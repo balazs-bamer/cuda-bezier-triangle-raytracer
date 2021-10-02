@@ -4,6 +4,7 @@
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int32_t
 
 #include "stl_reader.h"
+#include <map>
 #include <array>
 #include <deque>
 #include <vector>
@@ -56,7 +57,7 @@ auto makeUnitSphere(int32_t const aSectors, int32_t const aBelts);
 /////////////////////////////////
 
 template<template<typename> typename tContainer>
-void standardizeVertices(Mesh<tContainer> &aMesh) {        // Slow but was quick to implement. Moves all distinct but too close vertices to one place.
+void standardizeVertices(Mesh<tContainer> &aMesh) {        
   float smallestSide = std::numeric_limits<float>::max();
   for(auto &triangle : aMesh) {
     for(uint32_t i = 0u; i < 3u; ++i) {
@@ -64,22 +65,67 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {        // Slow but was quick
     }
   }
   auto epsilon = smallestSide * cgStandardizeVerticesEpsilonFactor;
-  epsilon *= epsilon; // Spare sqrt
-  for(uint32_t i = 0u; i < aMesh.size(); ++i) {
-    for(uint32_t j = 0u; j < 3u; ++j) {
-      for(uint32_t k = 0u; k < aMesh.size(); ++k) {
-        for(uint32_t l = 0u; l < 3u; ++l) {
-          if(i != k || j != l) {
-            auto &v1 = aMesh[i][j];
-            auto &v2 = aMesh[k][l];
-            if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
-              v1[0] = v2[0];
-            }
-            else { // nothing to do
-            }
-          }
-          else { // nothing to do
-          }
+
+  std::array<uint32_t, 3> maximums;
+  using Multimap = std::multimap<float, std::pair<uint32_t, uint32_t>>;
+  std::array<Multimap, 3u> projectedSorted;
+  using Iterator = Multimap::const_iterator;
+  std::array<std::deque<std::pair<Iterator, Iterator>>, 3u> intervals;
+
+  for(uint32_t dimension = 0u; dimension < 3u; ++dimension) {
+    auto& currentProjectedSorted = projectedSorted[dimension];
+    auto& currentIntervals = intervals[dimension];
+
+    for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+      auto &face = aMesh[indexFace];
+      for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
+        auto &vertex = face[indexVertex];
+        currentProjectedSorted.emplace(std::make_pair(vertex[dimension], std::make_pair(indexFace, indexVertex)));
+      }
+    }
+    bool was = false;
+    float startValue;
+    uint32_t max = 0u, counter;
+    Iterator startIterator;
+    for(Iterator i = currentProjectedSorted.cbegin(); i != currentProjectedSorted.cend(); ++i) {
+      if(was) {
+        auto now = i->first;
+        if(now - startValue >= epsilon) {
+          currentIntervals.emplace_back(std::make_pair(startIterator, i));
+          startValue = now;
+          startIterator = i;
+          max = std::max(max, counter);
+          counter = 1u;
+        }
+        else {
+          ++counter;
+        }
+      }
+      else {
+        startIterator = i;
+        startValue = i->first;
+        was = true;
+        counter = 1u;
+      }
+    }
+    Iterator last = currentProjectedSorted.cend();
+    currentIntervals.emplace_back(std::make_pair(startIterator, last));
+    max = std::max(max, counter);
+    maximums[dimension] = max;
+  }
+  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());
+  auto whichDim = minIt - maximums.cbegin();
+  auto& bestIntervals = intervals[whichDim];
+
+  for(auto& interval : bestIntervals) {
+    for(auto i = interval.first; i != interval.second; ++i) {
+      auto &v1 = aMesh[i->second.first][i->second.second];
+      for(auto j = interval.first; j != interval.second; ++j) {
+        auto &v2 = aMesh[j->second.first][j->second.second];
+        if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
+          v1[0] = v2[0];
+        }
+        else { // nothing to do
         }
       }
     }
@@ -105,7 +151,7 @@ void standardizeNormals(Mesh<tContainer> &aMesh) {        // Makes all normalvec
       if(found == was.end()) {
         indexInAll = vertices.size();
         faceVertexIndices[indexInFace] = indexInAll;
-        was.insert(std::pair(vertex, indexInAll));
+        was.emplace(std::make_pair(vertex, indexInAll));
         vertices.push_back(vertex);
       }
       else {
@@ -121,7 +167,7 @@ void standardizeNormals(Mesh<tContainer> &aMesh) {        // Makes all normalvec
       ++indexInFace;
     }
     for(uint32_t i = 0u; i < 3u; ++i) {
-      vertex2face.insert(std::pair(faceVertexIndices[i], indexFace));
+      vertex2face.emplace(std::make_pair(faceVertexIndices[i], indexFace));
       auto low = faceVertexIndices[i];
       auto high = faceVertexIndices[(i + 1u) % 3u];
       if(low > high) {
@@ -129,7 +175,7 @@ void standardizeNormals(Mesh<tContainer> &aMesh) {        // Makes all normalvec
       }
       else { // Nothing to do
       }
-      edge2face.insert(std::pair(std::pair(low, high), indexFace));
+      edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
     ++indexFace;
   }

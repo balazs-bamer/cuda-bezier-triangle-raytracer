@@ -18,7 +18,7 @@ void test(char const * const aName, int32_t const aSectors, int32_t const aBelts
   meshUtils::writeMesh(sphere, name);
 
   auto back = meshUtils::readMesh<tContainer>(name, inflate, leave);
-  back = meshUtils::divideLargeTriangles(back, 33.3f);
+  back = meshUtils::divideLargeTriangles(back, 11.1f);
   inflate /= aRadius;
   leave[0] = aRadius;
   meshUtils::transform(back, inflate, leave);
