@@ -22,12 +22,15 @@ void test(char const * const aName, int32_t const aSectors, int32_t const aBelts
   inflate /= aRadius;
   leave[0] = aRadius;
   meshUtils::transform(back, inflate, leave);
-  name = "back_" + name;
+  auto nameBack = "back_" + name;
   meshUtils::standardizeVertices(back);
-  meshUtils::writeMesh(back, name);
+  auto face2neighbour = meshUtils::standardizeNormals(back);
+  meshUtils::writeMesh(back, nameBack);
+  auto nameNorm = "norm_" + name;
+//  meshUtils::writeMesh(visualizeNormals(back), nameNorm);
 }
 
 int main() {
   test<std::deque>("deque", 3, 1, 1.0f);
-  test<std::vector>("vector", 11, 5, 11.1f);
+//  test<std::vector>("vector", 11, 5, 11.1f);
 }

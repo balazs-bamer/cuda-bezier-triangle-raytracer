@@ -5,12 +5,14 @@
 
 #include "stl_reader.h"
 #include <map>
+#include <list>
 #include <array>
 #include <deque>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <Eigen/Dense>
 
 #include <iostream>
@@ -35,7 +37,7 @@ template<template<typename> typename tContainer>
 void standardizeVertices(Mesh<tContainer> &aMesh);
 
 template<template<typename> typename tContainer>
-void standardizeNormals(Mesh<tContainer> &aMesh);
+tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh);
 
 template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Transform const &aTransform, Vertex const aDisplacement);
@@ -64,19 +66,19 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
       smallestSide = std::min(smallestSide, (triangle[i] - triangle[(i + 1u) % 3u]).norm());
     }
   }
-  auto epsilon = smallestSide * cgStandardizeVerticesEpsilonFactor;
+  auto epsilon = smallestSide * cgStandardizeVerticesEpsilonFactor;       // Vertices closer to each other than this will be forced to one point.
 
   std::array<uint32_t, 3> maximums;
   using Multimap = std::multimap<float, std::pair<uint32_t, uint32_t>>;
-  std::array<Multimap, 3u> projectedSorted;
+  std::array<Multimap, 3u> projectedSorted;                               // Holds the projected indices sorted by a coordinate, separate for x, y and z.
   using Iterator = Multimap::const_iterator;
-  std::array<std::deque<std::pair<Iterator, Iterator>>, 3u> intervals;
+  std::array<std::deque<std::pair<Iterator, Iterator>>, 3u> intervals;    // Holds iterator pairs to the previous stuff in between the projections are closer to each other than epsilon.
 
   for(uint32_t dimension = 0u; dimension < 3u; ++dimension) {
     auto& currentProjectedSorted = projectedSorted[dimension];
     auto& currentIntervals = intervals[dimension];
 
-    for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) { // Project for each coordinate.
       auto &face = aMesh[indexFace];
       for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
         auto &vertex = face[indexVertex];
@@ -90,7 +92,7 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
     for(Iterator i = currentProjectedSorted.cbegin(); i != currentProjectedSorted.cend(); ++i) {
       if(was) {
         auto now = i->first;
-        if(now - startValue >= epsilon) {
+        if(now - startValue >= epsilon) {                                 // Determine intervals.
           currentIntervals.emplace_back(std::make_pair(startIterator, i));
           startValue = now;
           startIterator = i;
@@ -113,17 +115,18 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
     max = std::max(max, counter);
     maximums[dimension] = max;
   }
-  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());
+  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());  // Best coordinate is where the maximum interval length is minimal.
   auto whichDim = minIt - maximums.cbegin();
   auto& bestIntervals = intervals[whichDim];
+  epsilon *= epsilon;                                                 // Avoid sqrt.
 
-  for(auto& interval : bestIntervals) {
+  for(auto& interval : bestIntervals) {                               // We need to check pairwise closeness only inside each interval.
     for(auto i = interval.first; i != interval.second; ++i) {
       auto &v1 = aMesh[i->second.first][i->second.second];
       for(auto j = interval.first; j != interval.second; ++j) {
         auto &v2 = aMesh[j->second.first][j->second.second];
         if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
-          v1[0] = v2[0];
+          v1[0] = v2[0];                                              // Use lexicographic sorting to choose an unique one among the points too close to each other.
         }
         else { // nothing to do
         }
@@ -132,42 +135,65 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
   }
 }
 
-template<template<typename> typename tContainer>          // Should run after standardizeVertices
-void standardizeNormals(Mesh<tContainer> &aMesh) {        // Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
-  std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t> edge2face;
-  std::unordered_multimap<uint32_t, uint32_t> vertex2face;
-  std::unordered_map<Vertex, uint32_t> was;  // For presence testing.
-  std::deque<Vertex> vertices;              // For indexing.
+struct PairHash {
+  template<typename t1, typename t2>
+  std::size_t operator()(std::pair<t1, t2> const &aPair) const {
+    return std::hash<t1>{}(aPair.first) ^ (std::hash<t2>{}(aPair.second) << 1u);
+  }
+};
+
+struct VertexHash {
+  std::size_t operator()(Vertex const &aVertex) const {
+    return std::hash<float>{}(aVertex[0]) ^ (std::hash<float>{}(aVertex[1]) << 1u) ^ (std::hash<float>{}(aVertex[2]) << 2u);
+  }
+};
+
+Vertex normalize(Triangle &aFace, Vertex const &aDesiredVector) {
+  auto normal = (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]).normalized();
+  if(aDesiredVector.dot(normal) < 0.0f) {
+    std::swap(aFace[0u], aFace[1u]);
+    normal = -normal;
+  }
+  else { // Nothing to do
+  }
+  return normal;
+}
+
+template<template<typename> typename tContainer>                      // Should run after standardizeVertices.
+tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh) {      // Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
+  std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash> edge2face; // Edge is identified by its two ordered vertex indices.
+  std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
+  std::deque<Vertex> vertices;                                        // Enables accessing each vertex by index. TODO consider if needed
+  std::vector<std::array<uint32_t, 3u>> face2vertex;
+  face2vertex.reserve(aMesh.size());
   float smallestX = std::numeric_limits<float>::max();
-  uint32_t smallestIndexInAll;
-  uint32_t indexFace = 0u;
-  for(auto &face : aMesh) {
-    uint32_t indexInFace = 0u;
-    std::array<uint32_t, 3u> faceVertexIndices;
-    for(auto &vertex : face) {
-      smallestX = std::min(smallestX, vertex[0]);
+  uint32_t smallestIndex;
+  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    auto const &face = aMesh[indexFace];
+    std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
+    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
+      auto const vertex = face[indexInFace];
+      uint32_t indexInVertices;
       auto found = was.find(vertex);
-      uint32_t indexInAll;
       if(found == was.end()) {
-        indexInAll = vertices.size();
-        faceVertexIndices[indexInFace] = indexInAll;
-        was.emplace(std::make_pair(vertex, indexInAll));
-        vertices.push_back(vertex);
+        indexInVertices = vertices.size();
+        faceVertexIndices[indexInFace] = indexInVertices;
+        was.emplace(std::make_pair(vertex, indexInVertices));
+        vertices.push_back(vertex);                                   // Vertex indexing.
       }
       else {
-        indexInAll = found->second;
-        faceVertexIndices[indexInFace] = indexInAll;
+        indexInVertices = found->second;
+        faceVertexIndices[indexInFace] = indexInVertices;
       }
       if(vertex[0] < smallestX) {
         smallestX = vertex[0];
-        smallestIndexInAll = indexInAll;
+        smallestIndex = indexInVertices;
       }
       else { // Nothing to do
       }
-      ++indexInFace;
     }
-    for(uint32_t i = 0u; i < 3u; ++i) {
-      vertex2face.emplace(std::make_pair(faceVertexIndices[i], indexFace));
+    face2vertex.push_back(faceVertexIndices);
+    for(uint32_t i = 0u; i < 3u; ++i) {                               // Filling maps.
       auto low = faceVertexIndices[i];
       auto high = faceVertexIndices[(i + 1u) % 3u];
       if(low > high) {
@@ -175,11 +201,82 @@ void standardizeNormals(Mesh<tContainer> &aMesh) {        // Makes all normalvec
       }
       else { // Nothing to do
       }
+std::cout << low << ' ' << high << ' ' << indexFace << std::endl;
       edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
-    ++indexFace;
   }
-  
+  tContainer<std::array<uint32_t, 3u>> face2neighbour;                // Obtaining neighbours...
+  std::unordered_set<uint32_t> facesAtSmallestX;                      // ...and the faces at the smallest x vertex
+  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    auto const &face = face2vertex[indexFace];
+    std::array<uint32_t, 3u> neighbours;
+    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
+      if(face[indexInFace] == smallestIndex) {
+        facesAtSmallestX.insert(indexFace);
+      }
+      else { // Nothing to do
+      }
+      auto edge = std::make_pair(face[indexInFace], face[(indexInFace + 1u) % 3u]);
+      if(edge.first > edge.second) {
+        std::swap(edge.first, edge.second);
+      }
+      else { // Nothing to do
+      }
+      auto[begin, end] = edge2face.equal_range(edge);
+      if(begin->second == indexFace) {                                // We need the other, neighbouring face.
+        ++begin;
+if(begin == end) throw 1;
+      }
+      else { // Nothing to do
+      }
+      neighbours[indexInFace] = begin->second;
+    }
+    face2neighbour.push_back(neighbours);
+  }
+  Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
+  desiredVector << 1.0f, 0.0f, 0.0f;
+  float maxAbsoluteDotProduct = std::numeric_limits<float>::max();
+  uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
+  for(auto const indexFace : facesAtSmallestX) {
+    auto const &face = aMesh[indexFace];
+    auto normal = (face[1] - face[0]).cross(face[2] - face[0]).normalized();
+    auto absoluteDotProduct = std::abs(desiredVector.dot(normal));
+    if(absoluteDotProduct > maxAbsoluteDotProduct) {
+      maxAbsoluteDotProduct = absoluteDotProduct;
+      initialFaceIndex = indexFace;
+    }
+    else { // Nothing to do
+    }
+  }
+  struct KnownUnknownFacePair {
+    uint32_t mKnownIndex;
+    Vertex   mKnownNormal;
+    uint32_t mUnknownIndex;
+  };
+  std::list<KnownUnknownFacePair> queue;                              // Faces with normals yet to be normalized.
+  desiredVector = normalize(aMesh[initialFaceIndex], desiredVector);
+  std::unordered_map<uint32_t, std::array<uint32_t, 3u>> remaining;
+  for(uint32_t i = 0u; i < face2neighbour.size(); ++i) {
+    remaining.emplace(std::make_pair(i, face2neighbour[i]));
+  }
+  for(auto const indexFace : remaining[initialFaceIndex]) {
+    queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, desiredVector, indexFace});
+  }
+  remaining.erase(initialFaceIndex);
+  while(!queue.empty()) {
+    auto actualPair = queue.front();
+    queue.pop_front();
+    desiredVector = normalize(aMesh[actualPair.mUnknownIndex], actualPair.mKnownNormal);
+    for(auto const indexFace : remaining[actualPair.mUnknownIndex]) {
+      if(remaining.find(indexFace) != remaining.end()) {
+        queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, desiredVector, indexFace});
+      }
+      else { // Nothing to do
+      }
+    }
+    remaining.erase(actualPair.mKnownIndex);
+  }
+  return face2neighbour;
 }
 
 template<template<typename> typename tContainer>
