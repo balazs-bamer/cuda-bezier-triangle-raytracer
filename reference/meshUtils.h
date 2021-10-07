@@ -254,25 +254,19 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   std::unordered_map<uint32_t, std::array<uint32_t, 3u>> remaining;   // Copy of face2neighbour with efficinet removing.
   for(uint32_t i = 0u; i < face2neighbour.size(); ++i) {
     remaining.emplace(std::make_pair(i, face2neighbour[i]));
-std::cout << "r " << i << ' ' << face2neighbour[i][0] << ' ' << face2neighbour[i][1] << ' ' << face2neighbour[i][2] << '\n';
   }
   for(auto const indexFace : remaining[initialFaceIndex]) {
     queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, desiredVector, indexFace});
-std::cout << "+ " << initialFaceIndex << ' ' << indexFace << '\n';
   }
   remaining.erase(initialFaceIndex);
-std::cout << "- " << initialFaceIndex << ' ' << remaining.size() << '\n';
   while(!queue.empty()) {
     auto actualPair = queue.back();
     queue.pop_back();
     desiredVector = normalize(aMesh[actualPair.mUnknownIndex], actualPair.mKnownNormal);
-std::cout << "!        " << actualPair.mKnownIndex << ' ' << actualPair.mUnknownIndex << '\n';
     remaining.erase(actualPair.mKnownIndex);
-std::cout << "- " << actualPair.mKnownIndex << ' ' << remaining.size() <<'\n';
     for(auto const indexFace : remaining[actualPair.mUnknownIndex]) {
       if(remaining.find(indexFace) != remaining.end() && actualPair.mUnknownIndex != indexFace) {
         queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, desiredVector, indexFace});
-std::cout << "+ " << actualPair.mUnknownIndex << ' ' << indexFace << '\n';
       }
       else { // Nothing to do
       }
