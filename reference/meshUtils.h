@@ -120,13 +120,20 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
   auto& bestIntervals = intervals[whichDim];
   epsilon *= epsilon;                                                 // Avoid sqrt.
 
+std::cout << "eps " << epsilon << '\n';
   for(auto& interval : bestIntervals) {                               // We need to check pairwise closeness only inside each interval.
+std::cout << "int -------------------------------\n";
     for(auto i = interval.first; i != interval.second; ++i) {
       auto &v1 = aMesh[i->second.first][i->second.second];
       for(auto j = interval.first; j != interval.second; ++j) {
         auto &v2 = aMesh[j->second.first][j->second.second];
+std::cout << "v1 " << i->second.first << i->second.second << ' ' << v1[0] << ' ' << v1[1] << ' '<< v1[2] << '\n';
+std::cout << "v2 " << j->second.first << j->second.second << ' ' << v2[0] << ' ' << v2[1] << ' '<< v2[2] << '\n';
+auto sn = (v1-v2).squaredNorm();
+std::cout << "sn " << sn << (sn < epsilon && sn > 0.0f ? "      !!!!!!!!!!" : "") << '\n';
         if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
-          v1[0] = v2[0];                                              // Use lexicographic sorting to choose an unique one among the points too close to each other.
+          v1 = v2;                                                    // Use lexicographic sorting to choose an unique one among the points too close to each other.
+std::cout << "   v1 = v2 " << '\n';
         }
         else { // nothing to do
         }
@@ -163,11 +170,11 @@ template<template<typename> typename tContainer>                      // Should 
 tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh) {      // Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
   std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash> edge2face; // Edge is identified by its two ordered vertex indices.
   std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
-  std::deque<Vertex> vertices;                                        // Enables accessing each vertex by index. TODO consider if needed
   std::vector<std::array<uint32_t, 3u>> face2vertex;
   face2vertex.reserve(aMesh.size());
   float smallestX = std::numeric_limits<float>::max();
   uint32_t smallestIndex;
+  uint32_t nextVertexIndex = 0u;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &face = aMesh[indexFace];
     std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
@@ -176,10 +183,11 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       uint32_t indexInVertices;
       auto found = was.find(vertex);
       if(found == was.end()) {
-        indexInVertices = vertices.size();
+        indexInVertices = nextVertexIndex;
         faceVertexIndices[indexInFace] = indexInVertices;
         was.emplace(std::make_pair(vertex, indexInVertices));
-        vertices.push_back(vertex);                                   // Vertex indexing.
+std::cout << "xyz " << vertex[0] << ' ' << vertex[1] << ' '<< vertex[2] << '\n';
+        ++nextVertexIndex;
       }
       else {
         indexInVertices = found->second;
@@ -192,6 +200,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       else { // Nothing to do
       }
     }
+std::cout << "face2vertex " << faceVertexIndices[0] << ' '  << faceVertexIndices[1] << ' '  << faceVertexIndices[2] << '\n';
     face2vertex.push_back(faceVertexIndices);
     for(uint32_t i = 0u; i < 3u; ++i) {                               // Filling maps.
       auto low = faceVertexIndices[i];
@@ -201,7 +210,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       }
       else { // Nothing to do
       }
-std::cout << low << ' ' << high << ' ' << indexFace << std::endl;
+std::cout << "edge2face " << low << ' ' << high << ' ' << indexFace << std::endl;
       edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
   }
