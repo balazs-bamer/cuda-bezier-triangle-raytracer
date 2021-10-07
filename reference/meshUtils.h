@@ -120,20 +120,13 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
   auto& bestIntervals = intervals[whichDim];
   epsilon *= epsilon;                                                 // Avoid sqrt.
 
-std::cout << "eps " << epsilon << '\n';
   for(auto& interval : bestIntervals) {                               // We need to check pairwise closeness only inside each interval.
-std::cout << "int -------------------------------\n";
     for(auto i = interval.first; i != interval.second; ++i) {
       auto &v1 = aMesh[i->second.first][i->second.second];
       for(auto j = interval.first; j != interval.second; ++j) {
         auto &v2 = aMesh[j->second.first][j->second.second];
-std::cout << "v1 " << i->second.first << i->second.second << ' ' << v1[0] << ' ' << v1[1] << ' '<< v1[2] << '\n';
-std::cout << "v2 " << j->second.first << j->second.second << ' ' << v2[0] << ' ' << v2[1] << ' '<< v2[2] << '\n';
-auto sn = (v1-v2).squaredNorm();
-std::cout << "sn " << sn << (sn < epsilon && sn > 0.0f ? "      !!!!!!!!!!" : "") << '\n';
         if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
           v1 = v2;                                                    // Use lexicographic sorting to choose an unique one among the points too close to each other.
-std::cout << "   v1 = v2 " << '\n';
         }
         else { // nothing to do
         }
@@ -174,7 +167,6 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   face2vertex.reserve(aMesh.size());
   float smallestX = std::numeric_limits<float>::max();
   uint32_t smallestIndex;
-  uint32_t nextVertexIndex = 0u;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &face = aMesh[indexFace];
     std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
@@ -183,11 +175,9 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       uint32_t indexInVertices;
       auto found = was.find(vertex);
       if(found == was.end()) {
-        indexInVertices = nextVertexIndex;
+        indexInVertices = was.size();
         faceVertexIndices[indexInFace] = indexInVertices;
         was.emplace(std::make_pair(vertex, indexInVertices));
-std::cout << "xyz " << vertex[0] << ' ' << vertex[1] << ' '<< vertex[2] << '\n';
-        ++nextVertexIndex;
       }
       else {
         indexInVertices = found->second;
@@ -200,7 +190,6 @@ std::cout << "xyz " << vertex[0] << ' ' << vertex[1] << ' '<< vertex[2] << '\n';
       else { // Nothing to do
       }
     }
-std::cout << "face2vertex " << faceVertexIndices[0] << ' '  << faceVertexIndices[1] << ' '  << faceVertexIndices[2] << '\n';
     face2vertex.push_back(faceVertexIndices);
     for(uint32_t i = 0u; i < 3u; ++i) {                               // Filling maps.
       auto low = faceVertexIndices[i];
@@ -210,7 +199,6 @@ std::cout << "face2vertex " << faceVertexIndices[0] << ' '  << faceVertexIndices
       }
       else { // Nothing to do
       }
-std::cout << "edge2face " << low << ' ' << high << ' ' << indexFace << std::endl;
       edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
   }
@@ -234,7 +222,6 @@ std::cout << "edge2face " << low << ' ' << high << ' ' << indexFace << std::endl
       auto[begin, end] = edge2face.equal_range(edge);
       if(begin->second == indexFace) {                                // We need the other, neighbouring face.
         ++begin;
-if(begin == end) throw 1;
       }
       else { // Nothing to do
       }
@@ -244,7 +231,7 @@ if(begin == end) throw 1;
   }
   Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
   desiredVector << 1.0f, 0.0f, 0.0f;
-  float maxAbsoluteDotProduct = std::numeric_limits<float>::max();
+  float maxAbsoluteDotProduct = -std::numeric_limits<float>::max();
   uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
   for(auto const indexFace : facesAtSmallestX) {
     auto const &face = aMesh[indexFace];
@@ -264,26 +251,32 @@ if(begin == end) throw 1;
   };
   std::list<KnownUnknownFacePair> queue;                              // Faces with normals yet to be normalized.
   desiredVector = normalize(aMesh[initialFaceIndex], desiredVector);
-  std::unordered_map<uint32_t, std::array<uint32_t, 3u>> remaining;
+  std::unordered_map<uint32_t, std::array<uint32_t, 3u>> remaining;   // Copy of face2neighbour with efficinet removing.
   for(uint32_t i = 0u; i < face2neighbour.size(); ++i) {
     remaining.emplace(std::make_pair(i, face2neighbour[i]));
+std::cout << "r " << i << ' ' << face2neighbour[i][0] << ' ' << face2neighbour[i][1] << ' ' << face2neighbour[i][2] << '\n';
   }
   for(auto const indexFace : remaining[initialFaceIndex]) {
     queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, desiredVector, indexFace});
+std::cout << "+ " << initialFaceIndex << ' ' << indexFace << '\n';
   }
   remaining.erase(initialFaceIndex);
+std::cout << "- " << initialFaceIndex << ' ' << remaining.size() << '\n';
   while(!queue.empty()) {
-    auto actualPair = queue.front();
-    queue.pop_front();
+    auto actualPair = queue.back();
+    queue.pop_back();
     desiredVector = normalize(aMesh[actualPair.mUnknownIndex], actualPair.mKnownNormal);
+std::cout << "!        " << actualPair.mKnownIndex << ' ' << actualPair.mUnknownIndex << '\n';
+    remaining.erase(actualPair.mKnownIndex);
+std::cout << "- " << actualPair.mKnownIndex << ' ' << remaining.size() <<'\n';
     for(auto const indexFace : remaining[actualPair.mUnknownIndex]) {
-      if(remaining.find(indexFace) != remaining.end()) {
+      if(remaining.find(indexFace) != remaining.end() && actualPair.mUnknownIndex != indexFace) {
         queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, desiredVector, indexFace});
+std::cout << "+ " << actualPair.mUnknownIndex << ' ' << indexFace << '\n';
       }
       else { // Nothing to do
       }
     }
-    remaining.erase(actualPair.mKnownIndex);
   }
   return face2neighbour;
 }
