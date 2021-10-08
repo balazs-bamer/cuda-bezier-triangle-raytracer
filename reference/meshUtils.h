@@ -43,6 +43,12 @@ template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Transform const &aTransform, Vertex const aDisplacement);
 
 template<template<typename> typename tContainer>
+void transform(Mesh<tContainer> &aMesh, Vertex const aDisplacement);
+
+template<template<typename> typename tContainer>
+void transform(Mesh<tContainer> &aMesh, Transform const &aTransform);
+
+template<template<typename> typename tContainer>
 auto divideLargeTriangles(Mesh<tContainer> &aMesh, float aMaxTriangleSide);
 
 template<template<typename> typename tContainer>
@@ -251,26 +257,28 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   };
   std::list<KnownUnknownFacePair> queue;                              // Faces with normals yet to be normalized.
   desiredVector = normalize(aMesh[initialFaceIndex], desiredVector);
-  std::unordered_map<uint32_t, std::array<uint32_t, 3u>> remaining;   // Copy of face2neighbour with efficinet removing.
-  for(uint32_t i = 0u; i < face2neighbour.size(); ++i) {
-    remaining.emplace(std::make_pair(i, face2neighbour[i]));
-std::cout << "r " << i << ' ' << face2neighbour[i][0] << ' ' << face2neighbour[i][1] << ' ' << face2neighbour[i][2] << '\n';
-  }
-  for(auto const indexFace : remaining[initialFaceIndex]) {
+  std::vector<bool> remaining;
+  remaining.reserve(face2neighbour.size());
+  std::fill_n(std::back_inserter(remaining), face2neighbour.size(), true);
+  for(auto const indexFace : face2neighbour[initialFaceIndex]) {
     queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, desiredVector, indexFace});
 std::cout << "+ " << initialFaceIndex << ' ' << indexFace << '\n';
   }
-  remaining.erase(initialFaceIndex);
-std::cout << "- " << initialFaceIndex << ' ' << remaining.size() << '\n';
+  remaining[initialFaceIndex] = false;
+std::cout << "- " << initialFaceIndex << '\n';
   while(!queue.empty()) {
     auto actualPair = queue.back();
     queue.pop_back();
-    desiredVector = normalize(aMesh[actualPair.mUnknownIndex], actualPair.mKnownNormal);
+    if(remaining[actualPair.mUnknownIndex]) {
+      desiredVector = normalize(aMesh[actualPair.mUnknownIndex], actualPair.mKnownNormal);
 std::cout << "!        " << actualPair.mKnownIndex << ' ' << actualPair.mUnknownIndex << '\n';
-    remaining.erase(actualPair.mKnownIndex);
-std::cout << "- " << actualPair.mKnownIndex << ' ' << remaining.size() <<'\n';
-    for(auto const indexFace : remaining[actualPair.mUnknownIndex]) {
-      if(remaining.find(indexFace) != remaining.end() && actualPair.mUnknownIndex != indexFace) {
+    }
+    else { // Nothing to do
+    }
+    remaining[actualPair.mUnknownIndex] = false;
+std::cout << "- " << actualPair.mKnownIndex << '\n';
+    for(auto const indexFace : face2neighbour[actualPair.mUnknownIndex]) {
+      if(remaining[indexFace] && actualPair.mUnknownIndex != indexFace) {
         queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, desiredVector, indexFace});
 std::cout << "+ " << actualPair.mUnknownIndex << ' ' << indexFace << '\n';
       }
@@ -288,6 +296,16 @@ void transform(Mesh<tContainer> &aMesh, Transform const &aTransform, Vertex cons
       vertex = aTransform * vertex + aDisplacement;      
     }
   }
+}
+
+template<template<typename> typename tContainer>
+void transform(Mesh<tContainer> &aMesh, Vertex const aDisplacement) {
+  transform(aMesh, Transform::Identity(), aDisplacement);
+}
+
+template<template<typename> typename tContainer>
+void transform(Mesh<tContainer> &aMesh, Transform const &aTransform) {
+  transform(aMesh, aTransform, Vertex::Zero());
 }
 
 template<template<typename> typename tContainer>
