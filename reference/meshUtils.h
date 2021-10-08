@@ -30,6 +30,7 @@ using MeshVector = Mesh<std::vector>;
 
 constexpr float cgPi = 3.1415926539f;
 constexpr float cgStandardizeVerticesEpsilonFactor = 0.2f;
+constexpr float cgStandardizeNormalsEpsilonFactor = 0.01f;
 
 // TODO perhaps a function to split triangles having vertex on an edge. Probably not needed.
 
@@ -154,15 +155,57 @@ struct VertexHash {
   }
 };
 
-Vertex normalize(Triangle &aFace, Vertex const &aDesiredVector) {
-  auto normal = (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]).normalized();
+auto getNormal(Triangle &aFace) {
+  return normal = (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
+}
+
+void normalize(Triangle &aFace, Vertex const &aDesiredVector) {
+  auto normal = getNormal(aFace);
   if(aDesiredVector.dot(normal) < 0.0f) {
     std::swap(aFace[0u], aFace[1u]);
-    normal = -normal;
   }
   else { // Nothing to do
   }
-  return normal;
+}
+
+uint32_t getIndependentFrom(Triangle const &aFaceTarget, Triangle const &aFaceOther) {
+  for(uint32_t i = 0u; i < 3u; ++i) {
+    if(std::find(aFaceOther.cbegin(), aFaceOther.cend(), aFaceTarget[i]) == aFaceOther.cend()) {
+      return i;
+    }
+    else { // Nothing to do
+    }
+  }
+  return 3; // Won't get here.
+}
+
+auto getAltitude(Vertex const &aCommon1, Vertex const &aCommon2, Vertex const &aIndependent) {
+  auto commonVector = aCommon2 - aCommon1;
+  auto independentVector = aIndependent - aCcommon1;
+  auto footFactor = commonVector.dot(independentVector) / commonVector.normSquared();
+  return independentVector - commonVector * footFactor; 
+}
+
+void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) {  // Calculates everything twice for each triangle, but won't cache now.
+  uint32_t independentIndexKnown = getIndependentFrom(aFaceKnown, aFaceUnknown);
+  uint32_t commonIndex1known = (independentIndexKnown + 1u) % 3u;
+  uint32_t commonIndex2known = (independentIndexKnown + 2u) % 3u;
+  uint32_t independentIndexUnknown = getIndependentFrom(aFaceUnknown, aFaceKnown);
+  uint32_t commonIndex1unknown = (independentIndexUnknown + 1u) % 3u;
+  uint32_t commonIndex2unknown = (independentIndexUnknown + 2u) % 3u;
+
+  auto altitudeKnown = getAltitude(aFaceKnown[commonIndex1known], aFaceKnown[commonIndex2known], aFaceKnown[independentIndexKnown]);
+  auto altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], aFaceUnknown[independentIndexUnknown]);
+  auto dotFaceAltitudes = altitudeKnown.dot(altitudeUnknown);
+  
+  auto normalKnown = getNormal(aFaceKnown);
+  auto normalUnknown = getNormal(aFaceUnknown);
+  auto knownDotUnknown = normalKnown.dot(normalUnknown);
+  if(std::abs(knownDotUnknown / (normalKnown.norm() * normalUnknown.norm())) < cgStandardizeNormalsEpsilonFactor) {
+    // TODO move independentIndexUnknown such that this won't be so small, recalculate aboves
+  }
+  else { // Nothing to do
+  }
 }
 
 template<template<typename> typename tContainer>                      // Should run after standardizeVertices.
@@ -241,7 +284,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
   for(auto const indexFace : facesAtSmallestX) {
     auto const &face = aMesh[indexFace];
-    auto normal = (face[1] - face[0]).cross(face[2] - face[0]).normalized();
+    auto normal = getNormal(face).normalized();
     auto absoluteDotProduct = std::abs(desiredVector.dot(normal));
     if(absoluteDotProduct > maxAbsoluteDotProduct) {
       maxAbsoluteDotProduct = absoluteDotProduct;
@@ -252,16 +295,15 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   }
   struct KnownUnknownFacePair {
     uint32_t mKnownIndex;
-    Vertex   mKnownNormal;
     uint32_t mUnknownIndex;
   };
   std::list<KnownUnknownFacePair> queue;                              // Faces with normals yet to be normalized.
-  desiredVector = normalize(aMesh[initialFaceIndex], desiredVector);
+  normalize(aMesh[initialFaceIndex], desiredVector);
   std::vector<bool> remaining;
   remaining.reserve(face2neighbour.size());
   std::fill_n(std::back_inserter(remaining), face2neighbour.size(), true);
   for(auto const indexFace : face2neighbour[initialFaceIndex]) {
-    queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, desiredVector, indexFace});
+    queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, indexFace});
   }
   remaining[initialFaceIndex] = false;
 std::cout << "- " << initialFaceIndex << '\n';
@@ -269,7 +311,7 @@ std::cout << "- " << initialFaceIndex << '\n';
     auto actualPair = queue.back();
     queue.pop_back();
     if(remaining[actualPair.mUnknownIndex]) {
-      desiredVector = normalize(aMesh[actualPair.mUnknownIndex], actualPair.mKnownNormal);
+      normalize(aMesh[actualPair.mKnownIndex], aMesh[actualPair.mUnknownIndex]);
 std::cout << "!        " << actualPair.mKnownIndex << ' ' << actualPair.mUnknownIndex << '\n';
     }
     else { // Nothing to do
@@ -278,7 +320,7 @@ std::cout << "!        " << actualPair.mKnownIndex << ' ' << actualPair.mUnknown
 std::cout << "- " << actualPair.mKnownIndex << '\n';
     for(auto const indexFace : face2neighbour[actualPair.mUnknownIndex]) {
       if(remaining[indexFace] && actualPair.mUnknownIndex != indexFace) {
-        queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, desiredVector, indexFace});
+        queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, indexFace});
       }
       else { // Nothing to do
       }
