@@ -14,7 +14,7 @@ auto visualizeNormals(meshUtils::Mesh<tContainer> const &aMesh) {
     auto average = ((face[1] - face[0]).norm() + (face[2] - face[1]).norm() + (face[0] - face[2]).norm()) / 3.0f;
     auto copy = sphere;
     auto shrink = meshUtils::Transform::Identity() * (average / 15.0f);
-    meshUtils::transform(copy, shrink, base + normal * (average / 11.0f));
+    meshUtils::transform(copy, shrink, base + normal * (average / 7.0f));
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
   }
   return result;

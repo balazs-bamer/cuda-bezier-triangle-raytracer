@@ -28,9 +28,10 @@ using Mesh = tContainer<Triangle>;
 
 using MeshVector = Mesh<std::vector>;
 
-constexpr float cgPi = 3.1415926539f;
-constexpr float cgStandardizeVerticesEpsilonFactor = 0.2f;
-constexpr float cgStandardizeNormalsEpsilonFactor = 0.01f;
+constexpr float cgPi                                      = 3.1415926539f;
+constexpr float cgStandardizeVerticesEpsilonFactor        = 0.2f;
+constexpr float cgStandardizeNormalsEpsilon               = 0.01f;
+constexpr float cgStandardizeNormalsIndependentMoveFactor = 0.2f;
 
 // TODO perhaps a function to split triangles having vertex on an edge. Probably not needed.
 
@@ -155,8 +156,8 @@ struct VertexHash {
   }
 };
 
-auto getNormal(Triangle &aFace) {
-  return normal = (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
+auto getNormal(Triangle const &aFace) {
+  return (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
 }
 
 void normalize(Triangle &aFace, Vertex const &aDesiredVector) {
@@ -181,8 +182,8 @@ uint32_t getIndependentFrom(Triangle const &aFaceTarget, Triangle const &aFaceOt
 
 auto getAltitude(Vertex const &aCommon1, Vertex const &aCommon2, Vertex const &aIndependent) {
   auto commonVector = aCommon2 - aCommon1;
-  auto independentVector = aIndependent - aCcommon1;
-  auto footFactor = commonVector.dot(independentVector) / commonVector.normSquared();
+  auto independentVector = aIndependent - aCommon1;
+  auto footFactor = commonVector.dot(independentVector) / commonVector.squaredNorm();
   return independentVector - commonVector * footFactor; 
 }
 
@@ -195,14 +196,26 @@ void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) {  // Calcula
   uint32_t commonIndex2unknown = (independentIndexUnknown + 2u) % 3u;
 
   auto altitudeKnown = getAltitude(aFaceKnown[commonIndex1known], aFaceKnown[commonIndex2known], aFaceKnown[independentIndexKnown]);
-  auto altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], aFaceUnknown[independentIndexUnknown]);
+  Vertex altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], aFaceUnknown[independentIndexUnknown]);
   auto dotFaceAltitudes = altitudeKnown.dot(altitudeUnknown);
   
   auto normalKnown = getNormal(aFaceKnown);
   auto normalUnknown = getNormal(aFaceUnknown);
   auto knownDotUnknown = normalKnown.dot(normalUnknown);
-  if(std::abs(knownDotUnknown / (normalKnown.norm() * normalUnknown.norm())) < cgStandardizeNormalsEpsilonFactor) {
-    // TODO move independentIndexUnknown such that this won't be so small, recalculate aboves
+  if(std::abs(knownDotUnknown / (normalKnown.norm() * normalUnknown.norm())) < cgStandardizeNormalsEpsilon) {
+    auto newIndependentUnknown = aFaceUnknown[independentIndexUnknown] + cgStandardizeNormalsIndependentMoveFactor * (aFaceKnown[independentIndexKnown] - (aFaceKnown[commonIndex1known] + aFaceKnown[commonIndex2known]) / 2.0f);
+    auto newFaceUnknown = aFaceUnknown;
+    newFaceUnknown[independentIndexUnknown] = newIndependentUnknown;
+
+    altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], newIndependentUnknown);
+    dotFaceAltitudes = altitudeKnown.dot(altitudeUnknown);
+    normalUnknown = getNormal(newFaceUnknown);
+    knownDotUnknown = normalKnown.dot(normalUnknown);
+  }
+  else { // Nothing to do
+  }
+  if(dotFaceAltitudes * knownDotUnknown > 0.0f) {
+    std::swap(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown]);
   }
   else { // Nothing to do
   }
@@ -215,7 +228,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   std::vector<std::array<uint32_t, 3u>> face2vertex;
   face2vertex.reserve(aMesh.size());
   float smallestX = std::numeric_limits<float>::max();
-  uint32_t smallestIndex;
+  uint32_t smallestXverticeIndex;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &face = aMesh[indexFace];
     std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
@@ -234,7 +247,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       }
       if(vertex[0] < smallestX) {
         smallestX = vertex[0];
-        smallestIndex = indexInVertices;
+        smallestXverticeIndex = indexInVertices;
       }
       else { // Nothing to do
       }
@@ -257,7 +270,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
     auto const &face = face2vertex[indexFace];
     std::array<uint32_t, 3u> neighbours;
     for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
-      if(face[indexInFace] == smallestIndex) {
+      if(face[indexInFace] == smallestXverticeIndex) {
         facesAtSmallestX.insert(indexFace);
       }
       else { // Nothing to do
@@ -279,7 +292,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
     face2neighbour.push_back(neighbours);
   }
   Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
-  desiredVector << 1.0f, 0.0f, 0.0f;
+  desiredVector << -1.0f, 0.0f, 0.0f;
   float maxAbsoluteDotProduct = -std::numeric_limits<float>::max();
   uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
   for(auto const indexFace : facesAtSmallestX) {
