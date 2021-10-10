@@ -71,6 +71,6 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
 }
 
 int main() {
-  testDequeDivisor("dequeDivisor", 3, 1, 3.0f, 3);
-  testVectorMax("vectorMax", 7, 7, 23.0f, 1.0f);
+  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+  testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
 }

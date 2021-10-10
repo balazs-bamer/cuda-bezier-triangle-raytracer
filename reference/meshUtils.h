@@ -39,6 +39,10 @@ constexpr Real cgStandardizeNormalsIndependentMoveFactor = 0.2;
 template<template<typename> typename tContainer>
 void standardizeVertices(Mesh<tContainer> &aMesh);
 
+/// Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
+/// Should run after standardizeVertices.
+/// But not after auto divideLargeTriangles(Mesh<tContainer> &aMesh, Real const aMaxTriangleSide), because it will probably put vertices on edges of other triangles.
+/// Returns coontainer with neighbouring faces for each face.
 template<template<typename> typename tContainer>
 tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh);
 
@@ -97,13 +101,13 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
     bool was = false;
     Real startValue;
     uint32_t max = 0u, counter;
-    Iterator startIterator;
+    Iterator startIterator = currentProjectedSorted.cend();;
     for(Iterator i = currentProjectedSorted.cbegin(); i != currentProjectedSorted.cend(); ++i) {
       if(was) {
-        auto now = i->first;
-        if(now - startValue >= epsilon) {                                 // Determine intervals.
+        auto valueNow = i->first;
+        if(valueNow - startValue >= epsilon) {                            // Determine intervals.
           currentIntervals.emplace_back(std::make_pair(startIterator, i));
-          startValue = now;
+          startValue = valueNow;
           startIterator = i;
           max = std::max(max, counter);
           counter = 1u;
@@ -126,10 +130,10 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
   }
   auto minIt = std::min_element(maximums.cbegin(), maximums.cend());      // Best coordinate is where the maximum interval length is minimal.
   auto whichDim = minIt - maximums.cbegin();
-  auto& bestIntervals = intervals[whichDim];
+  auto const& bestIntervals = intervals[whichDim];
   epsilon *= epsilon;                                                     // Avoid sqrt.
 
-  for(auto& interval : bestIntervals) {                                   // We need to check pairwise closeness only inside each interval.
+  for(auto const& interval : bestIntervals) {                             // We need to check pairwise closeness only inside each interval.
     for(auto i = interval.first; i != interval.second; ++i) {
       auto &v1 = aMesh[i->second.first][i->second.second];
       for(auto j = interval.first; j != interval.second; ++j) {
@@ -222,8 +226,8 @@ void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) {  // Calcula
   }
 }
 
-template<template<typename> typename tContainer>                      // Should run after standardizeVertices.
-tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh) {      // Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
+template<template<typename> typename tContainer>
+tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh) {
   std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash> edge2face; // Edge is identified by its two ordered vertex indices.
   std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
   std::vector<std::array<uint32_t, 3u>> face2vertex;
@@ -265,7 +269,6 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
   }
-std::cout << "points: " << was.size() << "  triangles: " << aMesh.size() << '\n';
   tContainer<std::array<uint32_t, 3u>> face2neighbour;                // Obtaining neighbours...
   std::unordered_set<uint32_t> facesAtSmallestX;                      // ...and the faces at the smallest x vertex
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
@@ -321,18 +324,15 @@ std::cout << "points: " << was.size() << "  triangles: " << aMesh.size() << '\n'
     queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, indexFace});
   }
   remaining[initialFaceIndex] = false;
-std::cout << "- " << initialFaceIndex << '\n';
   while(!queue.empty()) {
     auto actualPair = queue.back();
     queue.pop_back();
     if(remaining[actualPair.mUnknownIndex]) {
       normalize(aMesh[actualPair.mKnownIndex], aMesh[actualPair.mUnknownIndex]);
-std::cout << "!        " << actualPair.mKnownIndex << ' ' << actualPair.mUnknownIndex << '\n';
     }
     else { // Nothing to do
     }
     remaining[actualPair.mUnknownIndex] = false;
-std::cout << "- " << actualPair.mKnownIndex << '\n';
     for(auto const indexFace : face2neighbour[actualPair.mUnknownIndex]) {
       if(remaining[indexFace] && actualPair.mUnknownIndex != indexFace) {
         queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, indexFace});
@@ -364,7 +364,7 @@ void transform(Mesh<tContainer> &aMesh, Transform const &aTransform) {
 }
 
 template<template<typename> typename tContainer>
-void divideTriangle(Mesh<tContainer> result, Triangle const &aTriangle, int32_t const aDivisor) {
+void divideTriangle(Mesh<tContainer> &result, Triangle const &aTriangle, int32_t const aDivisor) {
   auto vector01 = (aTriangle[1] - aTriangle[0]) / aDivisor;
   auto vector02 = (aTriangle[2] - aTriangle[0]) / aDivisor;
   auto lineBase = aTriangle[0];
@@ -460,7 +460,6 @@ auto makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
   Real beltZup = 1.0f;
   Real beltZmiddle = std::cos(beltAngleMiddle);
   Real beltZdown = std::cos(beltAngleDown);
-std::cout << "points: " << 2 + aSectors * aBelts << "  triangles: " << 2 * aSectors * aBelts << '\n';
   for(int32_t belt = 0; belt < aBelts; ++belt) {
     Real sectorAngleUpDown = bias + sectorAngleHalf;
     Real sectorAngleMiddle1 = bias + 0.0f;
