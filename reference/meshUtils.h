@@ -19,8 +19,9 @@
 
 namespace meshUtils {
 
-using Vertex = Eigen::Vector3f;
-using Transform = Eigen::Matrix3f;
+using Real = float;
+using Vertex = Eigen::Matrix<Real, 3, 1>;
+using Transform = Eigen::Matrix<Real, 3, 3>;
 using Triangle = std::array<Vertex, 3u>;
 
 template<template<typename> typename tContainer>
@@ -28,10 +29,10 @@ using Mesh = tContainer<Triangle>;
 
 using MeshVector = Mesh<std::vector>;
 
-constexpr float cgPi                                      = 3.1415926539f;
-constexpr float cgStandardizeVerticesEpsilonFactor        = 0.2f;
-constexpr float cgStandardizeNormalsEpsilon               = 0.01f;
-constexpr float cgStandardizeNormalsIndependentMoveFactor = 0.2f;
+constexpr Real cgPi                                      = 3.14159265358979323846;
+constexpr Real cgStandardizeVerticesEpsilonFactor        = 0.2;
+constexpr Real cgStandardizeNormalsEpsilon               = 0.01;
+constexpr Real cgStandardizeNormalsIndependentMoveFactor = 0.2;
 
 // TODO perhaps a function to split triangles having vertex on an edge. Probably not needed.
 
@@ -51,7 +52,7 @@ template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Transform const &aTransform);
 
 template<template<typename> typename tContainer>
-auto divideLargeTriangles(Mesh<tContainer> &aMesh, float aMaxTriangleSide);
+auto divideLargeTriangles(Mesh<tContainer> &aMesh, Real aMaxTriangleSide);
 
 template<template<typename> typename tContainer>
 auto readMesh(std::string const &aFilename, Transform const &aTransform, Vertex const aDisplacement);
@@ -68,7 +69,7 @@ auto makeUnitSphere(int32_t const aSectors, int32_t const aBelts);
 
 template<template<typename> typename tContainer>
 void standardizeVertices(Mesh<tContainer> &aMesh) {        
-  float smallestSide = std::numeric_limits<float>::max();
+  Real smallestSide = std::numeric_limits<Real>::max();
   for(auto &triangle : aMesh) {
     for(uint32_t i = 0u; i < 3u; ++i) {
       smallestSide = std::min(smallestSide, (triangle[i] - triangle[(i + 1u) % 3u]).norm());
@@ -77,7 +78,7 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
   auto epsilon = smallestSide * cgStandardizeVerticesEpsilonFactor;       // Vertices closer to each other than this will be forced to one point.
 
   std::array<uint32_t, 3> maximums;
-  using Multimap = std::multimap<float, std::pair<uint32_t, uint32_t>>;
+  using Multimap = std::multimap<Real, std::pair<uint32_t, uint32_t>>;
   std::array<Multimap, 3u> projectedSorted;                               // Holds the projected indices sorted by a coordinate, separate for x, y and z.
   using Iterator = Multimap::const_iterator;
   std::array<std::deque<std::pair<Iterator, Iterator>>, 3u> intervals;    // Holds iterator pairs to the previous stuff in between the projections are closer to each other than epsilon.
@@ -94,7 +95,7 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
       }
     }
     bool was = false;
-    float startValue;
+    Real startValue;
     uint32_t max = 0u, counter;
     Iterator startIterator;
     for(Iterator i = currentProjectedSorted.cbegin(); i != currentProjectedSorted.cend(); ++i) {
@@ -123,18 +124,18 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
     max = std::max(max, counter);
     maximums[dimension] = max;
   }
-  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());  // Best coordinate is where the maximum interval length is minimal.
+  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());      // Best coordinate is where the maximum interval length is minimal.
   auto whichDim = minIt - maximums.cbegin();
   auto& bestIntervals = intervals[whichDim];
-  epsilon *= epsilon;                                                 // Avoid sqrt.
+  epsilon *= epsilon;                                                     // Avoid sqrt.
 
-  for(auto& interval : bestIntervals) {                               // We need to check pairwise closeness only inside each interval.
+  for(auto& interval : bestIntervals) {                                   // We need to check pairwise closeness only inside each interval.
     for(auto i = interval.first; i != interval.second; ++i) {
       auto &v1 = aMesh[i->second.first][i->second.second];
       for(auto j = interval.first; j != interval.second; ++j) {
         auto &v2 = aMesh[j->second.first][j->second.second];
         if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
-          v1 = v2;                                                    // Use lexicographic sorting to choose an unique one among the points too close to each other.
+          v1 = v2;                                                        // Use lexicographic sorting to choose an unique one among the points too close to each other.
         }
         else { // nothing to do
         }
@@ -152,7 +153,7 @@ struct PairHash {
 
 struct VertexHash {
   std::size_t operator()(Vertex const &aVertex) const {
-    return std::hash<float>{}(aVertex[0]) ^ (std::hash<float>{}(aVertex[1]) << 1u) ^ (std::hash<float>{}(aVertex[2]) << 2u);
+    return std::hash<Real>{}(aVertex[0]) ^ (std::hash<Real>{}(aVertex[1]) << 1u) ^ (std::hash<Real>{}(aVertex[2]) << 2u);
   }
 };
 
@@ -227,7 +228,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
   std::vector<std::array<uint32_t, 3u>> face2vertex;
   face2vertex.reserve(aMesh.size());
-  float smallestX = std::numeric_limits<float>::max();
+  Real smallestX = std::numeric_limits<Real>::max();
   uint32_t smallestXverticeIndex;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &face = aMesh[indexFace];
@@ -264,6 +265,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
   }
+std::cout << "points: " << was.size() << "  triangles: " << aMesh.size() << '\n';
   tContainer<std::array<uint32_t, 3u>> face2neighbour;                // Obtaining neighbours...
   std::unordered_set<uint32_t> facesAtSmallestX;                      // ...and the faces at the smallest x vertex
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
@@ -283,7 +285,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
       }
       auto[begin, end] = edge2face.equal_range(edge);
       if(begin->second == indexFace) {                                // We need the other, neighbouring face.
-        ++begin;
+        ++begin;                          /// TODO past the end access
       }
       else { // Nothing to do
       }
@@ -293,7 +295,7 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   }
   Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
   desiredVector << -1.0f, 0.0f, 0.0f;
-  float maxAbsoluteDotProduct = -std::numeric_limits<float>::max();
+  Real maxAbsoluteDotProduct = -std::numeric_limits<Real>::max();
   uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
   for(auto const indexFace : facesAtSmallestX) {
     auto const &face = aMesh[indexFace];
@@ -362,35 +364,49 @@ void transform(Mesh<tContainer> &aMesh, Transform const &aTransform) {
 }
 
 template<template<typename> typename tContainer>
-auto divideLargeTriangles(Mesh<tContainer> &aMesh, float aMaxTriangleSide) {
+void divideTriangle(Mesh<tContainer> result, Triangle const &aTriangle, int32_t const aDivisor) {
+  auto vector01 = (aTriangle[1] - aTriangle[0]) / aDivisor;
+  auto vector02 = (aTriangle[2] - aTriangle[0]) / aDivisor;
+  auto lineBase = aTriangle[0];
+  auto base0 = lineBase;
+  auto base1 = (aDivisor > 1) ? (base0 + vector01) : aTriangle[1];
+  auto base2 = (aDivisor > 1) ? (base0 + vector02) : aTriangle[2];
+  for(int32_t i = 0; i < aDivisor - 1; ++i) {
+    for(int32_t j = 0; j < aDivisor - i - 1; j++) {
+      result.push_back({base0, base1, base2});
+      auto base1next = base1 + vector02;
+      result.push_back({base1, base1next, base2});
+      base1 = base1next;
+      base0 = base2;
+      base2 += vector02;
+    }
+    result.push_back({base0, base1, base2});
+    lineBase += vector01;
+    base0 = lineBase;
+    base1 = base0 + vector01;
+    base2 = base0 + vector02;
+  }
+  result.push_back({base0, aTriangle[1], base2});
+}
+
+template<template<typename> typename tContainer>
+auto divideLargeTriangles(Mesh<tContainer> &aMesh, Real const aMaxTriangleSide) {
   Mesh<tContainer> result;
   for(auto const &triangle : aMesh) {
-    float maxSide = (triangle[0] - triangle[1]).norm();
+    Real maxSide = (triangle[0] - triangle[1]).norm();
     maxSide = std::max(maxSide, (triangle[0] - triangle[2]).norm());
     maxSide = std::max(maxSide, (triangle[1] - triangle[2]).norm());
     int32_t divisor = static_cast<int32_t>(std::ceil(maxSide / aMaxTriangleSide));
-    auto vector01 = (triangle[1] - triangle[0]) / divisor;
-    auto vector02 = (triangle[2] - triangle[0]) / divisor;
-    auto lineBase = triangle[0];
-    auto base0 = lineBase;
-    auto base1 = (divisor > 1) ? (base0 + vector01) : triangle[1];
-    auto base2 = (divisor > 1) ? (base0 + vector02) : triangle[2];
-    for(int32_t i = 0; i < divisor - 1; ++i) {
-      for(int32_t j = 0; j < divisor - i - 1; j++) {
-        result.push_back({base0, base1, base2});
-        auto base1next = base1 + vector02;
-        result.push_back({base1, base1next, base2});
-        base1 = base1next;
-        base0 = base2;
-        base2 += vector02;
-      }
-      result.push_back({base0, base1, base2});
-      lineBase += vector01;
-      base0 = lineBase;
-      base1 = base0 + vector01;
-      base2 = base0 + vector02;
-    }
-    result.push_back({base0, triangle[1], base2});
+    divideTriangle(result, triangle, divisor);
+  }
+  return result;
+}
+
+template<template<typename> typename tContainer>
+auto divideLargeTriangles(Mesh<tContainer> &aMesh, int32_t const aDivisor) {
+  Mesh<tContainer> result;
+  for(auto const &triangle : aMesh) {
+    divideTriangle(result, triangle, aDivisor);
   }
   return result;
 }
@@ -398,12 +414,12 @@ auto divideLargeTriangles(Mesh<tContainer> &aMesh, float aMaxTriangleSide) {
 template<template<typename> typename tContainer>
 auto readMesh(std::string const &aFilename, Transform const &aTransform, Vertex const aDisplacement) {
   Mesh<tContainer> work;
-  stl_reader::StlMesh<float, int32_t> mesh(aFilename);
+  stl_reader::StlMesh<Real, int32_t> mesh(aFilename);
   for(int32_t indexTriangle = 0; indexTriangle < mesh.num_tris(); ++indexTriangle) {
     Triangle triangle;
     for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
-      float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
-      Eigen::Vector3f in;
+      Real const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
+      Vertex in;
       for(int32_t i = 0; i < 3; ++i) {
         in(i) = coords[i];
       }
@@ -431,23 +447,24 @@ void writeMesh(Mesh<tContainer> const &aMesh, std::string const& aFilename) {
 template<template<typename> typename tContainer>
 auto makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
   Mesh<tContainer> result;
-  float sectorAngleHalf = cgPi / aSectors;
-  float sectorAngleFull = sectorAngleHalf * 2.0f;
-  float beltAngle       = cgPi / (aBelts + 1.0f);
-  float bias = 0.0f;
-  float beltAngleUp = 0.0f;
-  float beltAngleMiddle = beltAngle;
-  float beltAngleDown = 2.0f * beltAngle;
-  float beltRadiusUp = 0.0f;
-  float beltRadiusMiddle = std::sin(beltAngleMiddle);
-  float beltRadiusDown = std::sin(beltAngleDown);
-  float beltZup = 1.0f;
-  float beltZmiddle = std::cos(beltAngleMiddle);
-  float beltZdown = std::cos(beltAngleDown);
+  Real sectorAngleHalf = cgPi / aSectors;
+  Real sectorAngleFull = sectorAngleHalf * 2.0f;
+  Real beltAngle       = cgPi / (aBelts + 1.0f);
+  Real bias = 0.0f;
+  Real beltAngleUp = 0.0f;
+  Real beltAngleMiddle = beltAngle;
+  Real beltAngleDown = 2.0f * beltAngle;
+  Real beltRadiusUp = 0.0f;
+  Real beltRadiusMiddle = std::sin(beltAngleMiddle);
+  Real beltRadiusDown = std::sin(beltAngleDown);
+  Real beltZup = 1.0f;
+  Real beltZmiddle = std::cos(beltAngleMiddle);
+  Real beltZdown = std::cos(beltAngleDown);
+std::cout << "points: " << 2 + aSectors * aBelts << "  triangles: " << 2 * aSectors * aBelts << '\n';
   for(int32_t belt = 0; belt < aBelts; ++belt) {
-    float sectorAngleUpDown = bias + sectorAngleHalf;
-    float sectorAngleMiddle1 = bias + 0.0f;
-    float sectorAngleMiddle2 = bias + sectorAngleFull;
+    Real sectorAngleUpDown = bias + sectorAngleHalf;
+    Real sectorAngleMiddle1 = bias + 0.0f;
+    Real sectorAngleMiddle2 = bias + sectorAngleFull;
     for(int32_t sector = 0; sector < aSectors; ++sector) {
       Vertex corner1(beltRadiusUp * std::sin(sectorAngleUpDown), beltRadiusUp * std::cos(sectorAngleUpDown), beltZup);
       Vertex corner2(beltRadiusMiddle * std::sin(sectorAngleMiddle1), beltRadiusMiddle * std::cos(sectorAngleMiddle1), beltZmiddle);

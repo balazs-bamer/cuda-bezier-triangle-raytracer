@@ -20,21 +20,45 @@ auto visualizeNormals(meshUtils::Mesh<tContainer> const &aMesh) {
   return result;
 }
 
-template<template<typename> typename tContainer>
-void test(char const * const aName, int32_t const aSectors, int32_t const aBelts, float aRadius) {
+void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
   std::string name{"test_"};
   name += aName;
   name += ".stl";
 
-  auto sphere = meshUtils::makeUnitSphere<tContainer>(aSectors, aBelts);
+  auto sphere = meshUtils::makeUnitSphere<std::deque>(aSectors, aBelts);
   meshUtils::Transform inflate = meshUtils::Transform::Identity() * aRadius;
   meshUtils::transform(sphere, inflate);
   meshUtils::writeMesh(sphere, name);
 
   meshUtils::Vertex disp = meshUtils::Vertex::Zero();
-  auto back = meshUtils::readMesh<tContainer>(name, inflate, disp);
+  auto back = meshUtils::readMesh<std::deque>(name, inflate, disp);
 
-  back = meshUtils::divideLargeTriangles(back, 11.1f);
+  back = meshUtils::divideLargeTriangles(back, aDivisor);
+  disp[0] = aRadius;
+  meshUtils::transform(back, disp);
+  auto nameBack = "back_" + name;
+  meshUtils::standardizeVertices(back);
+  auto face2neighbour = meshUtils::standardizeNormals(back);
+  meshUtils::writeMesh(back, nameBack);
+
+  auto nameNorm = "norm_" + name;
+  meshUtils::writeMesh(visualizeNormals(back), nameNorm);
+}
+
+void testVectorMax(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, float const aMaxSide) {
+  std::string name{"test_"};
+  name += aName;
+  name += ".stl";
+
+  auto sphere = meshUtils::makeUnitSphere<std::vector>(aSectors, aBelts);
+  meshUtils::Transform inflate = meshUtils::Transform::Identity() * aRadius;
+  meshUtils::transform(sphere, inflate);
+  meshUtils::writeMesh(sphere, name);
+
+  meshUtils::Vertex disp = meshUtils::Vertex::Zero();
+  auto back = meshUtils::readMesh<std::vector>(name, inflate, disp);
+
+  back = meshUtils::divideLargeTriangles(back, aMaxSide);
   disp[0] = aRadius;
   meshUtils::transform(back, disp);
   auto nameBack = "back_" + name;
@@ -47,6 +71,6 @@ void test(char const * const aName, int32_t const aSectors, int32_t const aBelts
 }
 
 int main() {
-  test<std::deque>("deque", 3, 1, 1.0f);
-  test<std::vector>("vector", 11, 5, 11.1f);
+  testDequeDivisor("dequeDivisor", 3, 1, 3.0f, 3);
+  testVectorMax("vectorMax", 7, 7, 23.0f, 1.0f);
 }
