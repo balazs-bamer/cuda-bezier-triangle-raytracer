@@ -30,15 +30,16 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   meshUtils::transform(sphere, inflate);
   meshUtils::writeMesh(sphere, name);
 
-  meshUtils::Vertex disp = meshUtils::Vertex::Zero();
-  auto back = meshUtils::readMesh<std::deque>(name, inflate, disp);
+  auto back = meshUtils::readMesh<std::deque>(name);
+  meshUtils::transform(back, inflate);
 
   back = meshUtils::divideLargeTriangles(back, aDivisor);
+  meshUtils::Vertex disp = meshUtils::Vertex::Zero();
   disp[0] = aRadius;
   meshUtils::transform(back, disp);
   auto nameBack = "back_" + name;
   meshUtils::standardizeVertices(back);
-  auto face2neighbour = meshUtils::standardizeNormals(back);
+  meshUtils::standardizeNormals(back);
   meshUtils::writeMesh(back, nameBack);
 
   auto nameNorm = "norm_" + name;
@@ -55,22 +56,44 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   meshUtils::transform(sphere, inflate);
   meshUtils::writeMesh(sphere, name);
 
-  meshUtils::Vertex disp = meshUtils::Vertex::Zero();
-  auto back = meshUtils::readMesh<std::vector>(name, inflate, disp);
+  auto back = meshUtils::readMesh<std::vector>(name);
+  meshUtils::transform(back, inflate);
 
   back = meshUtils::divideLargeTriangles(back, aMaxSide);
+  meshUtils::Vertex disp = meshUtils::Vertex::Zero();
   disp[0] = aRadius;
   meshUtils::transform(back, disp);
   auto nameBack = "back_" + name;
   meshUtils::standardizeVertices(back);
-  auto face2neighbour = meshUtils::standardizeNormals(back);
+  meshUtils::standardizeNormals(back);
   meshUtils::writeMesh(back, nameBack);
 
   auto nameNorm = "norm_" + name;
   meshUtils::writeMesh(visualizeNormals(back), nameNorm);
 }
 
-int main() {
+void testCustomStl(char * const aName) {
+  auto mesh = meshUtils::readMesh<std::deque>(aName);
+
+  meshUtils::standardizeVertices(mesh);
+  meshUtils::standardizeNormals(mesh);
+
+  std::string nameBack{"back_"};
+  nameBack += aName;
+  meshUtils::writeMesh(mesh, nameBack);
+
+  std::string nameNorm{"norm_"};
+  nameNorm += aName;
+  meshUtils::writeMesh(visualizeNormals(mesh), nameNorm);
+}
+
+int main(int argc, char **argv) {
   testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
+
+  if(argc > 1) {
+    testCustomStl(argv[1]);
+  }
+  else { // Nothing to do
+  }
 }

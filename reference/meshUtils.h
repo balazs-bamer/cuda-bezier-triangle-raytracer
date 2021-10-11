@@ -55,11 +55,12 @@ void transform(Mesh<tContainer> &aMesh, Vertex const aDisplacement);
 template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Transform const &aTransform);
 
+/// WARNING! Likely to put new vertices on edges!
 template<template<typename> typename tContainer>
 auto divideLargeTriangles(Mesh<tContainer> &aMesh, Real aMaxTriangleSide);
 
 template<template<typename> typename tContainer>
-auto readMesh(std::string const &aFilename, Transform const &aTransform, Vertex const aDisplacement);
+auto readMesh(std::string const &aFilename);
 
 template<template<typename> typename tContainer>
 void writeMesh(Mesh<tContainer> const &aMesh, std::string const& aFilename);
@@ -72,73 +73,71 @@ auto makeUnitSphere(int32_t const aSectors, int32_t const aBelts);
 /////////////////////////////////
 
 template<template<typename> typename tContainer>
-void standardizeVertices(Mesh<tContainer> &aMesh) {        
+auto getSmallestSide(Mesh<tContainer> &aMesh) {
   Real smallestSide = std::numeric_limits<Real>::max();
   for(auto &triangle : aMesh) {
     for(uint32_t i = 0u; i < 3u; ++i) {
       smallestSide = std::min(smallestSide, (triangle[i] - triangle[(i + 1u) % 3u]).norm());
     }
   }
-  auto epsilon = smallestSide * cgStandardizeVerticesEpsilonFactor;       // Vertices closer to each other than this will be forced to one point.
+  return smallestSide;
+}
+    
+using ProjectedIndices = std::multimap<Real, std::pair<uint32_t, uint32_t>>;
+using Iterator = ProjectedIndices::const_iterator;
+using Intervals = std::deque<std::pair<Iterator, Iterator>>;
 
-  std::array<uint32_t, 3> maximums;
-  using Multimap = std::multimap<Real, std::pair<uint32_t, uint32_t>>;
-  std::array<Multimap, 3u> projectedSorted;                               // Holds the projected indices sorted by a coordinate, separate for x, y and z.
-  using Iterator = Multimap::const_iterator;
-  std::array<std::deque<std::pair<Iterator, Iterator>>, 3u> intervals;    // Holds iterator pairs to the previous stuff in between the projections are closer to each other than epsilon.
-
-  for(uint32_t dimension = 0u; dimension < 3u; ++dimension) {
-    auto& currentProjectedSorted = projectedSorted[dimension];
-    auto& currentIntervals = intervals[dimension];
-
-    for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) { // Project for each coordinate.
-      auto &face = aMesh[indexFace];
-      for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
-        auto &vertex = face[indexVertex];
-        currentProjectedSorted.emplace(std::make_pair(vertex[dimension], std::make_pair(indexFace, indexVertex)));
-      }
+template<template<typename> typename tContainer>
+void projectVertices(Mesh<tContainer> const &aMesh, ProjectedIndices &aCurrentProjectedSorted, int32_t const aDimension) {
+  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    auto &face = aMesh[indexFace];
+    for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
+      auto &vertex = face[indexVertex];
+      aCurrentProjectedSorted.emplace(std::make_pair(vertex[aDimension], std::make_pair(indexFace, indexVertex)));
     }
-    bool was = false;
-    Real startValue;
-    uint32_t max = 0u, counter;
-    Iterator startIterator = currentProjectedSorted.cend();;
-    for(Iterator i = currentProjectedSorted.cbegin(); i != currentProjectedSorted.cend(); ++i) {
-      if(was) {
-        auto valueNow = i->first;
-        if(valueNow - startValue >= epsilon) {                            // Determine intervals.
-          currentIntervals.emplace_back(std::make_pair(startIterator, i));
-          startValue = valueNow;
-          startIterator = i;
-          max = std::max(max, counter);
-          counter = 1u;
-        }
-        else {
-          ++counter;
-        }
-      }
-      else {
+  }
+}
+
+Real makeProximityIntervals(ProjectedIndices const &aCurrentProjectedSorted, Intervals &aCurrentIntervals, Real const aEpsilon) {
+  bool was = false;
+  Real startValue;
+  uint32_t max = 0u, counter;
+  Iterator startIterator = aCurrentProjectedSorted.cend();;
+  for(Iterator i = aCurrentProjectedSorted.cbegin(); i != aCurrentProjectedSorted.cend(); ++i) {
+    if(was) {
+      auto valueNow = i->first;
+      if(valueNow - startValue >= aEpsilon) {
+        aCurrentIntervals.emplace_back(std::make_pair(startIterator, i));
+        startValue = valueNow;
         startIterator = i;
-        startValue = i->first;
-        was = true;
+        max = std::max(max, counter);
         counter = 1u;
       }
+      else {
+        ++counter;
+      }
     }
-    Iterator last = currentProjectedSorted.cend();
-    currentIntervals.emplace_back(std::make_pair(startIterator, last));
-    max = std::max(max, counter);
-    maximums[dimension] = max;
+    else {
+      startIterator = i;
+      startValue = i->first;
+      was = true;
+      counter = 1u;
+    }
   }
-  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());      // Best coordinate is where the maximum interval length is minimal.
-  auto whichDim = minIt - maximums.cbegin();
-  auto const& bestIntervals = intervals[whichDim];
-  epsilon *= epsilon;                                                     // Avoid sqrt.
+  Iterator last = aCurrentProjectedSorted.cend();
+  aCurrentIntervals.emplace_back(std::make_pair(startIterator, last));
+  max = std::max(max, counter);
+  return max;
+}
 
-  for(auto const& interval : bestIntervals) {                             // We need to check pairwise closeness only inside each interval.
+template<template<typename> typename tContainer>
+void standardizeInIntervals(Mesh<tContainer> &aMesh, Intervals const &aIntervals, Real const aEpsilonSquared) {
+  for(auto const& interval : aIntervals) {                               // We need to check pairwise proximity only inside each interval.
     for(auto i = interval.first; i != interval.second; ++i) {
       auto &v1 = aMesh[i->second.first][i->second.second];
       for(auto j = interval.first; j != interval.second; ++j) {
         auto &v2 = aMesh[j->second.first][j->second.second];
-        if((v1-v2).squaredNorm() < epsilon && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
+        if((v1-v2).squaredNorm() < aEpsilonSquared && (v1[0] < v2[0] || (v1[0] == v2[0] && v1[1] < v2[1]) || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] < v2[2]))) {
           v1 = v2;                                                        // Use lexicographic sorting to choose an unique one among the points too close to each other.
         }
         else { // nothing to do
@@ -148,31 +147,29 @@ void standardizeVertices(Mesh<tContainer> &aMesh) {
   }
 }
 
-struct PairHash {
-  template<typename t1, typename t2>
-  std::size_t operator()(std::pair<t1, t2> const &aPair) const {
-    return std::hash<t1>{}(aPair.first) ^ (std::hash<t2>{}(aPair.second) << 1u);
-  }
-};
+template<template<typename> typename tContainer>
+void standardizeVertices(Mesh<tContainer> &aMesh) {
+  auto epsilon = getSmallestSide(aMesh) * cgStandardizeVerticesEpsilonFactor; // Vertices closer to each other than this will be forced to one point.
 
-struct VertexHash {
-  std::size_t operator()(Vertex const &aVertex) const {
-    return std::hash<Real>{}(aVertex[0]) ^ (std::hash<Real>{}(aVertex[1]) << 1u) ^ (std::hash<Real>{}(aVertex[2]) << 2u);
-  }
-};
+  std::array<uint32_t, 3> maximums;
+  std::array<ProjectedIndices, 3u> projectedSorted;                           // Holds the projected indices sorted by a coordinate, separate for x, y and z.
+  std::array<Intervals, 3u> proximityIntervals;                               // Holds iterator pairs to the previous stuff in between the projections are closer to each other than epsilon.
 
-auto getNormal(Triangle const &aFace) {
-  return (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
+  for(uint32_t dimension = 0u; dimension < 3u; ++dimension) {
+    auto& currentProjectedSorted = projectedSorted[dimension];
+    auto& currentIntervals = proximityIntervals[dimension];
+
+    projectVertices(aMesh, currentProjectedSorted, dimension);
+    maximums[dimension] = makeProximityIntervals(currentProjectedSorted, currentIntervals, epsilon);
+  }
+  auto minIt = std::min_element(maximums.cbegin(), maximums.cend());          // Best coordinate is where the maximum interval length is minimal.
+  auto whichDim = minIt - maximums.cbegin();
+  auto const& bestIntervals = proximityIntervals[whichDim];
+
+  standardizeInIntervals(aMesh, bestIntervals, epsilon * epsilon);
 }
 
-void normalize(Triangle &aFace, Vertex const &aDesiredVector) {
-  auto normal = getNormal(aFace);
-  if(aDesiredVector.dot(normal) < 0.0f) {
-    std::swap(aFace[0u], aFace[1u]);
-  }
-  else { // Nothing to do
-  }
-}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 uint32_t getIndependentFrom(Triangle const &aFaceTarget, Triangle const &aFaceOther) {
   for(uint32_t i = 0u; i < 3u; ++i) {
@@ -190,6 +187,134 @@ auto getAltitude(Vertex const &aCommon1, Vertex const &aCommon2, Vertex const &a
   auto independentVector = aIndependent - aCommon1;
   auto footFactor = commonVector.dot(independentVector) / commonVector.squaredNorm();
   return independentVector - commonVector * footFactor; 
+}
+
+struct PairHash {
+  template<typename t1, typename t2>
+  std::size_t operator()(std::pair<t1, t2> const &aPair) const {
+    return std::hash<t1>{}(aPair.first) ^ (std::hash<t2>{}(aPair.second) << 1u);
+  }
+};
+
+struct VertexHash {
+  std::size_t operator()(Vertex const &aVertex) const {
+    return std::hash<Real>{}(aVertex[0]) ^ (std::hash<Real>{}(aVertex[1]) << 1u) ^ (std::hash<Real>{}(aVertex[2]) << 2u);
+  }
+};
+
+using Edge2face = std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash>;
+using Face2vertex = std::vector<std::array<uint32_t, 3u>>;
+
+template<template<typename> typename tContainer>
+auto createEdge2faceFace2vertex(Mesh<tContainer> const &aMesh, Edge2face &aEdge2face, Face2vertex &aFace2vertex) {
+  std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
+  Real smallestX = std::numeric_limits<Real>::max();
+  uint32_t smallestXverticeIndex;
+  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    auto const &face = aMesh[indexFace];
+    std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
+    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
+      auto const vertex = face[indexInFace];
+      uint32_t indexInVertices;
+      auto found = was.find(vertex);
+      if(found == was.end()) {
+        indexInVertices = was.size();
+        faceVertexIndices[indexInFace] = indexInVertices;
+        was.emplace(std::make_pair(vertex, indexInVertices));
+      }
+      else {
+        indexInVertices = found->second;
+        faceVertexIndices[indexInFace] = indexInVertices;
+      }
+      if(vertex[0] < smallestX) {
+        smallestX = vertex[0];
+        smallestXverticeIndex = indexInVertices;
+      }
+      else { // Nothing to do
+      }
+    }
+    aFace2vertex.push_back(faceVertexIndices);
+    for(uint32_t i = 0u; i < 3u; ++i) {
+      auto low = faceVertexIndices[i];
+      auto high = faceVertexIndices[(i + 1u) % 3u];
+      if(low > high) {
+        std::swap(low, high);
+      }
+      else { // Nothing to do
+      }
+      aEdge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
+    }
+  }
+  return std::make_pair(smallestX, smallestXverticeIndex);
+}
+
+template<template<typename> typename tContainer>
+using Face2neighbour = tContainer<std::array<uint32_t, 3u>>;
+
+template<template<typename> typename tContainer>
+auto createFace2neighbourFacesAtSmallestX(Mesh<tContainer> const &aMesh, Edge2face const &aEdge2face, Face2vertex const &aFace2vertex, uint32_t const aSmallestXverticeIndex,
+                                          Face2neighbour<tContainer> &aFace2neighbour, std::unordered_set<uint32_t> &aFacesAtSmallestX) {
+  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    auto const &face = aFace2vertex[indexFace];
+    std::array<uint32_t, 3u> neighbours;
+    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
+      if(face[indexInFace] == aSmallestXverticeIndex) {
+        aFacesAtSmallestX.insert(indexFace);
+      }
+      else { // Nothing to do
+      }
+      auto edge = std::make_pair(face[indexInFace], face[(indexInFace + 1u) % 3u]);
+      if(edge.first > edge.second) {
+        std::swap(edge.first, edge.second);
+      }
+      else { // Nothing to do
+      }
+      auto[begin, end] = aEdge2face.equal_range(edge);
+      if(begin->second == indexFace) {                                // We need the other, neighbouring face.
+        ++begin;
+        if(begin == end) {
+          throw "Vertex on edge detected.";
+        }
+        else { // Nothing to do
+        }
+      }
+      else { // Nothing to do
+      }
+      neighbours[indexInFace] = begin->second;
+    }
+    aFace2neighbour.push_back(neighbours);
+  }
+}
+
+auto getNormal(Triangle const &aFace) {
+  return (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
+}
+
+template<template<typename> typename tContainer>
+auto getInitialFaceIndex(Mesh<tContainer> const &aMesh, std::unordered_set<uint32_t> const &aFacesAtSmallestX, Vertex const &aDesiredVector) {
+  Real maxAbsoluteDotProduct = -std::numeric_limits<Real>::max();
+  uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
+  for(auto const indexFace : aFacesAtSmallestX) {
+    auto const &face = aMesh[indexFace];
+    auto normal = getNormal(face).normalized();
+    auto absoluteDotProduct = std::abs(aDesiredVector.dot(normal));
+    if(absoluteDotProduct > maxAbsoluteDotProduct) {
+      maxAbsoluteDotProduct = absoluteDotProduct;
+      initialFaceIndex = indexFace;
+    }
+    else { // Nothing to do
+    }
+  }
+  return initialFaceIndex;
+}
+
+void normalize(Triangle &aFace, Vertex const &aDesiredVector) {
+  auto normal = getNormal(aFace);
+  if(aDesiredVector.dot(normal) < 0.0f) {
+    std::swap(aFace[0u], aFace[1u]);
+  }
+  else { // Nothing to do
+  }
 }
 
 void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) {  // Calculates everything twice for each triangle, but won't cache now.
@@ -228,89 +353,22 @@ void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) {  // Calcula
 
 template<template<typename> typename tContainer>
 tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh) {
-  std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash> edge2face; // Edge is identified by its two ordered vertex indices.
-  std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
-  std::vector<std::array<uint32_t, 3u>> face2vertex;
+  Edge2face edge2face;                                                // Edge is identified by its two ordered vertex indices.
+  Face2vertex face2vertex;
   face2vertex.reserve(aMesh.size());
-  Real smallestX = std::numeric_limits<Real>::max();
-  uint32_t smallestXverticeIndex;
-  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
-    auto const &face = aMesh[indexFace];
-    std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
-    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
-      auto const vertex = face[indexInFace];
-      uint32_t indexInVertices;
-      auto found = was.find(vertex);
-      if(found == was.end()) {
-        indexInVertices = was.size();
-        faceVertexIndices[indexInFace] = indexInVertices;
-        was.emplace(std::make_pair(vertex, indexInVertices));
-      }
-      else {
-        indexInVertices = found->second;
-        faceVertexIndices[indexInFace] = indexInVertices;
-      }
-      if(vertex[0] < smallestX) {
-        smallestX = vertex[0];
-        smallestXverticeIndex = indexInVertices;
-      }
-      else { // Nothing to do
-      }
-    }
-    face2vertex.push_back(faceVertexIndices);
-    for(uint32_t i = 0u; i < 3u; ++i) {                               // Filling maps.
-      auto low = faceVertexIndices[i];
-      auto high = faceVertexIndices[(i + 1u) % 3u];
-      if(low > high) {
-        std::swap(low, high);
-      }
-      else { // Nothing to do
-      }
-      edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
-    }
-  }
-  tContainer<std::array<uint32_t, 3u>> face2neighbour;                // Obtaining neighbours...
+
+  auto [smallestX, smallestXverticeIndex] = createEdge2faceFace2vertex(aMesh, edge2face, face2vertex);
+
+  Face2neighbour<tContainer> face2neighbour;                          // Obtaining neighbours...
   std::unordered_set<uint32_t> facesAtSmallestX;                      // ...and the faces at the smallest x vertex
-  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
-    auto const &face = face2vertex[indexFace];
-    std::array<uint32_t, 3u> neighbours;
-    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
-      if(face[indexInFace] == smallestXverticeIndex) {
-        facesAtSmallestX.insert(indexFace);
-      }
-      else { // Nothing to do
-      }
-      auto edge = std::make_pair(face[indexInFace], face[(indexInFace + 1u) % 3u]);
-      if(edge.first > edge.second) {
-        std::swap(edge.first, edge.second);
-      }
-      else { // Nothing to do
-      }
-      auto[begin, end] = edge2face.equal_range(edge);
-      if(begin->second == indexFace) {                                // We need the other, neighbouring face.
-        ++begin;                          /// TODO past the end access
-      }
-      else { // Nothing to do
-      }
-      neighbours[indexInFace] = begin->second;
-    }
-    face2neighbour.push_back(neighbours);
-  }
+  
+  createFace2neighbourFacesAtSmallestX(aMesh, edge2face, face2vertex, smallestXverticeIndex,
+                                       face2neighbour, facesAtSmallestX);
+
   Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
   desiredVector << -1.0f, 0.0f, 0.0f;
-  Real maxAbsoluteDotProduct = -std::numeric_limits<Real>::max();
-  uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
-  for(auto const indexFace : facesAtSmallestX) {
-    auto const &face = aMesh[indexFace];
-    auto normal = getNormal(face).normalized();
-    auto absoluteDotProduct = std::abs(desiredVector.dot(normal));
-    if(absoluteDotProduct > maxAbsoluteDotProduct) {
-      maxAbsoluteDotProduct = absoluteDotProduct;
-      initialFaceIndex = indexFace;
-    }
-    else { // Nothing to do
-    }
-  }
+  uint32_t initialFaceIndex = getInitialFaceIndex(aMesh, facesAtSmallestX, desiredVector);
+
   struct KnownUnknownFacePair {
     uint32_t mKnownIndex;
     uint32_t mUnknownIndex;
@@ -344,6 +402,8 @@ tContainer<std::array<uint32_t, 3u>> standardizeNormals(Mesh<tContainer> &aMesh)
   return face2neighbour;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Transform const &aTransform, Vertex const aDisplacement) {
   for(auto &triangle : aMesh) {
@@ -353,15 +413,21 @@ void transform(Mesh<tContainer> &aMesh, Transform const &aTransform, Vertex cons
   }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Vertex const aDisplacement) {
   transform(aMesh, Transform::Identity(), aDisplacement);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<template<typename> typename tContainer>
 void transform(Mesh<tContainer> &aMesh, Transform const &aTransform) {
   transform(aMesh, aTransform, Vertex::Zero());
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<template<typename> typename tContainer>
 void divideTriangle(Mesh<tContainer> &result, Triangle const &aTriangle, int32_t const aDivisor) {
@@ -402,6 +468,8 @@ auto divideLargeTriangles(Mesh<tContainer> &aMesh, Real const aMaxTriangleSide) 
   return result;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<template<typename> typename tContainer>
 auto divideLargeTriangles(Mesh<tContainer> &aMesh, int32_t const aDivisor) {
   Mesh<tContainer> result;
@@ -411,8 +479,10 @@ auto divideLargeTriangles(Mesh<tContainer> &aMesh, int32_t const aDivisor) {
   return result;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<template<typename> typename tContainer>
-auto readMesh(std::string const &aFilename, Transform const &aTransform, Vertex const aDisplacement) {
+auto readMesh(std::string const &aFilename) {
   Mesh<tContainer> work;
   stl_reader::StlMesh<Real, int32_t> mesh(aFilename);
   for(int32_t indexTriangle = 0; indexTriangle < mesh.num_tris(); ++indexTriangle) {
@@ -423,12 +493,14 @@ auto readMesh(std::string const &aFilename, Transform const &aTransform, Vertex 
       for(int32_t i = 0; i < 3; ++i) {
         in(i) = coords[i];
       }
-      triangle[indexCorner] = aTransform * in + aDisplacement;
+      triangle[indexCorner] = in;
     }
     work.push_back(triangle);
   }
   return work;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<template<typename> typename tContainer>
 void writeMesh(Mesh<tContainer> const &aMesh, std::string const& aFilename) {
@@ -443,6 +515,8 @@ void writeMesh(Mesh<tContainer> const &aMesh, std::string const& aFilename) {
   }
   out << "endsolid Exported from Blender-2.82 (sub 7)\n";
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<template<typename> typename tContainer>
 auto makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
