@@ -6,3 +6,4 @@ INCLUDE_DIRECTORIES ( "/usr/include/eigen3"
                       "../repos/stl_reader" )
 
 add_executable(test test.cpp)
+add_executable(rayTracer main.cpp rayTracer.cpp bezier.cpp)

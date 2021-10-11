@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="IntersectionReference"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="clang"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rayTracer">
+				<Option output="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/rayTracer" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/include/eigen3"/>
+					<Add directory="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/../repos/stl_reader"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 rayTracer"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rayTracer/fast">
+				<Option output="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/rayTracer" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/include/eigen3"/>
+					<Add directory="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/../repos/stl_reader"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 rayTracer/fast"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test">
+				<Option output="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/test" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/include/eigen3"/>
+					<Add directory="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/../repos/stl_reader"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 test"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test/fast">
+				<Option output="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/test" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/include/eigen3"/>
+					<Add directory="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/../repos/stl_reader"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 test/fast"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/bezier.cpp">
+			<Option target="rayTracer"/>
+		</Unit>
+		<Unit filename="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/rayTracer.cpp">
+			<Option target="rayTracer"/>
+		</Unit>
+		<Unit filename="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/test.cpp">
+			<Option target="test"/>
+		</Unit>
+		<Unit filename="/home/balazs/munka/cuda-bezier-triangle-raytracer/reference/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

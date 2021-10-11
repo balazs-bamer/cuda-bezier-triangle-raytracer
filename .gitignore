@@ -4,3 +4,13 @@
 *.ptx
 *.cubin
 *.fatbin
+**/.idea/
+**/CMakeCache.txt
+**/CMakeFiles/
+**/Makefile
+**/Testing/
+**/cmake-build-debug/
+**/cmake_install.cmake
+reference/rayTracer
+reference/stl/
+reference/test
