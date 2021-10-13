@@ -1,21 +1,20 @@
-#include "meshUtils.h"
+#include "mesh.h"
 
 #include<deque>
 #include<vector>
 
 using Real = float;
 
-template<template<typename...> typename tContainer>
-auto visualizeNormals(Mesh<Real, tContainer> const &aMesh) {
-  Mesh<Real, std::deque> result;
-  Mesh<Real, std::deque> sphere;
+auto visualizeNormals(Mesh<Real> const &aMesh) {
+  Mesh<Real> result;
+  Mesh<Real> sphere;
   sphere.makeUnitSphere(3, 1);
   for(auto &face : aMesh) {
-    auto normal = Mesh<Real, std::deque>::getNormal(face).normalized();
+    auto normal = Mesh<Real>::getNormal(face).normalized();
     auto base = (face[0] + face[1] + face[2]) / 3.0f;
     auto average = ((face[1] - face[0]).norm() + (face[2] - face[1]).norm() + (face[0] - face[2]).norm()) / 3.0f;
     auto copy = sphere;
-    auto shrink = Mesh<Real, std::deque>::Transform::Identity() * (average / 15.0f);
+    auto shrink = Mesh<Real>::Transform::Identity() * (average / 15.0f);
     copy.transform(shrink, base + normal * (average / 7.0f));
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
   }
@@ -27,18 +26,18 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   name += aName;
   name += ".stl";
 
-  Mesh<Real, std::deque> sphere;
+  Mesh<Real> sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Mesh<Real, std::deque>::Transform inflate = Mesh<Real, std::deque>::Transform::Identity() * aRadius;
+  Mesh<Real>::Transform inflate = Mesh<Real>::Transform::Identity() * aRadius;
   sphere *= inflate;
   sphere.writeMesh(name);
 
-  Mesh<Real, std::deque> back;
+  Mesh<Real> back;
   back.readMesh(name);
   back *= inflate;
 
   back.splitTriangles(aDivisor);
-  Mesh<Real, std::deque>::Vector disp = Mesh<Real, std::deque>::Vector::Zero();
+  Mesh<Real>::Vector disp = Mesh<Real>::Vector::Zero();
   disp[0] = aRadius;
   back += disp;
   auto nameBack = "back_" + name;
@@ -47,7 +46,7 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   back.writeMesh(nameBack);
 
   auto nameNorm = "norm_" + name;
-  visualizeNormals<std::deque>(back).writeMesh(nameNorm);
+  visualizeNormals(back).writeMesh(nameNorm);
 }
 
 void testVectorMax(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, float const aMaxSide) {
@@ -55,18 +54,18 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   name += aName;
   name += ".stl";
 
-  Mesh<Real, std::vector> sphere;
+  Mesh<Real> sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Mesh<Real, std::vector>::Transform inflate = Mesh<Real, std::vector>::Transform::Identity() * aRadius;
+  Mesh<Real>::Transform inflate = Mesh<Real>::Transform::Identity() * aRadius;
   sphere *= inflate;
   sphere.writeMesh(name);
 
-  Mesh<Real, std::vector> back;
+  Mesh<Real> back;
   back.readMesh(name);
   back *= inflate;
 
   back.splitTriangles(aMaxSide);
-  Mesh<Real, std::vector>::Vector disp = Mesh<Real, std::deque>::Vector::Zero();
+  Mesh<Real>::Vector disp = Mesh<Real>::Vector::Zero();
   disp[0] = aRadius;
   back += disp;
   auto nameBack = "back_" + name;
@@ -75,11 +74,11 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   back.writeMesh(nameBack);
 
   auto nameNorm = "norm_" + name;
-  visualizeNormals<std::vector>(back).writeMesh(nameNorm);
+  visualizeNormals(back).writeMesh(nameNorm);
 }
 
 void testCustomStl(char * const aName) {
-  Mesh<Real, std::vector> mesh;
+  Mesh<Real> mesh;
   mesh.readMesh(aName);
 
   mesh.standardizeVertices();
@@ -91,7 +90,7 @@ void testCustomStl(char * const aName) {
 
   std::string nameNorm{"norm_"};
   nameNorm += aName;
-  visualizeNormals<std::vector>(mesh).writeMesh(nameNorm);
+  visualizeNormals(mesh).writeMesh(nameNorm);
 }
 
 int main(int argc, char **argv) {
