@@ -31,9 +31,13 @@ public:
   using Transform       = Eigen::Matrix<tReal, 3, 3>;
   using Triangle        = std::array<Vertex, 3u>;
   using TheMesh         = std::vector<Triangle>;
-  using Neighbours      = std::array<uint32_t, 3u>;
   using Face2neighbours = std::vector<Neighbours>;
   using value_type      = Triangle;
+  
+  struct Neighbours final {
+    std::array<uint32_t, 3u> mFellowsTriangles;       // Triangle indices.
+    std::array<uint8_t, 3u>  mFellowCommonSideStarts; // Vertice indice in each triangle where the common side starts, such that the side in the neighbouring triangle is (i, i+1)
+  };
 
 private:
   TheMesh         mMesh;
@@ -320,7 +324,8 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       }
       else { // Nothing to do
       }
-      auto edge = std::make_pair(face[indexInFace], face[(indexInFace + 1u) % 3u]);
+      auto otherVertexIndex = face[(indexInFace + 1u) % 3u];
+      auto edge = std::make_pair(face[indexInFace], otherVertexIndex);
       if(edge.first > edge.second) {
         std::swap(edge.first, edge.second);
       }
@@ -337,7 +342,11 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       }
       else { // Nothing to do
       }
-      neighbours[indexInFace] = begin->second;
+      auto otherIndexFace = begin->second;
+      neighbours.mFellowTriangles[indexInFace] = otherIndexFace;      // Neighbour of edge (index, index + 1)
+      auto const &otherFace = aFace2vertex[otherIndexFace];
+      auto const otherIndexInFace = std::find(otherFace.cbegin(), otherFace.cend(), otherVertexIndex) - otherFace.cbegin(); 
+      neighbours.mFellowCommonSideStarts[indexInFace] = otherIndexInFace;
     }
     aFace2neighbour.push_back(neighbours);
   }
@@ -434,7 +443,7 @@ void Mesh<tReal>::standardizeNormals() {
   std::vector<bool> remaining;
   remaining.reserve(mFace2neighbours.size());
   std::fill_n(std::back_inserter(remaining), mFace2neighbours.size(), true);
-  for(auto const indexFace : mFace2neighbours[initialFaceIndex]) {
+  for(auto const indexFace : mFace2neighbours[initialFaceIndex].mFellowTriangles) {
     queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, indexFace});
   }
   remaining[initialFaceIndex] = false;
@@ -447,7 +456,7 @@ void Mesh<tReal>::standardizeNormals() {
     else { // Nothing to do
     }
     remaining[actualPair.mUnknownIndex] = false;
-    for(auto const indexFace : mFace2neighbours[actualPair.mUnknownIndex]) {
+    for(auto const indexFace : mFace2neighbours[actualPair.mUnknownIndex].mFellowTriangles) {
       if(remaining[indexFace] && actualPair.mUnknownIndex != indexFace) {
         queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, indexFace});
       }
