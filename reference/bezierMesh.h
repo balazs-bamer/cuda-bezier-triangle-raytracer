@@ -10,8 +10,8 @@ private:
   std::vector<BezierTriangle<tReal>> mMesh;
   
 public:
-  using Triangle   = Mesh<tReal>::Triangle;
-  using Neighbours = Mesh<tReal>::Neighbours;
+  using Triangle   = typename Mesh<tReal>::Triangle;
+  using Neighbours = typename Mesh<tReal>::Neighbours;
 
   BezierMesh(Mesh<tReal> const &aMesh) {
     mMesh.clear();
@@ -41,11 +41,11 @@ void BezierMesh<tReal>::append(Triangle const& aTriangle, std::array<std::refere
   auto currentBase = mMesh.size();
   for(uint32_t i = 0u; i < 3u; ++i) {
     mMesh.emplace_back(BezierTriangle<tReal>(aTriangle[i], aTriangle[(i + 1u) % 3u], center,
-  	               3u * aNeigh.mFellowTriangles[i] + aNeigh.mFellowCommonSideStarts[i], currentBase + (i + 1u) % 3u, currentBase + (i + 2u) % 3u); 
+  	               3u * aNeigh.mFellowTriangles[i] + aNeigh.mFellowCommonSideStarts[i], currentBase + (i + 1u) % 3u, currentBase + (i + 2u) % 3u)); 
   }
-  std::array<std::reference_wrapper<BezierTriangle>, 3u> triangles = { mMesh[currentBase], 
-                                                                       mMesh[currentBase + 1u], 
-        							       mMesh[currentBase + 2u] };
+  std::array<std::reference_wrapper<BezierTriangle<tReal>>, 3u> triangles = { mMesh[currentBase], 
+                                                                              mMesh[currentBase + 1u], 
+                                                                              mMesh[currentBase + 2u] };
 }
 
 #endif

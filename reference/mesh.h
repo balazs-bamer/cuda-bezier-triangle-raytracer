@@ -31,13 +31,14 @@ public:
   using Transform       = Eigen::Matrix<tReal, 3, 3>;
   using Triangle        = std::array<Vertex, 3u>;
   using TheMesh         = std::vector<Triangle>;
-  using Face2neighbours = std::vector<Neighbours>;
   using value_type      = Triangle;
   
   struct Neighbours final {
-    std::array<uint32_t, 3u> mFellowsTriangles;       // Triangle indices.
+    std::array<uint32_t, 3u> mFellowTriangles;       // Triangle indices.
     std::array<uint8_t, 3u>  mFellowCommonSideStarts; // Vertice indice in each triangle where the common side starts, such that the side in the neighbouring triangle is (i, i+1)
   };
+  
+  using Face2neighbours = std::vector<Neighbours>;
 
 private:
   TheMesh         mMesh;
