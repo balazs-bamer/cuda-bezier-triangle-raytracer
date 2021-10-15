@@ -256,7 +256,7 @@ uint32_t Mesh<tReal>::getIndependentFrom(Triangle const &aFaceTarget, Triangle c
     else { // Nothing to do
     }
   }
-  return 3; // Won't get here, but avoid compiler complaint.
+  return 3u;                                                          // Won't get here, but avoid compiler complaint.
 }
 
 template<typename tReal>
@@ -465,6 +465,7 @@ void Mesh<tReal>::standardizeNormals() {
       }
     }
   }
+  calculateNormalAverages4vertices();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

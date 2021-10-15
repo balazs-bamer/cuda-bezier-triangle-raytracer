@@ -18,7 +18,7 @@ int measure(char const *t, func &f) {
   s << 0.0f, 0.0f, 0.0f;
   int n = 0;
   auto start = std::chrono::high_resolution_clock::now();
-  for(int i = 0; i < 10000; ++i) {
+  for(int i = 0; i < 1000000; ++i) {
     m << ++n, ++n, ++n, ++n, ++n, ++n, ++n, ++n, ++n;
     v << ++n, ++n, ++n;
     n %= 71;

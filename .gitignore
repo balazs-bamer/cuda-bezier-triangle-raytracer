@@ -14,3 +14,5 @@
 reference/rayTracer
 reference/stl/
 reference/test
+**/*~
+**/*swp
