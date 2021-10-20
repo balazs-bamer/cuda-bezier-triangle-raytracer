@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(IntersectionReference)
+project(BezierTrangleReference)
 
 add_compile_options(-ggdb -D_GLIBCXX_DEBUG -std=c++17)
 INCLUDE_DIRECTORIES ( "/usr/include/eigen3"

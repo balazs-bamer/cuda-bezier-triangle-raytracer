@@ -10,7 +10,9 @@ private:
   std::vector<BezierTriangle<tReal>> mMesh;
   
 public:
+  using Vector     = typename Mesh<tReal>::Vector;
   using Triangle   = typename Mesh<tReal>::Triangle;
+  using Plane      = typename Mesh<tReal>::Plane;
   using Neighbours = typename Mesh<tReal>::Neighbours;
 
   BezierMesh(Mesh<tReal> const &aMesh);
@@ -24,35 +26,46 @@ private:
 /////////////////////////////////
 
 template<typename tReal>
-void BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
+BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
   mMesh.clear();
   mMesh.reserve(aMesh.size() * 3u);
-  auto const &mesh = aMesh.getMesh();
-  auto const &neighbours = aMesh.getNeighbours();
-  for(uint32_t i = 0u; i < aMesh.size(); ++i) {
-    auto const &neigh = neighbours[i];
-    std::array<std::reference_wrapper<Triangle const>, 3u> fellows = { mesh[neigh.mFellowTriangles[0u]],
-                                                                       mesh[neigh.mFellowTriangles[1u]], 
-                                                                       mesh[neigh.mFellowTriangles[2u]] };
-    append(mesh[i], fellows, neigh);
+  auto const &mesh                  = aMesh.getMesh();
+  auto const &neighbours            = aMesh.getNeighbours();
+  auto const &vertex2averageNormals = aMesh.getVertex2averageNormals();
+  std::vector<std::array<Vector, 3u>> normalAveragesAtOriginalVertices = getNormalAveragesAtOriginalVertices(aMesh);
+  for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
+    auto const &neigh = neighbours[indexFace];
+    auto const &originalTriangle = aMesh[indexFace];
+    auto const originalCentral = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
+    auto normal = Mesh<tReal>::getNormal(originalTriangle);
+    for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) { // Appending a regular triangle means doing Clough-Tocher split on it and appending each one.
+      auto const &originalCommonVertex0 = originalTriangle[indexVertex];
+      auto const &originalCommonVertex1 = originalTriangle[(indexVertex + 1u) % 3u)];
+      auto const &averageNormal0 = vertex2averageNormals[originalCommonVertex0];
+      auto const &averageNormal1 = vertex2averageNormals[originalCommonVertex1];
+                                                                                 // Neighbour of edge (index, index + 1)
+      Plane planeBetweenOriginalNeighbours(normal + Mesh<tReal>::getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]), originalCommonVertex0, originalCommonVertex1);
+      auto currentBase = indexFace * 3u;
+      std::array<uint32_t, 3u> newNeighbourIndices = { 3u * neigh.mFellowTriangles[i] + neigh.mFellowCommonSideStarts[i], currentBase + (indexVertex + 1u) % 3u, currentBase + (indexVertex + 2u) % 3u) };
+      mMesh.emplace_back(BezierTriangle<tReal>(originalCommonVertex0, originalCommonVertex1, originalCentral,
+                                               averageNormal0, averageNormal1, planeBetweenOriginalNeighbours),
+                                               newNeighbourIndices);
+    }
   }
-  std::vector<std::array<Vector, 3u>> normalAveragesAtOriginalVertices = getNormalAveragesAtOriginalVertices();
+  Vertex originalCentral;
   for(uint32_t i = 0u; i < mMesh.size(); ++i) {
-                                    // TODO find out how to pass it. Only 2 from the internal array?
-    mMesh[i].setMissingFields(mMesh, normalAveragesAtOriginalVertices[i / 3u], aFellows[i % 3u]);
+    auto subTriangleIndex = i % 3u;
+    auto indexBase = i - subTriangleIndex;
+    auto const &triangleNext = mMesh[indexBase + (subTriangleIndex + 1u) % 3u];
+    auto const &trianglePrevious = mMesh[indexBase + (subTriangleIndex + 2u) % 3u];
+    if(subTriangleIndex % 3u == 0u) {
+      auto const &originalTriangle = aMesh[indexBase / 3u];
+      originalCentral = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
+    }
+    else { // Nothing to do
+    }
+    mMesh[i].setMissingFields(originalCentral, triangleNext, trianglePrevious);
   }
-}
-
-template<typename tReal>
-void BezierMesh<tReal>::append(Triangle const& aTriangle, std::array<std::reference_wrapper<Triangle const>, 3u> const &aFellows, Neighbours const aNeigh) {
-  auto currentBase = mMesh.size();
-  for(uint32_t i = 0u; i < 3u; ++i) {
-    mMesh.emplace_back(BezierTriangle<tReal>(aTriangle[i], aTriangle[(i + 1u) % 3u],
-  	               3u * aNeigh.mFellowTriangles[i] + aNeigh.mFellowCommonSideStarts[i], currentBase + (i + 1u) % 3u, currentBase + (i + 2u) % 3u)); 
-  }
-  std::array<std::reference_wrapper<BezierTriangle<tReal>>, 3u> triangles = { mMesh[currentBase],        // TODO consider if needed
-                                                                              mMesh[currentBase + 1u], 
-                                                                              mMesh[currentBase + 2u] };
 }
 
 #endif

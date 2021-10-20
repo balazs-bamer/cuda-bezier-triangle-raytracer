@@ -10,11 +10,10 @@ private:
   using Vertex     = typename Mesh<tReal>::Vertex;
   using Matrix     = typename Mesh<tReal>::Matrix;
   using Triangle   = typename Mesh<tReal>::Triangle;
+  using Plane      = typename Mesh<tReal>::Plane;
 
-  Vector                   mNormal;                  // normalized
-  tReal                    mNormalEquationConstant;  // mNormal[0] * x + mNormal[1] * y + mNormal[2] * z = mNormalEquationContant
-  std::array<Vector, 3u>   mNeighbourDividerNormals; // These are about the plane going through each edge and having the normal the average of the adjacent side normals.
-  std::array<tReal, 3u>    mNeighbourDividerNormalEquationConstant;
+  Plane                    mOriginalPlane;
+  std::array<Plane, 3u>    mNeighbourDividerPlanes;  // These are about the plane going through each edge and having the normal the average of the adjacent side normals.
   std::array<uint32_t, 3u> mNeighbours;              // With new indices after Clough-Tocher split.
   // 0-1 identical to original triangle vertices
   // 2 around above the middle of the original triangle center TODO
@@ -32,21 +31,20 @@ private:
 
 public:
   // Vertices in argument are in order such that the normal points to the desired direction.
-  // Neighbour i is Neighbour of edge (i, i + 1)
-  BezierTriangle(Vertex const &aVertex0, Vertex const &aVertex1, Vertex const &aVertex2,
-		 uint32_t const aNeigh0, uint32_t const aNeigh1, uint32_t const aNeigh2);
+  // Neighbour i is neighbour of edge (i, i + 1)
+  BezierTriangle(Vertex const &aOriginalCommonVertex0, Vertex const &aOriginalCommonVertex1, Vertex const &aOriginalCentral,
+                 Vector const &aAverageNormal0, Vector const &aAverageNormal1, Plane const &aPlaneBetweenOriginalNeighbours,
+                 std::array<uint32_t, 3u> const &aNeighbourIndices);
 
-  void setMissingFields(std::vector<BezierTriangle<tReal>> const &aEverything, Triangle const &aOriginalFellow);
-
-private:
-  void setNeighbourDividerPlanes(std::vector<BezierTriangle<tReal>> const &aEverything);
+  void setMissingFields(Vertex const &aOriginalCentral, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious,
+                        uint32_t const aNeigh0, uint32_t const aNeigh1, uint32_t const aNeigh2);
 };
 
 /////////////////////////////////
 //       IMPLEMENTATION        //
 /////////////////////////////////
 
-template<typename tReal>
+/*template<typename tReal>
 BezierTriangle<tReal>::BezierTriangle(Vertex const &aVertex0, Vertex const &aVertex1,
 		                             uint32_t const aNeigh0, uint32_t const aNeigh1, uint32_t const aNeigh2) {
   mControlPoints[0u] = aVertex0;   
@@ -55,26 +53,18 @@ BezierTriangle<tReal>::BezierTriangle(Vertex const &aVertex0, Vertex const &aVer
   mNeighbours[0u] = aNeigh0;
   mNeighbours[1u] = aNeigh1;
   mNeighbours[2u] = aNeigh2;
-  /* TODO 2 not known yet mNormal = Mesh<tReal>::getNormal({aVertex0, aVertex1, aVertex2}).normalized();
-  mNormalEquationConstant = mNormal.dot(aVertex0); */
-  /* TODO 2 not known yet Matrix vertices;
+  mNormal = Mesh<tReal>::getNormal({aVertex0, aVertex1, aVertex2}).normalized();
+  mNormalEquationConstant = mNormal.dot(aVertex0);
+  Matrix vertices;
   vertices.column(0) = aVertex0; 
   vertices.column(1) = aVertex1; 
   vertices.column(2) = aVertex2; 
-  mBarycentricInverse = vertices.inverse(); */
-}
-
-template<typename tReal>                                                                // TODO find out what else we need, like normalAveragesAtOriginalVertices
-void BezierTriangle<tReal>::setMissingFields(std::vector<BezierTriangle<tReal>> const &aEverything, Triangle const &aOriginalFellow) {
-  setNeighbourDividerPlanes(aEverything);
+  mBarycentricInverse = vertices.inverse();
 }
 
 template<typename tReal>
-void BezierTriangle<tReal>::setNeighbourDividerPlanes(std::vector<BezierTriangle<tReal>> const &aEverything) {
-  for(uint32_t i = 0u; i < 3u; ++i) {
-    mNeighbourDividerNormals[i] = (mNormal + aEverything[mNeighbours[i]].mNormal).normalized();      // We compute these twice but don't care.
-    mNeighbourDividerNormalEquationConstant[i] = mNeighbourDividerNormals[i].dot(mControlPoints[i]);
-  }
-}
+void BezierTriangle<tReal>::setMissingFields(std::vector<BezierTriangle<tReal>> const &aEverything, Triangle const &aOriginalFellow) {
+  setNeighbourDividerPlanes(aEverything);
+}*/
 
 #endif

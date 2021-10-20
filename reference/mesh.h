@@ -1,5 +1,5 @@
-#ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_MESHUTILS
-#define CUDA_BEZIER_TRIANGLE_RAYTRACER_MESHUTILS
+#ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_MESH
+#define CUDA_BEZIER_TRIANGLE_RAYTRACER_MESH
 
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int32_t
 
@@ -34,15 +34,52 @@ public:
   using value_type      = Triangle;
   
   struct Neighbours final {
-    std::array<uint32_t, 3u> mFellowTriangles;       // Triangle indices.
+    std::array<uint32_t, 3u> mFellowTriangles;        // Triangle indices: neighbour of edge (index, index + 1)
     std::array<uint8_t, 3u>  mFellowCommonSideStarts; // Vertice indice in each triangle where the common side starts, such that the side in the neighbouring triangle is (i, i+1)
   };
+
+  struct Plane final {
+    enum TemplateSpecializer : int8_t {
+      P3 = 0,
+      P2 = 1,
+      P1 = 2
+    };
+
+    Vector mNormal;
+    tReal  mConstant;
+
+    template<TemplateSpecializer tArg>
+    Plane(Vertex const &aPoint0, Vertex const &aPoint1, Vertex const &aPoint2) {}
+
+    template<>
+    Plane<P3>(Vertex const &aPoint0, Vertex const &aPoint1, Vertex const &aPoint2)
+      : mNormal{ (aPoint1 - aPoint0).cross(aPoint2 - aPoint0).normalized() }
+      , mConstant{ mNormal.dot(aPoint0) } {}
+
+    template<>
+    Plane<P2>(Vector const &aDirection, Vertex const &aPoint0, Vertex const &aPoint1)
+      : mNormal{ aDirection.cross(aPoint1 - aPoint0).normalized() }
+      , mConstant{ mNormal.dot(aPoint0) } {}
+
+    template<>
+    Plane<P1>(Vector const &aDirection0, Vector const &aDirection1, Vertex const &aPoint)
+      : mNormal{ aDirection0.cross(aDirection1).normalized() }
+      , mConstant{ mNormal.dot(aPoint) } {}
+  };
   
-  using Face2neighbours = std::vector<Neighbours>;
+  struct VertexHash {
+    std::size_t operator()(Vertex const &aVertex) const {
+      return std::hash<tReal>{}(aVertex[0]) ^ (std::hash<tReal>{}(aVertex[1]) << 1u) ^ (std::hash<tReal>{}(aVertex[2]) << 2u);
+    }
+  };
+
+  using Face2neighbours       = std::vector<Neighbours>;
+  using Vertex2averageNormals = std::unordered_map<Vertex, Vector, VertexHash>;
 
 private:
-  TheMesh         mMesh;
-  Face2neighbours mFace2neighbours;
+  TheMesh               mMesh;
+  Face2neighbours       mFace2neighbours;
+  Vertex2averageNormals mVertex2averageNormals;
 
 public:
   Mesh() = default;
@@ -57,9 +94,12 @@ public:
   auto cbegin() const { return mMesh.cbegin(); }
   auto cend() const { return mMesh.cend(); }
   void push_back(Triangle const &aTriangle) { mMesh.push_back(aTriangle); }
+  auto& operator[](uint32_t const aI) { return mMesh[aI]; }
+  auto const &operator[](uint32_t const aI) const { return mMesh[aI]; }
 
-  TheMesh const&         getMesh() const            { return mMesh; }
-  Face2neighbours const& getFace2neighbours() const { return mFace2neighbours; }
+  TheMesh const&               getMesh() const                  { return mMesh; }
+  Face2neighbours const&       getFace2neighbours() const       { return mFace2neighbours; }
+  Vertex2averageNormals const& getVertex2averageNormals() const { return mVertex2averageNormals; }
 
 // TODO perhaps a function to split triangles having vertex on an edge. Probably not needed.
 // TODO later a function to split triangles using Clough-Tocher method if the Bezier Triangle is too high above the triangle.
@@ -69,7 +109,7 @@ public:
 /// Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
 /// Should run after standardizeVertices.
 /// But not after auto divideLargeTriangles(tReal const aMaxTriangleSide), because it will probably put vertices on edges of other triangles.
-/// Only this method populates the member variable mFace2neighbours.
+/// Only this method populates the member variable mFace2neighbours and mVertex2averageNormals
   void standardizeNormals();
 
   void transform(Transform const &aTransform, Vertex const aDisplacement);
@@ -100,6 +140,10 @@ public:
     return (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
   }
 
+  static Vector getNormal(Vertex const &aVertex0, Vertex const &aVertex1, Vertex const &aVertex2) {
+    return (aVertex1 - aVertex0).cross(aVertex2 - aVertex0);
+  }
+
 private:
   tReal getSmallestSide() const;
 
@@ -124,12 +168,6 @@ private:
     }
   };
 
-  struct VertexHash {
-    std::size_t operator()(Vertex const &aVertex) const {
-      return std::hash<tReal>{}(aVertex[0]) ^ (std::hash<tReal>{}(aVertex[1]) << 1u) ^ (std::hash<tReal>{}(aVertex[2]) << 2u);
-    }
-  };
-
   using Edge2face = std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash>;
   using Face2vertex = std::vector<std::array<uint32_t, 3u>>;
 
@@ -143,6 +181,8 @@ private:
   static void normalize(Triangle &aFace, Vertex const &aDesiredVector);
 
   static void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown);
+
+  void calculateNormalAverages4vertices();
 
   static void divideTriangle(TheMesh &aMesh, Triangle const &aTriangle, int32_t const aDivisor);
 };
@@ -413,6 +453,27 @@ void Mesh<tReal>::normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) 
     std::swap(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown]);
   }
   else { // Nothing to do
+  }
+}
+
+template<typename tReal>
+void Mesh<tReal>::calculateNormalAverages4vertices() {
+  std::unordered_multimap<Vertex, uint32_t, VertexHash> vertex2triangleIndex;
+  for(uint32_t indexInMesh = 0u; indexInMesh < mMesh.size(); ++indexInMesh) {
+    auto const &triangle = mMesh[indexInMesh];
+    for(uint32_t i = 0u; i < 3u; ++i) {
+      vertex2triangleIndex.emplace(std::make_pair(triangle[i], indexInMesh));
+    }
+  }
+  for (auto iter=vertex2triangleIndex.cbegin(); iter != vertex2triangleIndex.cend(); iter = vertex2triangleIndex.equal_range(iter->first).second) {
+    auto const &vertex = iter->first;
+    auto const range = vertex2triangleIndex.equal_range(vertex);
+    Vector sum = Vector::Zero();
+    for (auto inRange = range.first; inRange != range.second; ++inRange) {
+      sum += getNormal(mMesh[inRange->second]).normalized();
+    }
+    sum.normalize();
+    mVertex2averageNormals.emplace(std::make_pair(vertex, sum));
   }
 }
 

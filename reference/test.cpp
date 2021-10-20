@@ -21,6 +21,23 @@ auto visualizeNormals(Mesh<Real> const &aMesh) {
   return result;
 }
 
+auto visualizeVertexNormals(Mesh<Real> const &aMesh) { // Only for spheres
+  Mesh<Real> result;
+  Mesh<Real> sphere;
+  sphere.makeUnitSphere(3, 1);
+  auto &first = aMesh[0u];
+  auto distance = ((first[1u] - first[0u]).norm() + (first[2u] - first[1u]).norm() + (first[0u] - first[2u]).norm()) / 3.0f;
+  auto shrink = Mesh<Real>::Transform::Identity() * (distance / 5.0f);
+  sphere *= shrink;
+  for(auto i : aMesh.getVertex2averageNormals()) {
+    auto displacement = i.first + i.second * distance;
+    auto copy = sphere;
+    copy += displacement;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
+  }
+  return result;
+}
+
 void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
   std::string name{"test_"};
   name += aName;
@@ -47,6 +64,9 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
 
   auto nameNorm = "norm_" + name;
   visualizeNormals(back).writeMesh(nameNorm);
+
+  auto nameVertexNorm = "vertexNorm_" + name;
+  visualizeVertexNormals(back).writeMesh(nameVertexNorm);
 }
 
 void testVectorMax(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, float const aMaxSide) {
@@ -65,9 +85,6 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   back *= inflate;
 
   back.splitTriangles(aMaxSide);
-  Mesh<Real>::Vector disp = Mesh<Real>::Vector::Zero();
-  disp[0] = aRadius;
-  back += disp;
   auto nameBack = "back_" + name;
   back.standardizeVertices();
   back.standardizeNormals();
@@ -75,6 +92,9 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
 
   auto nameNorm = "norm_" + name;
   visualizeNormals(back).writeMesh(nameNorm);
+
+  auto nameVertexNorm = "vertexNorm_" + name;
+  visualizeVertexNormals(back).writeMesh(nameVertexNorm);
 }
 
 void testCustomStl(char * const aName) {
@@ -96,6 +116,7 @@ void testCustomStl(char * const aName) {
 int main(int argc, char **argv) {
   testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
+  testVectorMax("vectorIdentity", 5, 2, 1.0f, 11.0f);
 
   if(argc > 1) {
     testCustomStl(argv[1]);
