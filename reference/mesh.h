@@ -1,8 +1,7 @@
 #ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_MESH
 #define CUDA_BEZIER_TRIANGLE_RAYTRACER_MESH
 
-#define EIGEN_DEFAULT_DENSE_INDEX_TYPE int32_t
-
+#include "util.h"
 #include "stl_reader.h"
 #include <map>
 #include <list>
@@ -13,23 +12,23 @@
 #include <fstream>
 #include <unordered_map>
 #include <unordered_set>
-#include <Eigen/Dense>
 
 
 template<typename tReal>
 class Mesh final {
 private:
-  static constexpr tReal csPi                                      = 3.14159265358979323846;
   static constexpr tReal csStandardizeVerticesEpsilonFactor        = 0.2;
   static constexpr tReal csStandardizeNormalsEpsilon               = 0.01;
   static constexpr tReal csStandardizeNormalsIndependentMoveFactor = 0.2;
 
+  using Vector     = ::Vector<tReal>;
+  using Vertex     = ::Vertex<tReal>;
+  using Matrix     = ::Matrix<tReal>;
+  using Triangle   = ::Triangle<tReal>;
+  using Transform  = ::Transform<tReal>;
+  using Plane      = ::Plane<tReal>;
+
 public:
-  using Vector          = Eigen::Matrix<tReal, 3, 1>;
-  using Vertex          = Eigen::Matrix<tReal, 3, 1>;
-  using Matrix          = Eigen::Matrix<tReal, 3, 3>;
-  using Transform       = Eigen::Matrix<tReal, 3, 3>;
-  using Triangle        = std::array<Vertex, 3u>;
   using TheMesh         = std::vector<Triangle>;
   using value_type      = Triangle;
   
@@ -38,35 +37,6 @@ public:
     std::array<uint8_t, 3u>  mFellowCommonSideStarts; // Vertice indice in each triangle where the common side starts, such that the side in the neighbouring triangle is (i, i+1)
   };
 
-  struct Plane final {
-    enum TemplateSpecializer : int8_t {
-      P3 = 0,
-      P2 = 1,
-      P1 = 2
-    };
-
-    Vector mNormal;
-    tReal  mConstant;
-
-    template<TemplateSpecializer tArg>
-    Plane(Vertex const &aPoint0, Vertex const &aPoint1, Vertex const &aPoint2) {}
-
-    template<>
-    Plane<P3>(Vertex const &aPoint0, Vertex const &aPoint1, Vertex const &aPoint2)
-      : mNormal{ (aPoint1 - aPoint0).cross(aPoint2 - aPoint0).normalized() }
-      , mConstant{ mNormal.dot(aPoint0) } {}
-
-    template<>
-    Plane<P2>(Vector const &aDirection, Vertex const &aPoint0, Vertex const &aPoint1)
-      : mNormal{ aDirection.cross(aPoint1 - aPoint0).normalized() }
-      , mConstant{ mNormal.dot(aPoint0) } {}
-
-    template<>
-    Plane<P1>(Vector const &aDirection0, Vector const &aDirection1, Vertex const &aPoint)
-      : mNormal{ aDirection0.cross(aDirection1).normalized() }
-      , mConstant{ mNormal.dot(aPoint) } {}
-  };
-  
   struct VertexHash {
     std::size_t operator()(Vertex const &aVertex) const {
       return std::hash<tReal>{}(aVertex[0]) ^ (std::hash<tReal>{}(aVertex[1]) << 1u) ^ (std::hash<tReal>{}(aVertex[2]) << 2u);
@@ -135,14 +105,6 @@ public:
   void writeMesh(std::string const &aFilename) const;
 
   void makeUnitSphere(int32_t const aSectors, int32_t const aBelts);
-
-  static Vector getNormal(Triangle const &aFace) {
-    return (aFace[1] - aFace[0]).cross(aFace[2] - aFace[0]);
-  }
-
-  static Vector getNormal(Vertex const &aVertex0, Vertex const &aVertex1, Vertex const &aVertex2) {
-    return (aVertex1 - aVertex0).cross(aVertex2 - aVertex0);
-  }
 
 private:
   tReal getSmallestSide() const;
@@ -636,9 +598,9 @@ void Mesh<tReal>::makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
   mMesh.clear();
   mMesh.reserve(static_cast<uint32_t>(2 * aSectors * aBelts));
   mFace2neighbours.clear();
-  tReal sectorAngleHalf = csPi / aSectors;
+  tReal sectorAngleHalf = gsPi<tReal> / aSectors;
   tReal sectorAngleFull = sectorAngleHalf * 2.0f;
-  tReal beltAngle       = csPi / (aBelts + 1.0f);
+  tReal beltAngle       = gsPi<tReal> / (aBelts + 1.0f);
   tReal bias = 0.0f;
   tReal beltAngleUp = 0.0f;
   tReal beltAngleMiddle = beltAngle;

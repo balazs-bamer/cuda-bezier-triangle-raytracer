@@ -10,11 +10,11 @@ auto visualizeNormals(Mesh<Real> const &aMesh) {
   Mesh<Real> sphere;
   sphere.makeUnitSphere(3, 1);
   for(auto &face : aMesh) {
-    auto normal = Mesh<Real>::getNormal(face).normalized();
+    auto normal = getNormal(face).normalized();
     auto base = (face[0] + face[1] + face[2]) / 3.0f;
     auto average = ((face[1] - face[0]).norm() + (face[2] - face[1]).norm() + (face[0] - face[2]).norm()) / 3.0f;
     auto copy = sphere;
-    auto shrink = Mesh<Real>::Transform::Identity() * (average / 15.0f);
+    auto shrink = Transform<Real>::Identity() * (average / 15.0f);
     copy.transform(shrink, base + normal * (average / 7.0f));
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
   }
@@ -27,7 +27,7 @@ auto visualizeVertexNormals(Mesh<Real> const &aMesh) { // Only for spheres
   sphere.makeUnitSphere(3, 1);
   auto &first = aMesh[0u];
   auto distance = ((first[1u] - first[0u]).norm() + (first[2u] - first[1u]).norm() + (first[0u] - first[2u]).norm()) / 3.0f;
-  auto shrink = Mesh<Real>::Transform::Identity() * (distance / 5.0f);
+  auto shrink = Transform<Real>::Identity() * (distance / 5.0f);
   sphere *= shrink;
   for(auto i : aMesh.getVertex2averageNormals()) {
     auto displacement = i.first + i.second * distance;
@@ -45,7 +45,7 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
 
   Mesh<Real> sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Mesh<Real>::Transform inflate = Mesh<Real>::Transform::Identity() * aRadius;
+  Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
   sphere *= inflate;
   sphere.writeMesh(name);
 
@@ -54,7 +54,7 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   back *= inflate;
 
   back.splitTriangles(aDivisor);
-  Mesh<Real>::Vector disp = Mesh<Real>::Vector::Zero();
+  Vector<Real> disp = Vector<Real>::Zero();
   disp[0] = aRadius;
   back += disp;
   auto nameBack = "back_" + name;
@@ -76,7 +76,7 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
 
   Mesh<Real> sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Mesh<Real>::Transform inflate = Mesh<Real>::Transform::Identity() * aRadius;
+  Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
   sphere *= inflate;
   sphere.writeMesh(name);
 
