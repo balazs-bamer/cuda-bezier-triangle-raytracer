@@ -38,7 +38,7 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &neigh = neighbours[indexFace];
     auto const &originalTriangle = aMesh[indexFace];
-    auto const originalCentral = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
+    auto const originalCentroid = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
     auto normal = Mesh<tReal>::getNormal(originalTriangle);
     for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) { // Appending a regular triangle means doing Clough-Tocher split on it and appending each one.
       auto const &originalCommonVertex0 = originalTriangle[indexVertex];
@@ -50,12 +50,12 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
                                                                                         originalCommonVertex0, originalCommonVertex1);
       auto currentBase = indexFace * 3u;
       std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex], currentBase + (indexVertex + 1u) % 3u, currentBase + (indexVertex + 2u) % 3u });
-      mMesh.emplace_back(BezierTriangle<tReal>(originalCommonVertex0, originalCommonVertex1, originalCentral,
+      mMesh.emplace_back(BezierTriangle<tReal>(originalCommonVertex0, originalCommonVertex1, originalCentroid,
                                                averageNormal0, averageNormal1, planeBetweenOriginalNeighbours),
                                                newNeighbourIndices);
     }
   }
-  Vertex originalCentral;
+  Vertex originalCentroid;
   for(uint32_t i = 0u; i < mMesh.size(); ++i) {
     auto subTriangleIndex = i % 3u;
     auto indexBase = i - subTriangleIndex;
@@ -63,11 +63,17 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
     auto const &trianglePrevious = mMesh[indexBase + (subTriangleIndex + 2u) % 3u];
     if(subTriangleIndex % 3u == 0u) {
       auto const &originalTriangle = aMesh[indexBase / 3u];
-      originalCentral = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
+      originalCentroid = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
     }
     else { // Nothing to do
     }
-    mMesh[i].setMissingFields(originalCentral, triangleNext, trianglePrevious);
+    mMesh[i].setMissingFields1(originalCentroid, triangleNext, trianglePrevious);
+  }
+  for(uint32_t i = 0u; i < mMesh.size(); ++i) {
+    auto subTriangleIndex = i % 3u;
+    auto indexBase = i - subTriangleIndex;
+    auto const &triangleNext = mMesh[indexBase + (subTriangleIndex + 1u) % 3u];
+    mMesh[i].setMissingFields2(triangleNext);
   }
 }
 
