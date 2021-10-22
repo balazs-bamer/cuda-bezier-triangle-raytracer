@@ -48,7 +48,8 @@ public:
                  std::array<uint32_t, 3u> const &aNeighbourIndices);
 
   void setMissingFields1(Vertex const &aOriginalCentroid, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
-  void setMissingFields2(BezierTriangle const &aTriangleNext);
+  void setMissingFields2(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &);
+  void setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
 };
 
 /////////////////////////////////
@@ -78,14 +79,20 @@ BezierTriangle<tReal>::BezierTriangle(Vertex const &aOriginalCommonVertex0, Vert
   Plane perpendicularToSplitBetweenTrianglesInProportion0 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCommonVertex0, aOriginalCentroid);
   Plane perpendicularToSplitBetweenTrianglesInProportion1 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCommonVertex1, aOriginalCentroid);
 
-  mControlPoints[csControlIndexOnSideFromOriginalCentroid1] = Plane::intersect(commonPlaneVertex0, parallelToOriginalNormalBetweenSplitTriangles0, perpendicularToSplitBetweenTrianglesInProportion0);
-  mControlPoints[csControlIndexOnSideToOriginalCentroid0] = Plane::intersect(commonPlaneVertex1, parallelToOriginalNormalBetweenSplitTriangles1, perpendicularToSplitBetweenTrianglesInProportion1);
+  mControlPoints[csControlIndexOnSideFromOriginalCentroid1] = Plane::intersect(commonPlaneVertex0,
+                                                                               parallelToOriginalNormalBetweenSplitTriangles0,
+                                                                               perpendicularToSplitBetweenTrianglesInProportion0);
+  mControlPoints[csControlIndexOnSideToOriginalCentroid0] = Plane::intersect(commonPlaneVertex1,
+                                                                             parallelToOriginalNormalBetweenSplitTriangles1,
+                                                                             perpendicularToSplitBetweenTrianglesInProportion1);
 
   Plane perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide = Plane::createFrom1vector2points(aPlaneBetweenOriginalNeighbours.mNormal, mControlPoints[csControlIndexOnOriginalSide0], mControlPoints[csControlIndexOnOriginalSide1]);
   Plane halfPlaneOfControlPointsInOriginalSide = Plane::createFrom1proportion2points(0.5f, mControlPoints[csControlIndexOnOriginalSide0], mControlPoints[csControlIndexOnOriginalSide1]);
   Plane perpendicularToOriginalMedianInProportion = Plane::createFrom1proportion2points(csProportionControlOnOriginalMedian, (aOriginalCommonVertex0, aOriginalCommonVertex1) / 2.0f, aOriginalCentroid);
 
-  mControlPoints[csControlIndexMiddle] = Plane::intersect(perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide, halfPlaneOfControlPointsInOriginalSide, perpendicularToOriginalMedianInProportion);
+  mControlPoints[csControlIndexMiddle] = Plane::intersect(perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide,
+                                                          halfPlaneOfControlPointsInOriginalSide,
+                                                          perpendicularToOriginalMedianInProportion);
 
   mNeighbourDividerPlanes[0u] = aPlaneBetweenOriginalNeighbours;
 }
@@ -100,12 +107,16 @@ void BezierTriangle<tReal>::setMissingFields1(Vertex const &aOriginalCentroid, B
   Plane perpendicularToSplitBetweenTrianglesInProportion0 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCentroid, mControlPoints[csControlIndexOriginalVertex0]);
   Plane perpendicularToSplitBetweenTrianglesInProportion1 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCentroid, mControlPoints[csControlIndexOriginalVertex1]);
 
-  mControlPoints[csControlIndexOnSideFromOriginalCentroid0] = Plane::intersect(twoMiddlesAndSplitCloseToOriginalCommonVertex0, parallelToOriginalNormalBetweenSplitTriangles0, perpendicularToSplitBetweenTrianglesInProportion0);
-  mControlPoints[csControlIndexOnSideToOriginalCentroid1] = Plane::intersect(twoMiddlesAndSplitCloseToOriginalCommonVertex1, parallelToOriginalNormalBetweenSplitTriangles1, perpendicularToSplitBetweenTrianglesInProportion1);
+  mControlPoints[csControlIndexOnSideFromOriginalCentroid0] = Plane::intersect(twoMiddlesAndSplitCloseToOriginalCommonVertex0,
+                                                                               parallelToOriginalNormalBetweenSplitTriangles0,
+                                                                               perpendicularToSplitBetweenTrianglesInProportion0);
+  mControlPoints[csControlIndexOnSideToOriginalCentroid1] = Plane::intersect(twoMiddlesAndSplitCloseToOriginalCommonVertex1,
+                                                                             parallelToOriginalNormalBetweenSplitTriangles1,
+                                                                             perpendicularToSplitBetweenTrianglesInProportion1);
 }
 
 template<typename tReal>
-void BezierTriangle<tReal>::setMissingFields2(BezierTriangle const &aTriangleNext) {
+void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &) {
   mControlPoints[csControlIndexAboveOriginalCentroid] = (mControlPoints[csControlIndexOnSideFromOriginalCentroid0] +
                                                          mControlPoints[csControlIndexOnSideToOriginalCentroid1] +
                                                          aTriangleNext.mControlPoints[csControlIndexOnSideToOriginalCentroid1]) / 3.0f;
@@ -117,6 +128,16 @@ void BezierTriangle<tReal>::setMissingFields2(BezierTriangle const &aTriangleNex
   vertices.column(1) =  mControlPoints[csControlIndexOriginalVertex1];
   vertices.column(2) =  mControlPoints[csControlIndexAboveOriginalCentroid];
   mBarycentricInverse = vertices.inverse();
+}
+
+template<typename tReal>
+void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious) {
+  mNeighbourDividerPlanes[1u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTriangleNext.mUnderlyingPlane.mNormal,
+                                                                mControlPoints[csControlIndexOriginalVertex1],
+                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
+  mNeighbourDividerPlanes[2u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTrianglePrevious.mUnderlyingPlane.mNormal,
+                                                                mControlPoints[csControlIndexOriginalVertex0],
+                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
 }
 
 #endif

@@ -10,17 +10,19 @@ class BezierMesh final {
 private:
   std::vector<BezierTriangle<tReal>> mMesh;
   
-  using Vector     = ::Vector<tReal>;
-  using Vertex     = ::Vertex<tReal>;
-  using Matrix     = ::Matrix<tReal>;
-  using Triangle   = ::Triangle<tReal>;
-  using Plane      = ::Plane<tReal>;
-  using Neighbours = typename Mesh<tReal>::Neighbours;
+  using Vector              = ::Vector<tReal>;
+  using Vertex              = ::Vertex<tReal>;
+  using Matrix              = ::Matrix<tReal>;
+  using Triangle            = ::Triangle<tReal>;
+  using Plane               = ::Plane<tReal>;
+  using Neighbours          = typename Mesh<tReal>::Neighbours;
+  using MissingFieldsMethod = std::function<void(BezierTriangle<tReal> &, Vertex const &aOriginalCentroid, BezierTriangle<tReal> const &aTriangleNext, BezierTriangle<tReal> const &aTrianglePrevious)>;
 
 public:
   BezierMesh(Mesh<tReal> const &aMesh);
 
 private:
+  void setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod);
 };
 
 /////////////////////////////////
@@ -55,6 +57,13 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
                                                newNeighbourIndices);
     }
   }
+  setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields1);
+  setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields2);
+  setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields3);
+}
+
+template<typename tReal>
+void BezierMesh<tReal>::setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod) {
   Vertex originalCentroid;
   for(uint32_t i = 0u; i < mMesh.size(); ++i) {
     auto subTriangleIndex = i % 3u;
@@ -67,13 +76,7 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
     }
     else { // Nothing to do
     }
-    mMesh[i].setMissingFields1(originalCentroid, triangleNext, trianglePrevious);
-  }
-  for(uint32_t i = 0u; i < mMesh.size(); ++i) {
-    auto subTriangleIndex = i % 3u;
-    auto indexBase = i - subTriangleIndex;
-    auto const &triangleNext = mMesh[indexBase + (subTriangleIndex + 1u) % 3u];
-    mMesh[i].setMissingFields2(triangleNext);
+    aMissingFieldsMethod(mMesh[i], originalCentroid, triangleNext, trianglePrevious);
   }
 }
 
