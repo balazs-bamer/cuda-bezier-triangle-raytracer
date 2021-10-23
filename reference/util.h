@@ -33,6 +33,28 @@ Vector<tReal> getNormal(Vertex<tReal> const &aVertex0, Vertex<tReal> const &aVer
   return (aVertex1 - aVertex0).cross(aVertex2 - aVertex0);
 }
 
+// Assumes sum(aB*) == 1
+template<typename tReal>
+Vertex<tReal> barycentric2cartesian(Triangle<tReal> const &aTriangle, tReal const aB0, tReal const aB1, tReal const aB2) {
+  return aTriangle[0u] * aB0 + aTriangle[1u] * aB1 + aTriangle[2u] * aB2;
+}
+
+template<typename tReal>
+Vertex<tReal> barycentric2cartesian(Triangle<tReal> const &aTriangle, tReal const aB0, tReal const aB1) {
+  return aTriangle[0u] * aB0 + aTriangle[1u] * aB1 + aTriangle[2u] * (1.0f - aB0 - aB1);
+}
+
+// Assumes sum(aB*) == 1
+template<typename tReal>
+Vertex<tReal> barycentric2cartesian(Vertex<tReal> const &aV0, Vertex<tReal> const &aV1, Vertex<tReal> const &aV2, tReal const aB0, tReal const aB1, tReal const aB2) {
+  return aV0 * aB0 + aV1 * aB1 + aV2 * aB2;
+}
+
+template<typename tReal>
+Vertex<tReal> barycentric2cartesian(Vertex<tReal> const &aV0, Vertex<tReal> const &aV1, Vertex<tReal> const &aV2, tReal const aB0, tReal const aB1) {
+  return aV0 * aB0 + aV1 * aB1 + aV2 * (1.0f - aB0 - aB1);
+}
+
 template<typename tReal>
 struct Plane final {
   Vector<tReal> mNormal;
@@ -50,6 +72,32 @@ struct Plane final {
 /////////////////////////////////
 //       IMPLEMENTATION        //
 /////////////////////////////////
+
+template<typename tReal, typename tLambda>
+void divide(Triangle<tReal> const &aTriangle, int32_t const aDivisor, tLambda &&aCollector) {
+  auto vector01 = (aTriangle[1] - aTriangle[0]) / aDivisor;
+  auto vector02 = (aTriangle[2] - aTriangle[0]) / aDivisor;
+  auto lineBase = aTriangle[0];
+  auto base0 = lineBase;
+  auto base1 = (aDivisor > 1) ? (base0 + vector01) : aTriangle[1];
+  auto base2 = (aDivisor > 1) ? (base0 + vector02) : aTriangle[2];
+  for(int32_t i = 0; i < aDivisor - 1; ++i) {
+    for(int32_t j = 0; j < aDivisor - i - 1; j++) {
+      aCollector({base0, base1, base2});
+      auto base1next = base1 + vector02;
+      aCollector({base1, base1next, base2});
+      base1 = base1next;
+      base0 = base2;
+      base2 += vector02;
+    }
+    aCollector({base0, base1, base2});
+    lineBase += vector01;
+    base0 = lineBase;
+    base1 = base0 + vector01;
+    base2 = base0 + vector02;
+  }
+  aCollector({base0, aTriangle[1], base2});
+}
 
 template<typename tReal>
 Plane<tReal> Plane<tReal>::createFrom1proportion2points(tReal const aProportion, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1) {

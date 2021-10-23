@@ -506,28 +506,7 @@ void Mesh<tReal>::transform(Transform const &aTransform, Vertex const aDisplacem
 
 template<typename tReal>
 void Mesh<tReal>::divideTriangle(TheMesh &result, Triangle const &aTriangle, int32_t const aDivisor) {
-  auto vector01 = (aTriangle[1] - aTriangle[0]) / aDivisor;
-  auto vector02 = (aTriangle[2] - aTriangle[0]) / aDivisor;
-  auto lineBase = aTriangle[0];
-  auto base0 = lineBase;
-  auto base1 = (aDivisor > 1) ? (base0 + vector01) : aTriangle[1];
-  auto base2 = (aDivisor > 1) ? (base0 + vector02) : aTriangle[2];
-  for(int32_t i = 0; i < aDivisor - 1; ++i) {
-    for(int32_t j = 0; j < aDivisor - i - 1; j++) {
-      result.push_back({base0, base1, base2});
-      auto base1next = base1 + vector02;
-      result.push_back({base1, base1next, base2});
-      base1 = base1next;
-      base0 = base2;
-      base2 += vector02;
-    }
-    result.push_back({base0, base1, base2});
-    lineBase += vector01;
-    base0 = lineBase;
-    base1 = base0 + vector01;
-    base2 = base0 + vector02;
-  }
-  result.push_back({base0, aTriangle[1], base2});
+  divide(aTriangle, aDivisor, [&result](Triangle && aNew){ result.push_back(aNew); } );
 }
 
 template<typename tReal>
