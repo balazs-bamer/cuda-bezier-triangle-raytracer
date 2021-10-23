@@ -52,9 +52,8 @@ public:
   void setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
 
   Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
-  Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return resolveParameters(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
-
-
+  Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
+  Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary[0u], aBary[1u], aBary[2u]); }
 };
 
 /////////////////////////////////
@@ -128,10 +127,14 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
 
   mUnderlyingPlane = Plane::createFrom3points(mControlPoints[csControlIndexOriginalVertex0], mControlPoints[csControlIndexOriginalVertex1], mControlPoints[csControlIndexAboveOriginalCentroid]);
 
-  Matrix vertices;
-  vertices.column(0) =  mControlPoints[csControlIndexOriginalVertex0];
-  vertices.column(1) =  mControlPoints[csControlIndexOriginalVertex1];
-  vertices.column(2) =  mControlPoints[csControlIndexAboveOriginalCentroid];
+  auto const &column0 = mControlPoints[csControlIndexOriginalVertex0];
+  auto const &column1 = mControlPoints[csControlIndexOriginalVertex1];
+  auto const &column2 = mControlPoints[csControlIndexAboveOriginalCentroid];
+  Matrix vertices {{
+    column0(0), column1(0), column2(0),
+    column0(1), column1(1), column2(1),
+    column0(2), column1(2), column2(2),
+  }};
   mBarycentricInverse = vertices.inverse();
 }
 

@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "bezierMesh.h"
 
 #include<deque>
 #include<vector>
@@ -97,6 +98,22 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   visualizeVertexNormals(back).writeMesh(nameVertexNorm);
 }
 
+void testBarycentric2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
+  std::string name{"bary2plane_"};
+  name += aName;
+  name += ".stl";
+
+  Mesh<Real> sphere;
+  sphere.makeUnitSphere(aSectors, aBelts);
+  Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
+  sphere *= inflate;
+
+  BezierMesh<Real> bezier(sphere);
+  auto planified = bezier.interpolate(aDivisor);
+
+  planified.writeMesh(name);
+}
+
 void testCustomStl(char * const aName) {
   Mesh<Real> mesh;
   mesh.readMesh(aName);
@@ -117,6 +134,7 @@ int main(int argc, char **argv) {
   testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
   testVectorMax("vectorIdentity", 5, 2, 1.0f, 11.0f);
+  testBarycentric2plane("bary2plane", 3, 1, 11.1f, 5);
 
   if(argc > 1) {
     testCustomStl(argv[1]);
