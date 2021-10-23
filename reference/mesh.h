@@ -63,6 +63,7 @@ public:
   auto end() const { return mMesh.end(); }
   auto cbegin() const { return mMesh.cbegin(); }
   auto cend() const { return mMesh.cend(); }
+  void reserve(uint32_t const aSize) { mMesh.reserve(aSize); }
   void push_back(Triangle const &aTriangle) { mMesh.push_back(aTriangle); }
   auto& operator[](uint32_t const aI) { return mMesh[aI]; }
   auto const &operator[](uint32_t const aI) const { return mMesh[aI]; }

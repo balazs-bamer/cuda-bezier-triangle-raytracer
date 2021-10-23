@@ -51,8 +51,10 @@ public:
   void setMissingFields2(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &);
   void setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
 
-  Vertex resolveParameters(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
-  Vertex resolveParameters(tReal const aBary0, tReal const aBary1) const { return resolveParameters(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
+  Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
+  Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return resolveParameters(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
+
+
 };
 
 /////////////////////////////////
@@ -144,7 +146,7 @@ void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle con
 }
 
 template<typename tReal>
-Vertex<tReal> BezierTriangle<tReal>::resolveParameters(tReal const aBary0, tReal const aBary1, tReal const aBary2) const {
+Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const {
   auto const bary0_2 = aBary0 * aBary0;
   auto const bary1_2 = aBary1 * aBary1;
   auto const bary2_2 = aBary2 * aBary2;
