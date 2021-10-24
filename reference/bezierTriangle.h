@@ -74,8 +74,8 @@ BezierTriangle<tReal>::BezierTriangle(Vertex const &aOriginalCommonVertex0, Vert
   Plane const perpendicularToOriginalSideInProportion1 = Plane::createFrom1proportion2points(csProportionControlOnOriginalSide, aOriginalCommonVertex1, aOriginalCommonVertex0);
 
   // For each control point obtained by planes intersection, the first plane is the critical one ensuring Bezier surface C1 continuity among triangles.
-  mControlPoints[csControlIndexOnOriginalSide0] = Plane::intersect(commonPlaneVertex0. aPlaneBetweenOriginalNeighbours, perpendicularToOriginalSideInProportion0);
-  mControlPoints[csControlIndexOnOriginalSide1] = Plane::intersect(commonPlaneVertex1. aPlaneBetweenOriginalNeighbours, perpendicularToOriginalSideInProportion1);
+  mControlPoints[csControlIndexOnOriginalSide0] = Plane::intersect(commonPlaneVertex0, aPlaneBetweenOriginalNeighbours, perpendicularToOriginalSideInProportion0);
+  mControlPoints[csControlIndexOnOriginalSide1] = Plane::intersect(commonPlaneVertex1, aPlaneBetweenOriginalNeighbours, perpendicularToOriginalSideInProportion1);
 
   Vector const originalNormal = getNormal(aOriginalCommonVertex0, aOriginalCommonVertex1, aOriginalCentroid);
   Plane const parallelToOriginalNormalBetweenSplitTriangles0 = Plane::createFrom1vector2points(originalNormal, aOriginalCommonVertex0, aOriginalCentroid);
@@ -92,7 +92,7 @@ BezierTriangle<tReal>::BezierTriangle(Vertex const &aOriginalCommonVertex0, Vert
 
   Plane const perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide = Plane::createFrom1vector2points(aPlaneBetweenOriginalNeighbours.mNormal, mControlPoints[csControlIndexOnOriginalSide0], mControlPoints[csControlIndexOnOriginalSide1]);
   Plane const halfPlaneOfControlPointsInOriginalSide = Plane::createFrom1proportion2points(0.5f, mControlPoints[csControlIndexOnOriginalSide0], mControlPoints[csControlIndexOnOriginalSide1]);
-  Plane const perpendicularToOriginalMedianInProportion = Plane::createFrom1proportion2points(csProportionControlOnOriginalMedian, (aOriginalCommonVertex0, aOriginalCommonVertex1) / 2.0f, aOriginalCentroid);
+  Plane const perpendicularToOriginalMedianInProportion = Plane::createFrom1proportion2points(csProportionControlOnOriginalMedian, (aOriginalCommonVertex0 + aOriginalCommonVertex1) / 2.0f, aOriginalCentroid);
 
   mControlPoints[csControlIndexMiddle] = Plane::intersect(perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide,
                                                           halfPlaneOfControlPointsInOriginalSide,
@@ -130,11 +130,11 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
   auto const &column0 = mControlPoints[csControlIndexOriginalVertex0];
   auto const &column1 = mControlPoints[csControlIndexOriginalVertex1];
   auto const &column2 = mControlPoints[csControlIndexAboveOriginalCentroid];
-  Matrix vertices {{
-    column0(0), column1(0), column2(0),
-    column0(1), column1(1), column2(1),
-    column0(2), column1(2), column2(2),
-  }};
+  Matrix vertices {
+    { column0(0), column1(0), column2(0) },
+    { column0(1), column1(1), column2(1) },
+    { column0(2), column1(2), column2(2) },
+  };
   mBarycentricInverse = vertices.inverse();
 }
 

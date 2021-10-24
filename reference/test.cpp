@@ -107,6 +107,8 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   sphere.makeUnitSphere(aSectors, aBelts);
   Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
   sphere *= inflate;
+  sphere.standardizeVertices();
+  sphere.standardizeNormals();
 
   BezierMesh<Real> bezier(sphere);
   auto planified = bezier.interpolate(aDivisor);
@@ -134,7 +136,7 @@ int main(int argc, char **argv) {
   testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
   testVectorMax("vectorIdentity", 5, 2, 1.0f, 11.0f);
-  testBarycentric2plane("bary2plane", 3, 1, 11.1f, 5);
+  testBarycentric2plane("7x3", 7, 3, 11.1f, 2);
 
   if(argc > 1) {
     testCustomStl(argv[1]);

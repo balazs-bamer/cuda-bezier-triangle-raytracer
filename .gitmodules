@@ -1,3 +1,6 @@
 [submodule "repos/stl_reader"]
 	path = repos/stl_reader
 	url = https://github.com/sreiter/stl_reader.git
+[submodule "repos/eigen-initializer_list"]
+	path = repos/eigen-initializer_list
+	url = https://github.com/hauptmech/eigen-initializer_list.git

@@ -134,11 +134,11 @@ Plane<tReal> Plane<tReal>::createFrom2vectors1point(Vertex<tReal> const &aDirect
 
 template<typename tReal>
 Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1, Plane const &aPlane2) {
-  Matrix<tReal> matrix {{
-    aPlane0.mNormal(0), aPlane0.mNormal(1), aPlane0.mNormal(2),
-    aPlane1.mNormal(0), aPlane1.mNormal(1), aPlane1.mNormal(2),
-    aPlane2.mNormal(0), aPlane2.mNormal(1), aPlane2.mNormal(2)
-  }};
+  Matrix<tReal> matrix {
+    { aPlane0.mNormal(0), aPlane0.mNormal(1), aPlane0.mNormal(2) },
+    { aPlane1.mNormal(0), aPlane1.mNormal(1), aPlane1.mNormal(2) },
+    { aPlane2.mNormal(0), aPlane2.mNormal(1), aPlane2.mNormal(2) }
+  };
   Vector<tReal> vector{ aPlane0.mConstant, aPlane1.mConstant, aPlane2.mConstant };
   return matrix.inverse() * vector;
 }

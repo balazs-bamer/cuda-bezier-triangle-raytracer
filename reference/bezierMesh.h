@@ -46,16 +46,16 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
     for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) { // Appending a regular triangle means doing Clough-Tocher split on it and appending each one.
       auto const &originalCommonVertex0 = originalTriangle[indexVertex];
       auto const &originalCommonVertex1 = originalTriangle[(indexVertex + 1u) % 3u];
-      auto const &averageNormal0 = vertex2averageNormals[originalCommonVertex0];
-      auto const &averageNormal1 = vertex2averageNormals[originalCommonVertex1];
+      auto const &averageNormal0 = vertex2averageNormals.at(originalCommonVertex0);
+      auto const &averageNormal1 = vertex2averageNormals.at(originalCommonVertex1);
                                                                                  // Neighbour of edge (index, index + 1)
-      Plane planeBetweenOriginalNeighbours = createFrom1vector2points(normal + Mesh<tReal>::getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]),
-                                                                                        originalCommonVertex0, originalCommonVertex1);
+      Plane planeBetweenOriginalNeighbours = Plane::createFrom1vector2points(normal + getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]),
+                                                                             originalCommonVertex0, originalCommonVertex1);
       auto currentBase = indexFace * 3u;
       std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex], currentBase + (indexVertex + 1u) % 3u, currentBase + (indexVertex + 2u) % 3u });
       mMesh.emplace_back(BezierTriangle<tReal>(originalCommonVertex0, originalCommonVertex1, originalCentroid,
-                                               averageNormal0, averageNormal1, planeBetweenOriginalNeighbours),
-                                               newNeighbourIndices);
+                                               averageNormal0, averageNormal1, planeBetweenOriginalNeighbours,
+                                               newNeighbourIndices));
     }
   }
   setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields1);
