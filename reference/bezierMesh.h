@@ -15,13 +15,15 @@ private:
   using Matrix              = ::Matrix<tReal>;
   using Triangle            = ::Triangle<tReal>;
   using Plane               = ::Plane<tReal>;
+  using BezierTriangle      = ::BezierTriangle<tReal>;
   using Neighbours          = typename Mesh<tReal>::Neighbours;
-  using MissingFieldsMethod = std::function<void(BezierTriangle<tReal> &, Vertex const &aOriginalCentroid, BezierTriangle<tReal> const &aTriangleNext, BezierTriangle<tReal> const &aTrianglePrevious)>;
+  using MissingFieldsMethod = std::function<void(BezierTriangle &, Vertex const &aOriginalCentroid, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious)>;
 
 public:
   BezierMesh(Mesh<tReal> const &aMesh);
 
   Mesh<tReal> interpolate(int32_t const aDivisor) const;
+  std::vector<Vertex> dumpControlPoints() const;
 
 private:
   void setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod);
@@ -53,14 +55,14 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
                                                                              originalCommonVertex0, originalCommonVertex1);
       auto currentBase = indexFace * 3u;
       std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex], currentBase + (indexVertex + 1u) % 3u, currentBase + (indexVertex + 2u) % 3u });
-      mMesh.emplace_back(BezierTriangle<tReal>(originalCommonVertex0, originalCommonVertex1, originalCentroid,
+      mMesh.emplace_back(BezierTriangle(originalCommonVertex0, originalCommonVertex1, originalCentroid,
                                                averageNormal0, averageNormal1, planeBetweenOriginalNeighbours,
                                                newNeighbourIndices));
     }
   }
-  setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields1);
-  setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields2);
-  setMissingFields(aMesh, &BezierTriangle<tReal>::setMissingFields3);
+  setMissingFields(aMesh, &BezierTriangle::setMissingFields1);
+  setMissingFields(aMesh, &BezierTriangle::setMissingFields2);
+  setMissingFields(aMesh, &BezierTriangle::setMissingFields3);
 }
 
 template<typename tReal>
@@ -92,6 +94,18 @@ Mesh<tReal> BezierMesh<tReal>::interpolate(int32_t const aDivisor) const {
                          bezier.interpolate(aNewBary[2u]) });
     }
   } );
+  return result;
+}
+
+template<typename tReal>
+std::vector<Vertex<tReal>> BezierMesh<tReal>::dumpControlPoints() const {
+  std::vector<Vertex> result;
+  result.reserve(mMesh.size() * BezierTriangle::csControlPointsSize);
+  for(auto const &bezier : mMesh) {
+    for(uint32_t i = 0u; i < BezierTriangle::csControlPointsSize; ++i) {
+      result.push_back(bezier.getControlPoint(i));
+    }
+  }
   return result;
 }
 

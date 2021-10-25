@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 
 template<typename tReal>
-constexpr tReal gsPi = 3.14159265358979323846;
+constexpr tReal cgPi = 3.14159265358979323846;
 
 template<typename tReal>
 using Vector         = Eigen::Matrix<tReal, 3, 1>;

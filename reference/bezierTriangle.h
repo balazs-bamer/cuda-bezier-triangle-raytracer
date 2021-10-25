@@ -5,6 +5,8 @@
 
 template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
+public:
+  static constexpr uint32_t csControlPointsSize                       = 10u;
 private:
   static constexpr uint32_t csControlIndexOriginalVertex0             = 0u;
   static constexpr uint32_t csControlIndexOriginalVertex1             = 1u;
@@ -35,7 +37,7 @@ private:
   // 2 somewhere above the middle of the original triangle center, to be calculated
   // 3-8 somewhere above sides of triangle (0-2): 3i+3, 3i+4 on the same side as (i, (i+1)%3), to be calculated
   // 9 in the middle, to be calculated
-  std::array<Vertex, 10u>  mControlPoints;
+  std::array<Vertex, csControlPointsSize>  mControlPoints;
   // Perhaps not needed, because the iterative method to find ray and Bezier surface intersection takes long. std::array<Vertex, 12u> mDerivativeControlPoints; // T most probably more than 2*6 for each partial derivative.
   Matrix                   mBarycentricInverse;      // T = (v1 v2 v3), b = barycentric coefficient column, v = point on plane, v=Tb, b = mBI * v
                                                      // multiplication by the inverse proven to be much faster than solving the linear equation under Eigen.
@@ -50,6 +52,8 @@ public:
   void setMissingFields1(Vertex const &aOriginalCentroid, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
   void setMissingFields2(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &);
   void setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
+
+  Vertex getControlPoint(uint32_t const aI) const { return mControlPoints[aI]; }
 
   Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
   Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }

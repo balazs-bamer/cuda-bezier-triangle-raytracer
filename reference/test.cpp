@@ -99,7 +99,7 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
 }
 
 void testBarycentric2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
-  std::string name{"bary2plane_"};
+  std::string name{"baryorig_"};
   name += aName;
   name += ".stl";
 
@@ -109,11 +109,36 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   sphere *= inflate;
   sphere.standardizeVertices();
   sphere.standardizeNormals();
+  sphere.writeMesh(name);
 
   BezierMesh<Real> bezier(sphere);
   auto planified = bezier.interpolate(aDivisor);
 
+  name = "bary2plane_";
+  name += aName;
+  name += ".stl";
   planified.writeMesh(name);
+
+  Mesh<Real> result;
+  auto controlPoints = bezier.dumpControlPoints();
+  sphere.makeUnitSphere(3, 1);
+  inflate = Transform<Real>::Identity() * cgPi<Real> * aRadius / (aBelts + 1) / 20;
+  sphere *= inflate;
+  uint32_t i = 0u;
+  for(auto const &controlPoint : controlPoints) {
+    if(i < 5u) {
+      auto copy = sphere;
+      copy += controlPoint;
+      std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
+    }
+    else { // Nothing to do
+    }
+    i = (i + 1u) % 10u;
+  }
+  name = "baryControl_";
+  name += aName;
+  name += ".stl";
+  result.writeMesh(name);
 }
 
 void testCustomStl(char * const aName) {

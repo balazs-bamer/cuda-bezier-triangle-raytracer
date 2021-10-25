@@ -578,9 +578,9 @@ void Mesh<tReal>::makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
   mMesh.clear();
   mMesh.reserve(static_cast<uint32_t>(2 * aSectors * aBelts));
   mFace2neighbours.clear();
-  tReal sectorAngleHalf = gsPi<tReal> / aSectors;
+  tReal sectorAngleHalf = cgPi<tReal> / aSectors;
   tReal sectorAngleFull = sectorAngleHalf * 2.0f;
-  tReal beltAngle       = gsPi<tReal> / (aBelts + 1.0f);
+  tReal beltAngle       = cgPi<tReal> / (aBelts + 1.0f);
   tReal bias = 0.0f;
   tReal beltAngleUp = 0.0f;
   tReal beltAngleMiddle = beltAngle;
