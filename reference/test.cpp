@@ -3,6 +3,7 @@
 
 #include<deque>
 #include<vector>
+#include<iostream>
 
 using Real = float;
 
@@ -157,11 +158,35 @@ void testCustomStl(char * const aName) {
   visualizeNormals(mesh).writeMesh(nameNorm);
 }
 
+std::ostream& operator<<(std::ostream &aOut, Plane<Real> const aPlane) {
+  aOut << aPlane.mNormal << ':' << aPlane.mConstant;
+  return aOut;
+}
+
+void testPlaneIntersection(Vertex<Real> aPoint,
+                           Vector<Real> aDir1,
+                           Vector<Real> aDir2,
+                           Vector<Real> aDir3) {
+  Vector<Real> normal1 = aDir1.normalized();
+  Plane<Real> plane1(normal1, normal1.dot(aPoint));
+  std::cout << "plane1: " << plane1 << '\n';
+  Vector<Real> normal2 = aDir2.normalized();
+  Plane<Real> plane2(normal2, normal2.dot(aPoint));
+  std::cout << "plane2: " << plane2 << '\n';
+  Vector<Real> normal3 = aDir3.normalized();
+  Plane<Real> plane3(normal3, normal3.dot(aPoint));
+  std::cout << "plane3: " << plane3 << '\n';
+  std::cout << "original: " << aPoint << " intersection: " << Plane<Real>::intersect(plane1, plane2, plane3) << '\n';
+}
+
 int main(int argc, char **argv) {
-  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+ /* testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
   testVectorMax("vectorIdentity", 5, 2, 1.0f, 11.0f);
-  testBarycentric2plane("7x3", 7, 3, 11.1f, 2);
+  testBarycentric2plane("7x3", 7, 3, 11.1f, 2);*/
+  testPlaneIntersection({1.0f, 2.0f, 3.0f}, {1.0, 2.0f, 3.0f}, {3.0f, 1.0f, 2.0f}, {3.0f, 2.0f, 1.0f});
+  testPlaneIntersection({3.0f, -2.0f, 1.0f}, {1.0, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f});
+  testPlaneIntersection({3.0f, -2.0f, -1.0f}, {1.0, -2.0f, 3.0f}, {-1.0f, 2.0f, 3.0f}, {1.0f, 2.0f, -3.0f});
 
   if(argc > 1) {
     testCustomStl(argv[1]);
