@@ -100,11 +100,12 @@ void divide(Triangle<tReal> const &aTriangle, int32_t const aDivisor, tLambda &&
   aCollector({base0, aTriangle[1], base2});
 }
 
+// If aProportion < 0.5, the result will be closer to aPoint0
 template<typename tReal>
 Plane<tReal> Plane<tReal>::createFrom1proportion2points(tReal const aProportion, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1) {
   Plane result;
   result.mNormal = (aPoint1 - aPoint0).normalized();
-  result.mConstant = result.mNormal.dot(aPoint0 * aProportion + aPoint1 * (1.0f - aProportion));
+  result.mConstant = result.mNormal.dot(aPoint1 * aProportion + aPoint0 * (1.0f - aProportion));
   return result;
 }
 
@@ -140,7 +141,13 @@ Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1
     { aPlane2.mNormal(0), aPlane2.mNormal(1), aPlane2.mNormal(2) }
   };
   Vector<tReal> vector{ aPlane0.mConstant, aPlane1.mConstant, aPlane2.mConstant };
-  return matrix.inverse() * vector;
+  Vertex<tReal> result = matrix.inverse() * vector;
+  // TODO remove
+  auto error =::abs((matrix * result - vector).norm() / vector.norm());
+  if(error > 0.1f) {
+    throw "Plane::intersect rel error";
+  }
+  return result;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
