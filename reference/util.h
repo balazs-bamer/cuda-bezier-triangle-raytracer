@@ -144,6 +144,7 @@ Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1
   Vertex<tReal> result = matrix.inverse() * vector;
   // TODO remove
   auto error =::abs((matrix * result - vector).norm() / vector.norm());
+  static_assert(std::is_same_v<decltype(error), tReal>);
   if(error > 0.1f) {
     throw "Plane::intersect rel error";
   }
