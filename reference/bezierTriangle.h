@@ -54,6 +54,7 @@ public:
   void setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious);
 
   Vertex getControlPoint(uint32_t const aI) const { return mControlPoints[aI]; }
+  std::array<uint32_t, 3u> getNeighbours() const { return mNeighbours; }           // TODO remove
 
   Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
   Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }

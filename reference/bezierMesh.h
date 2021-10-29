@@ -22,6 +22,11 @@ private:
 public:
   BezierMesh(Mesh<tReal> const &aMesh);
 
+  auto size() const { return mMesh.size(); }
+  auto cbegin() const { return mMesh.cbegin(); }
+  auto cend() const { return mMesh.cend(); }
+  auto const &operator[](uint32_t const aI) const { return mMesh[aI]; }
+
   Mesh<tReal> interpolate(int32_t const aDivisor) const;
   std::vector<Vertex> dumpControlPoints() const;
 
@@ -44,17 +49,19 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
     auto const &neigh = neighbours[indexFace];
     auto const &originalTriangle = aMesh[indexFace];
     auto const originalCentroid = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
-    auto normal = getNormal(originalTriangle);
-    for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) { // Appending a regular triangle means doing Clough-Tocher split on it and appending each one.
+    auto normal = getNormal(originalTriangle).normalized();
+    for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) { // Appending a regular triangle means doing Clough-Tocher split on it and appending each small one.
       auto const &originalCommonVertex0 = originalTriangle[indexVertex];
       auto const &originalCommonVertex1 = originalTriangle[(indexVertex + 1u) % 3u];
       auto const &averageNormal0 = vertex2averageNormals.at(originalCommonVertex0);
       auto const &averageNormal1 = vertex2averageNormals.at(originalCommonVertex1);
                                                                                  // Neighbour of edge (index, index + 1)
-      Plane planeBetweenOriginalNeighbours = Plane::createFrom1vector2points(normal + getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]),
+      Plane planeBetweenOriginalNeighbours = Plane::createFrom1vector2points(normal + getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]).normalized(),
                                                                              originalCommonVertex0, originalCommonVertex1);
       auto currentBase = indexFace * 3u;
-      std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex], currentBase + (indexVertex + 1u) % 3u, currentBase + (indexVertex + 2u) % 3u });
+      std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex],
+                                                     currentBase + (indexVertex + 1u) % 3u,
+                                                     currentBase + (indexVertex + 2u) % 3u });
       mMesh.emplace_back(BezierTriangle(originalCommonVertex0, originalCommonVertex1, originalCentroid,
                                                averageNormal0, averageNormal1, planeBetweenOriginalNeighbours,
                                                newNeighbourIndices));

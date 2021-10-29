@@ -34,7 +34,8 @@ public:
   
   struct Neighbours final {
     std::array<uint32_t, 3u> mFellowTriangles;        // Triangle indices: neighbour of edge (index, index + 1)
-    std::array<uint8_t, 3u>  mFellowCommonSideStarts; // Vertice indice in each triangle where the common side starts, such that the side in the neighbouring triangle is (i, i+1)
+    std::array<uint8_t, 3u>  mFellowCommonSideStarts; // Vertice index in each fellow triangle where the common side starts,
+                                                      // such that the side in the neighbouring triangle is (i, i+1)
   };
 
   struct VertexHash {
@@ -313,6 +314,9 @@ std::pair<tReal, uint32_t> Mesh<tReal>::createEdge2faceFace2vertex(Edge2face &aE
   return std::make_pair(smallestX, smallestXverticeIndex);
 }
 
+#include<iostream>
+#include<iomanip>
+
 template<typename tReal>
 void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2face,
                                                        Face2vertex const &aFace2vertex,
@@ -328,6 +332,7 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       }
       else { // Nothing to do
       }
+      //////////////////////////////////////////////////////////
       auto otherVertexIndex = face[(indexInFace + 1u) % 3u];
       auto edge = std::make_pair(face[indexInFace], otherVertexIndex);
       if(edge.first > edge.second) {
@@ -346,10 +351,15 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       }
       else { // Nothing to do
       }
-      auto otherIndexFace = begin->second;
-      neighbours.mFellowTriangles[indexInFace] = otherIndexFace;      // Neighbour of edge (index, index + 1)
-      auto const &otherFace = aFace2vertex[otherIndexFace];
-      auto const otherIndexInFace = std::find(otherFace.cbegin(), otherFace.cend(), otherVertexIndex) - otherFace.cbegin(); 
+      auto otherFaceIndex = begin->second;
+      neighbours.mFellowTriangles[indexInFace] = otherFaceIndex;      // Neighbour of edge (index, index + 1)
+      auto const &otherFace = aFace2vertex[otherFaceIndex];
+      auto const otherIndexInFace = std::find(otherFace.cbegin(), otherFace.cend(), otherVertexIndex) - otherFace.cbegin();
+
+std::cout << std::setw(3) << indexFace << std::setw(3) << indexInFace << " OFI:" << std::setw(3) << otherFaceIndex << " OIIF: " << otherIndexInFace <<
+" (" << std::setw(2) << face[indexInFace] << std::setw(3) << otherVertexIndex << ") (" <<
+       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";
+
       neighbours.mFellowCommonSideStarts[indexInFace] = otherIndexInFace;
     }
     aFace2neighbour.push_back(neighbours);

@@ -3,6 +3,7 @@
 
 #include<deque>
 #include<vector>
+#include<iomanip>
 #include<iostream>
 
 using Real = float;
@@ -100,16 +101,16 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
 }
 
 void testBarycentric2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
-  std::string name{"baryorig_"};
-  name += aName;
-  name += ".stl";
-
   Mesh<Real> sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
   Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
   sphere *= inflate;
   sphere.standardizeVertices();
   sphere.standardizeNormals();
+
+  std::string name{"baryorig_"};
+  name += aName;
+  name += ".stl";
   sphere.writeMesh(name);
 
   BezierMesh<Real> bezier(sphere);
@@ -159,10 +160,62 @@ void testCustomStl(char * const aName) {
 }
 
 int main(int argc, char **argv) {
-  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
-  testVectorMax("vectorMax", 3, 1, 13.0f, 11.0f);
-  testVectorMax("vectorIdentity", 5, 2, 1.0f, 11.0f);
-  testBarycentric2plane("7x3", 7, 3, 11.1f, 2);
+/*  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+  testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
+  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
+  testBarycentric2plane("4x2", 4, 2, 11.1f, 2);*/
+
+
+  Mesh<Real> sphere;
+  sphere.makeUnitSphere(4, 2);
+  sphere.standardizeVertices();
+  sphere.standardizeNormals();
+/*  auto neighbours = sphere.getFace2neighbours();
+  for(uint32_t i = 0u; i < neighbours.size(); ++i) {
+    auto const &neigh = neighbours[i];
+    auto const &triangle = sphere[i];
+    std::cout << i << '\n';
+    for(uint32_t j = 0u; j < 3u; ++j) {
+      auto fellow = sphere[neigh.mFellowTriangles[j]];
+      auto fellowCommonStart = (int)(neigh.mFellowCommonSideStarts[j]);
+      Vector<Real> ownSide = triangle[j] - triangle[(j+1)%3];
+      Vector<Real> fellowSide = fellow[fellowCommonStart] - fellow[(fellowCommonStart+1)%3];
+      for(int k = 0; k < 3; ++k) {
+        if(::abs(ownSide(k)) < 0.001) ownSide(k) = 0.0;
+        if(::abs(fellowSide(k)) < 0.001) fellowSide(k) = 0.0;
+      }
+      std::cout << "  " << std::setw(3) << neigh.mFellowTriangles[j] << ":   " << (int)(neigh.mFellowCommonSideStarts[j]);
+      std::cout << ' ' << std::setw(10) << std::setprecision(3) << ownSide(0);
+      std::cout << ' ' << std::setw(10) << std::setprecision(3) << ownSide(1);
+      std::cout << ' ' << std::setw(10) << std::setprecision(3) << ownSide(2);
+      std::cout << " -";
+      std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(0);
+      std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(1);
+      std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(2);
+      std::cout << '\n';
+    }
+  }*/
+
+
+/*  for(uint32_t indexFace = 0u; indexFace < sphere.size(); ++indexFace) {
+    auto const &neigh = neighbours[indexFace];
+    auto const &originalTriangle = sphere[indexFace];
+    auto normal = getNormal(originalTriangle);
+    std::cout << std::setw(14) << normal(0) << std::setw(14) << normal(1) << std::setw(14) << normal(2) << "   " << indexFace << " XX\n";
+    for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
+      auto other = getNormal(sphere[neigh.mFellowTriangles[indexVertex]]);
+      std::cout << std::setw(14) << other(0) << std::setw(14) << other(1) << std::setw(14) << other(2) << "   " << indexFace << ' ' << indexVertex << '\n';
+    }
+  }*/
+
+/*  BezierMesh<Real> bezier(sphere);
+  for(uint32_t i = 0u; i < bezier.size(); ++i) {
+    auto const neighbours = bezier[i].getNeighbours();
+    std::cout << i << '\n';
+    for(uint32_t j = 0u; j < 3u; ++j) {
+      std::cout << "  " << std::setw(3) << neighbours[j] << '\n';
+    }
+  }*/
 
   if(argc > 1) {
     testCustomStl(argv[1]);
