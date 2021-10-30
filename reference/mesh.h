@@ -333,8 +333,9 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       else { // Nothing to do
       }
       //////////////////////////////////////////////////////////
-      auto otherVertexIndex = face[(indexInFace + 1u) % 3u];
-      auto edge = std::make_pair(face[indexInFace], otherVertexIndex);
+      auto vertexIndex0 = face[indexInFace];
+      auto vertexIndex1 = face[(indexInFace + 1u) % 3u];
+      auto edge = std::make_pair(vertexIndex0, vertexIndex1);
       if(edge.first > edge.second) {
         std::swap(edge.first, edge.second);
       }
@@ -354,13 +355,16 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       auto otherFaceIndex = begin->second;
       neighbours.mFellowTriangles[indexInFace] = otherFaceIndex;      // Neighbour of edge (index, index + 1)
       auto const &otherFace = aFace2vertex[otherFaceIndex];
-      auto const otherIndexInFace = std::find(otherFace.cbegin(), otherFace.cend(), otherVertexIndex) - otherFace.cbegin();
+      auto otherFaceRawIndex0 = std::find(otherFace.cbegin(), otherFace.cend(), vertexIndex0) - otherFace.cbegin();
+      auto otherFaceRawIndex1 = std::find(otherFace.cbegin(), otherFace.cend(), vertexIndex1) - otherFace.cbegin();
+      uint32_t const resolve[3u][3u] = {{3u, 0u, 2u}, {0u, 3u, 1u}, {2u, 1u, 3u}};
 
+/*auto otherIndexInFace = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
 std::cout << std::setw(3) << indexFace << std::setw(3) << indexInFace << " OFI:" << std::setw(3) << otherFaceIndex << " OIIF: " << otherIndexInFace <<
-" (" << std::setw(2) << face[indexInFace] << std::setw(3) << otherVertexIndex << ") (" <<
-       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";
+" (" << std::setw(2) << vertexIndex0 << std::setw(3) << vertexIndex1 << ") (" <<
+       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";*/
 
-      neighbours.mFellowCommonSideStarts[indexInFace] = otherIndexInFace;
+      neighbours.mFellowCommonSideStarts[indexInFace] = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
     }
     aFace2neighbour.push_back(neighbours);
   }
@@ -461,7 +465,14 @@ void Mesh<tReal>::standardizeNormals() {
   auto [smallestX, smallestXverticeIndex] = createEdge2faceFace2vertex(edge2face, face2vertex);
 
   std::unordered_set<uint32_t> facesAtSmallestX;
-  
+
+for(uint32_t i = 0; i < face2vertex.size(); ++i) {
+std::cout << std::setw(3) << i << ':' << std::setw(3) << face2vertex[i][0] << std::setw(3) << face2vertex[i][1] << std::setw(3) << face2vertex[i][2] << '\n';
+}
+for(auto &[edge, face] : edge2face) {
+std::cout << std::setw(3) << edge.first << std::setw(3) << edge.second << ':' << std::setw(3) << face << '\n';
+}
+
   createFace2neighbourFacesAtSmallestX(edge2face, face2vertex, smallestXverticeIndex,
                                        mFace2neighbours, facesAtSmallestX);
 
@@ -499,6 +510,8 @@ void Mesh<tReal>::standardizeNormals() {
       }
     }
   }
+  createFace2neighbourFacesAtSmallestX(edge2face, face2vertex, smallestXverticeIndex, // Need to call it once more, because we swapped vertices of triangles
+                                       mFace2neighbours, facesAtSmallestX);
   calculateNormalAverages4vertices();
 }
 
