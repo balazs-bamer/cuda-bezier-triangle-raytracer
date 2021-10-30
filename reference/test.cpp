@@ -198,6 +198,7 @@ int main(int argc, char **argv) {
       std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(1);
       std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(2);
       std::cout << '\n';
+      if(::abs(ownSide.norm() - fellowSide.norm()) > 0.01f) throw "own fellow sides length mismatch";
     }
   }
 
@@ -206,7 +207,7 @@ int main(int argc, char **argv) {
     auto const &neigh = neighbours[indexFace];
     auto const &originalTriangle = sphere[indexFace];
     auto normal = getNormal(originalTriangle);
-    std::cout << std::setw(14) << normal(0) << std::setw(14) << normal(1) << std::setw(14) << normal(2) << "   " << indexFace << " XX\n";
+    std::cout << std::setw(14) << normal(0) << std::setw(14) << normal(1) << std::setw(14) << normal(2) << "   " << indexFace << "\n";
     for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
       auto other = getNormal(sphere[neigh.mFellowTriangles[indexVertex]]);
       std::cout << std::setw(14) << other(0) << std::setw(14) << other(1) << std::setw(14) << other(2) << "   " << indexFace << ' ' << indexVertex << '\n';

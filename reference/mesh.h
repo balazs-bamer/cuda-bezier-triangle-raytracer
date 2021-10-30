@@ -116,13 +116,9 @@ private:
   using Intervals = std::deque<std::pair<Iterator, Iterator>>;
 
   void projectVertices(ProjectedIndices &aCurrentProjectedSorted, int32_t const aDimension) const;
-
   tReal makeProximityIntervals(ProjectedIndices const &aCurrentProjectedSorted, Intervals &aCurrentIntervals, tReal const aEpsilon) const;
-
   void standardizeInIntervals(Intervals const &aIntervals, tReal const aEpsilonSquared);
-
   static uint32_t getIndependentFrom(Triangle const &aFaceTarget, Triangle const &aFaceOther);
-
   static Vector getAltitude(Vertex const &aCommon1, Vertex const &aCommon2, Vertex const &aIndependent);
 
   struct PairHash {
@@ -134,20 +130,15 @@ private:
 
   using Edge2face = std::unordered_multimap<std::pair<uint32_t, uint32_t>, uint32_t, PairHash>;
   using Face2vertex = std::vector<std::array<uint32_t, 3u>>;
+  using Vertex2index = std::unordered_map<Vertex, uint32_t, VertexHash>;
 
-  std::pair<tReal, uint32_t> createEdge2faceFace2vertex(Edge2face &aEdge2face, Face2vertex &aFace2vertex) const;
-
-  void createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2face, Face2vertex const &aFace2vertex, uint32_t const aSmallestXverticeIndex,
-                                            Face2neighbours &aFace2neighbour, std::unordered_set<uint32_t> &aFacesAtSmallestX) const;
-
+  std::tuple<Edge2face, Face2vertex, Vertex2index> createEdge2faceFace2vertex() const;
+  std::pair<tReal, std::unordered_set<uint32_t>> getSmallestXstuff(Face2vertex const &aFace2vertex, Vertex2index const &) const;
+  void createFace2neighbour(Edge2face const &aEdge2face, Face2vertex const &aFace2vertex);
   uint32_t getInitialFaceIndex(std::unordered_set<uint32_t> const &aFacesAtSmallestX, Vertex const &aDesiredVector) const;
-
   static void normalize(Triangle &aFace, Vertex const &aDesiredVector);
-
   static void normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown);
-
   void calculateNormalAverages4vertices();
-
   static void divideTriangle(TheMesh &aMesh, Triangle const &aTriangle, int32_t const aDivisor);
 };
 
@@ -272,10 +263,11 @@ typename Mesh<tReal>::Vector Mesh<tReal>::getAltitude(Vertex const &aCommon1, Ve
 }
 
 template<typename tReal>
-std::pair<tReal, uint32_t> Mesh<tReal>::createEdge2faceFace2vertex(Edge2face &aEdge2face, Face2vertex &aFace2vertex) const {
+std::tuple<typename Mesh<tReal>::Edge2face, typename Mesh<tReal>::Face2vertex, typename Mesh<tReal>::Vertex2index> Mesh<tReal>::createEdge2faceFace2vertex() const {
+  Edge2face edge2face;
+  Face2vertex face2vertex;
+  face2vertex.reserve(mMesh.size());
   std::unordered_map<Vertex, uint32_t, VertexHash> was;               // For presence testing, maps each vertex to its index in the deque below.
-  tReal smallestX = std::numeric_limits<tReal>::max();
-  uint32_t smallestXverticeIndex;
   for(uint32_t indexFace = 0u; indexFace < mMesh.size(); ++indexFace) {
     auto const &face = mMesh[indexFace];
     std::array<uint32_t, 3u> faceVertexIndices;                       // We collect here the vertex indices for the actual face.
@@ -292,14 +284,8 @@ std::pair<tReal, uint32_t> Mesh<tReal>::createEdge2faceFace2vertex(Edge2face &aE
         indexInVertices = found->second;
         faceVertexIndices[indexInFace] = indexInVertices;
       }
-      if(vertex[0] < smallestX) {
-        smallestX = vertex[0];
-        smallestXverticeIndex = indexInVertices;
-      }
-      else { // Nothing to do
-      }
     }
-    aFace2vertex.push_back(faceVertexIndices);
+    face2vertex.push_back(faceVertexIndices);
     for(uint32_t i = 0u; i < 3u; ++i) {
       auto low = faceVertexIndices[i];
       auto high = faceVertexIndices[(i + 1u) % 3u];
@@ -308,31 +294,54 @@ std::pair<tReal, uint32_t> Mesh<tReal>::createEdge2faceFace2vertex(Edge2face &aE
       }
       else { // Nothing to do
       }
-      aEdge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
+      edge2face.emplace(std::make_pair(std::pair(low, high), indexFace));
     }
   }
-  return std::make_pair(smallestX, smallestXverticeIndex);
+  return std::make_tuple(edge2face, face2vertex, was);
+}
+
+template<typename tReal>
+std::pair<tReal, std::unordered_set<uint32_t>> Mesh<tReal>::getSmallestXstuff(Face2vertex const &aFace2vertex, Vertex2index const &aVertex2index) const {
+  tReal smallestX = std::numeric_limits<tReal>::max();
+  uint32_t smallestXverticeIndex;
+  for(uint32_t indexFace = 0u; indexFace < mMesh.size(); ++indexFace) {
+    auto const &face = mMesh[indexFace];
+    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
+      auto const vertex = face[indexInFace];
+      if(vertex[0] < smallestX) {
+        smallestX = vertex[0];
+        smallestXverticeIndex = aVertex2index.at(vertex);
+      }
+      else { // Nothing to do
+      }
+    }
+  }
+  std::unordered_set<uint32_t> facesAtSmallestX;
+  for(uint32_t indexFace = 0u; indexFace < mMesh.size(); ++indexFace) {
+    auto const &face = aFace2vertex[indexFace];
+    Neighbours neighbours;
+    for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
+      if(face[indexInFace] == smallestXverticeIndex) {
+        facesAtSmallestX.insert(indexFace);
+      }
+      else { // Nothing to do
+      }
+    }
+  }
+  return std::make_pair(smallestX, facesAtSmallestX);
 }
 
 #include<iostream>
 #include<iomanip>
 
 template<typename tReal>
-void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2face,
-                                                       Face2vertex const &aFace2vertex,
-                                                       uint32_t const aSmallestXverticeIndex,
-                                                       Face2neighbours &aFace2neighbour,
-                                                       std::unordered_set<uint32_t> &aFacesAtSmallestX) const {
+void Mesh<tReal>::createFace2neighbour(Edge2face const &aEdge2face, Face2vertex const &aFace2vertex) {
+  mFace2neighbours.clear();
+  mFace2neighbours.reserve(mMesh.size());
   for(uint32_t indexFace = 0u; indexFace < mMesh.size(); ++indexFace) {
     auto const &face = aFace2vertex[indexFace];
     Neighbours neighbours;
     for(uint32_t indexInFace = 0u; indexInFace < 3u; ++indexInFace) {
-      if(face[indexInFace] == aSmallestXverticeIndex) {
-        aFacesAtSmallestX.insert(indexFace);
-      }
-      else { // Nothing to do
-      }
-      //////////////////////////////////////////////////////////
       auto vertexIndex0 = face[indexInFace];
       auto vertexIndex1 = face[(indexInFace + 1u) % 3u];
       auto edge = std::make_pair(vertexIndex0, vertexIndex1);
@@ -359,14 +368,14 @@ void Mesh<tReal>::createFace2neighbourFacesAtSmallestX(Edge2face const &aEdge2fa
       auto otherFaceRawIndex1 = std::find(otherFace.cbegin(), otherFace.cend(), vertexIndex1) - otherFace.cbegin();
       uint32_t const resolve[3u][3u] = {{3u, 0u, 2u}, {0u, 3u, 1u}, {2u, 1u, 3u}};
 
-/*auto otherIndexInFace = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
+auto otherIndexInFace = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
 std::cout << std::setw(3) << indexFace << std::setw(3) << indexInFace << " OFI:" << std::setw(3) << otherFaceIndex << " OIIF: " << otherIndexInFace <<
 " (" << std::setw(2) << vertexIndex0 << std::setw(3) << vertexIndex1 << ") (" <<
-       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";*/
+       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";
 
       neighbours.mFellowCommonSideStarts[indexInFace] = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
     }
-    aFace2neighbour.push_back(neighbours);
+    mFace2neighbours.push_back(neighbours);
   }
 }
 
@@ -456,15 +465,50 @@ void Mesh<tReal>::calculateNormalAverages4vertices() {
 
 template<typename tReal>
 void Mesh<tReal>::standardizeNormals() {
-  Edge2face edge2face;                                                // Edge is identified by its two ordered vertex indices.
-  Face2vertex face2vertex;
-  face2vertex.reserve(mMesh.size());
-  mFace2neighbours.clear();
-  mFace2neighbours.reserve(mMesh.size());
+  {
+    auto [edge2face, face2vertex, vertex2index] = createEdge2faceFace2vertex();
+    auto [smallestX, facesAtSmallestX] = getSmallestXstuff(face2vertex, vertex2index);
 
-  auto [smallestX, smallestXverticeIndex] = createEdge2faceFace2vertex(edge2face, face2vertex);
+    createFace2neighbour(edge2face, face2vertex);
 
-  std::unordered_set<uint32_t> facesAtSmallestX;
+    Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
+    desiredVector << -1.0f, 0.0f, 0.0f;
+    uint32_t initialFaceIndex = getInitialFaceIndex(facesAtSmallestX, desiredVector);
+
+    struct KnownUnknownFacePair {
+      uint32_t mKnownIndex;
+      uint32_t mUnknownIndex;
+    };
+    std::list<KnownUnknownFacePair> queue;                              // Faces with normals yet to be normalized.
+    normalize(mMesh[initialFaceIndex], desiredVector);
+    std::vector<bool> remaining;
+    remaining.reserve(mFace2neighbours.size());
+    std::fill_n(std::back_inserter(remaining), mFace2neighbours.size(), true);
+    for(auto const indexFace : mFace2neighbours[initialFaceIndex].mFellowTriangles) {
+      queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, indexFace});
+    }
+    remaining[initialFaceIndex] = false;
+    while(!queue.empty()) {
+      auto actualPair = queue.back();
+      queue.pop_back();
+      if(remaining[actualPair.mUnknownIndex]) {
+        normalize(mMesh[actualPair.mKnownIndex], mMesh[actualPair.mUnknownIndex]);
+      }
+      else { // Nothing to do
+      }
+      remaining[actualPair.mUnknownIndex] = false;
+      for(auto const indexFace : mFace2neighbours[actualPair.mUnknownIndex].mFellowTriangles) {
+        if(remaining[indexFace] && actualPair.mUnknownIndex != indexFace) {
+          queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, indexFace});
+        }
+        else { // Nothing to do
+        }
+      }
+    }
+  }
+  {
+    auto [edge2face, face2vertex, vertex2index] = createEdge2faceFace2vertex();
+    createFace2neighbour(edge2face, face2vertex);                       // Need to call it once more, because we swapped vertices of triangles
 
 for(uint32_t i = 0; i < face2vertex.size(); ++i) {
 std::cout << std::setw(3) << i << ':' << std::setw(3) << face2vertex[i][0] << std::setw(3) << face2vertex[i][1] << std::setw(3) << face2vertex[i][2] << '\n';
@@ -473,45 +517,7 @@ for(auto &[edge, face] : edge2face) {
 std::cout << std::setw(3) << edge.first << std::setw(3) << edge.second << ':' << std::setw(3) << face << '\n';
 }
 
-  createFace2neighbourFacesAtSmallestX(edge2face, face2vertex, smallestXverticeIndex,
-                                       mFace2neighbours, facesAtSmallestX);
-
-  Vertex desiredVector;                                               // A known unit vector pointing outwards for a definite face.
-  desiredVector << -1.0f, 0.0f, 0.0f;
-  uint32_t initialFaceIndex = getInitialFaceIndex(facesAtSmallestX, desiredVector);
-
-  struct KnownUnknownFacePair {
-    uint32_t mKnownIndex;
-    uint32_t mUnknownIndex;
-  };
-  std::list<KnownUnknownFacePair> queue;                              // Faces with normals yet to be normalized.
-  normalize(mMesh[initialFaceIndex], desiredVector);
-  std::vector<bool> remaining;
-  remaining.reserve(mFace2neighbours.size());
-  std::fill_n(std::back_inserter(remaining), mFace2neighbours.size(), true);
-  for(auto const indexFace : mFace2neighbours[initialFaceIndex].mFellowTriangles) {
-    queue.emplace_back(KnownUnknownFacePair{initialFaceIndex, indexFace});
   }
-  remaining[initialFaceIndex] = false;
-  while(!queue.empty()) {
-    auto actualPair = queue.back();
-    queue.pop_back();
-    if(remaining[actualPair.mUnknownIndex]) {
-      normalize(mMesh[actualPair.mKnownIndex], mMesh[actualPair.mUnknownIndex]);
-    }
-    else { // Nothing to do
-    }
-    remaining[actualPair.mUnknownIndex] = false;
-    for(auto const indexFace : mFace2neighbours[actualPair.mUnknownIndex].mFellowTriangles) {
-      if(remaining[indexFace] && actualPair.mUnknownIndex != indexFace) {
-        queue.emplace_back(KnownUnknownFacePair{actualPair.mUnknownIndex, indexFace});
-      }
-      else { // Nothing to do
-      }
-    }
-  }
-  createFace2neighbourFacesAtSmallestX(edge2face, face2vertex, smallestXverticeIndex, // Need to call it once more, because we swapped vertices of triangles
-                                       mFace2neighbours, facesAtSmallestX);
   calculateNormalAverages4vertices();
 }
 
