@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
       std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(1);
       std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(2);
       std::cout << '\n';
-      if(::abs(ownSide.norm() - fellowSide.norm()) > 0.01f) throw "own fellow sides length mismatch";
+      if((ownSide - fellowSide).norm() > 0.01f && (ownSide + fellowSide).norm() > 0.01f) throw "own fellow sides mismatch";
     }
   }
 
