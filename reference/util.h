@@ -61,6 +61,7 @@ struct Plane final {
   tReal         mConstant;
 
   Plane() = default;
+  // aNormal must be normalized.
   Plane(Vector<tReal> const &aNormal, tReal const aConstant) : mNormal(aNormal), mConstant(aConstant) {}
 
   static Plane         createFrom1proportion2points(tReal const aProportion, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1);
@@ -68,6 +69,14 @@ struct Plane final {
   static Plane         createFrom1vector2points(Vector<tReal> const &aDirection, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1);
   static Plane         createFrom2vectors1point(Vertex<tReal> const &aDirection0, Vertex<tReal> const &aDirection1, Vertex<tReal> const &aPoint);
   static Vertex<tReal> intersect(Plane const &aPlane0, Plane const &aPlane1, Plane const &aPlane2);
+
+  // Point projection on this plane
+  Vector<tReal>        operator*(Vector<tReal> const aPoint) const { return aPoint - mNormal * (aPoint.dot(mNormal) - mConstant); }
+
+  bool operator<(Plane<tReal> const &aOther) const { return mNormal(0) < aOther.mNormal(0) // TODO remove: only for debugging
+                                                         || mNormal(0) == aOther.mNormal(0) && mNormal(1) < aOther.mNormal(1)
+                                                         || mNormal(0) == aOther.mNormal(0) && mNormal(1) == aOther.mNormal(1) && mNormal(2) < aOther.mNormal(2)
+                                                         || mNormal(0) == aOther.mNormal(0) && mNormal(1) == aOther.mNormal(1) && mNormal(2) == aOther.mNormal(2) && mConstant < aOther.mConstant; }
 };
 
 /////////////////////////////////

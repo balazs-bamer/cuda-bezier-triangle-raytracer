@@ -195,6 +195,33 @@ TEST(planeIntersection, VectorsPoint) {
   }
 }
 
+TEST(planeProjection, Point) {
+  {
+    Vertex<Real> point{0.0f, 0.0f, 0.0f};
+    Plane<Real> plane = Plane<Real>::createFrom3points({2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 0.0f, 2.0f});
+    auto projected = plane * point;
+    EXPECT_LT((projected - Vertex<Real>(0.6666f, 0.6666f, 0.6666f)).norm(), cgEpsilon);
+  }
+  {
+    Vertex<Real> point{0.0f, 0.0f, 0.0f};
+    Plane<Real> plane = Plane<Real>::createFrom3points({2.0f, 0.0f, 0.0f}, {2.0f, 1.0f, 0.0f}, {2.0f, 0.0f, 1.0f});
+    auto projected = plane * point;
+    EXPECT_LT((projected - Vertex<Real>(2.0f, 0.0f, 0.0f)).norm(), cgEpsilon);
+  }
+  {
+    Vertex<Real> point{1.0f, 2.0f, 3.0f};
+    Plane<Real> plane = Plane<Real>::createFrom3points({3.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 3.0f}, {1.0f, 2.0f, 5.0f});
+    auto projected = plane * point;
+    EXPECT_LT((projected - Vertex<Real>(1.6666f, 2.6666f, 3.6666f)).norm(), cgEpsilon);
+  }
+  {
+    Vertex<Real> point{-1.0f, -2.0f, 3.0f};
+    Plane<Real> plane = Plane<Real>::createFrom3points({1.0f, -2.0f, 3.0f}, {1.0f, -3.0f, 3.0f}, {1.0f, -2.0f, 4.0f});
+    auto projected = plane * point;
+    EXPECT_LT((projected - Vertex<Real>(1.0f, -2.0f, 3.0f)).norm(), cgEpsilon);
+  }
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
