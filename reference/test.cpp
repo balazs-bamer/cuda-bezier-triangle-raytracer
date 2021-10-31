@@ -108,7 +108,7 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   sphere.standardizeVertices();
   sphere.standardizeNormals();
 
-  std::string name{"baryorig_"};
+  std::string name{"baryOrig_"};
   name += aName;
   name += ".stl";
   sphere.writeMesh(name);
@@ -128,7 +128,7 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   sphere *= inflate;
   uint32_t i = 0u;
   for(auto const &controlPoint : controlPoints) {
-    if(i < 3u) {
+    if(i < 12u || i >= 3 || i >= 8u) {
       auto copy = sphere;
       copy += controlPoint;
       std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
@@ -166,10 +166,11 @@ void testCustomStl(char * const aName) {
 }
 
 int main(int argc, char **argv) {
- /* testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
-  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);*/
-  testBarycentric2plane("4x2", 4, 2, 3.0f, 2);
+  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
+  testBarycentric2plane("4x2", 4, 2, 3.0f, 4);
+  testBarycentric2plane("7x5", 7, 5, 3.0f, 4);
 
 
  /* Mesh<Real> sphere;
