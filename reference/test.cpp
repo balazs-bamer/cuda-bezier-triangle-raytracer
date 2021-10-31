@@ -128,7 +128,7 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   sphere *= inflate;
   uint32_t i = 0u;
   for(auto const &controlPoint : controlPoints) {
-    if(i < 5u) {
+    if(i < 3u) {
       auto copy = sphere;
       copy += controlPoint;
       std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
@@ -141,6 +141,12 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   name += aName;
   name += ".stl";
   result.writeMesh(name);
+
+  auto parameters = bezier.getStuff();
+  name = "baryPara_";
+  name += aName;
+  name += ".stl";
+  parameters.writeMesh(name);
 }
 
 void testCustomStl(char * const aName) {
@@ -162,11 +168,11 @@ void testCustomStl(char * const aName) {
 int main(int argc, char **argv) {
  /* testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
-  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
-  testBarycentric2plane("4x2", 4, 2, 11.1f, 2);*/
+  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);*/
+  testBarycentric2plane("4x2", 4, 2, 3.0f, 2);
 
 
-  Mesh<Real> sphere;
+ /* Mesh<Real> sphere;
   sphere.makeUnitSphere(4, 2);
   sphere.standardizeVertices();
   sphere.standardizeNormals();
@@ -212,16 +218,16 @@ int main(int argc, char **argv) {
       auto other = getNormal(sphere[neigh.mFellowTriangles[indexVertex]]);
       std::cout << std::setw(14) << other(0) << std::setw(14) << other(1) << std::setw(14) << other(2) << "   " << indexFace << ' ' << indexVertex << '\n';
     }
-  }
+  }*/
 
-  BezierMesh<Real> bezier(sphere);
+/*  BezierMesh<Real> bezier(sphere);
   for(uint32_t i = 0u; i < bezier.size(); ++i) {
     auto const neighbours = bezier[i].getNeighbours();
     std::cout << i << '\n';
     for(uint32_t j = 0u; j < 3u; ++j) {
       std::cout << "  " << std::setw(3) << neighbours[j] << '\n';
     }
-  }
+  }*/
 
   if(argc > 1) {
     testCustomStl(argv[1]);

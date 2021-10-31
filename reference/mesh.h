@@ -331,8 +331,8 @@ std::pair<tReal, std::unordered_set<uint32_t>> Mesh<tReal>::getSmallestXstuff(Fa
   return std::make_pair(smallestX, facesAtSmallestX);
 }
 
-#include<iostream>
-#include<iomanip>
+/*#include<iostream>
+#include<iomanip>*/
 
 template<typename tReal>
 void Mesh<tReal>::createFace2neighbour(Edge2face const &aEdge2face, Face2vertex const &aFace2vertex) {
@@ -368,10 +368,10 @@ void Mesh<tReal>::createFace2neighbour(Edge2face const &aEdge2face, Face2vertex 
       auto otherFaceRawIndex1 = std::find(otherFace.cbegin(), otherFace.cend(), vertexIndex1) - otherFace.cbegin();
       uint32_t const resolve[3u][3u] = {{3u, 0u, 2u}, {0u, 3u, 1u}, {2u, 1u, 3u}};
 
-auto otherIndexInFace = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
+/*auto otherIndexInFace = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
 std::cout << std::setw(3) << indexFace << std::setw(3) << indexInFace << " OFI:" << std::setw(3) << otherFaceIndex << " OIIF: " << otherIndexInFace <<
 " (" << std::setw(2) << vertexIndex0 << std::setw(3) << vertexIndex1 << ") (" <<
-       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";
+       std::setw(2) << otherFace[otherIndexInFace] << std::setw(3) << otherFace[(otherIndexInFace+1)%3] << ")\n";*/
 
       neighbours.mFellowCommonSideStarts[indexInFace] = resolve[otherFaceRawIndex0][otherFaceRawIndex1];
     }
@@ -451,7 +451,7 @@ void Mesh<tReal>::calculateNormalAverages4vertices() {
       vertex2triangleIndex.emplace(std::make_pair(triangle[i], indexInMesh));
     }
   }
-  for (auto iter=vertex2triangleIndex.cbegin(); iter != vertex2triangleIndex.cend(); iter = vertex2triangleIndex.equal_range(iter->first).second) {
+  for (auto iter=vertex2triangleIndex.cbegin(); iter != vertex2triangleIndex.cend(); ) {
     auto const &vertex = iter->first;
     auto const range = vertex2triangleIndex.equal_range(vertex);
     Vector sum = Vector::Zero();
@@ -460,6 +460,7 @@ void Mesh<tReal>::calculateNormalAverages4vertices() {
     }
     sum.normalize();
     mVertex2averageNormals.emplace(std::make_pair(vertex, sum));
+    iter = range.second;
   }
 }
 
@@ -510,12 +511,12 @@ void Mesh<tReal>::standardizeNormals() {
     auto [edge2face, face2vertex, vertex2index] = createEdge2faceFace2vertex();
     createFace2neighbour(edge2face, face2vertex);                       // Need to call it once more, because we swapped vertices of triangles
 
-for(uint32_t i = 0; i < face2vertex.size(); ++i) {
+/*for(uint32_t i = 0; i < face2vertex.size(); ++i) {
 std::cout << std::setw(3) << i << ':' << std::setw(3) << face2vertex[i][0] << std::setw(3) << face2vertex[i][1] << std::setw(3) << face2vertex[i][2] << '\n';
 }
 for(auto &[edge, face] : edge2face) {
 std::cout << std::setw(3) << edge.first << std::setw(3) << edge.second << ':' << std::setw(3) << face << '\n';
-}
+}*/
 
   }
   calculateNormalAverages4vertices();
