@@ -142,11 +142,11 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   name += ".stl";
   result.writeMesh(name);
 
-  auto parameters = bezier.getStuff();
+/*  auto parameters = bezier.getStuff();
   name = "baryPara_";
   name += aName;
   name += ".stl";
-  parameters.writeMesh(name);
+  parameters.writeMesh(name);*/
 }
 
 void testCustomStl(char * const aName) {

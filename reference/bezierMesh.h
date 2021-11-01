@@ -30,8 +30,8 @@ public:
   Mesh<tReal> interpolate(int32_t const aDivisor) const;
   std::vector<Vertex> dumpControlPoints() const;
 
-Mesh<tReal> stuff;
-Mesh<tReal> const& getStuff() const { return stuff; }
+/*Mesh<tReal> stuff;
+Mesh<tReal> const& getStuff() const { return stuff; }*/
 
 private:
   void setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod);
@@ -41,9 +41,9 @@ private:
 //       IMPLEMENTATION        //
 /////////////////////////////////
 
-#include<fstream>
+/*#include<fstream>
 #include<iostream>
-#include<iomanip>
+#include<iomanip>*/
 
 template<typename tReal>
 BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
@@ -52,7 +52,7 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
   auto const &mesh                  = aMesh.getMesh();
   auto const &neighbours            = aMesh.getFace2neighbours();
   auto const &vertex2averageNormals = aMesh.getVertex2averageNormals();
-std::map<Plane, uint32_t> neighPlanes;
+//std::map<Plane, uint32_t> neighPlanes;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &neigh = neighbours[indexFace];
     auto const &originalTriangle = aMesh[indexFace];
@@ -70,7 +70,7 @@ std::map<Plane, uint32_t> neighPlanes;
       std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex],
                                                      currentBase + (indexVertex + 1u) % 3u,
                                                      currentBase + (indexVertex + 2u) % 3u });
-std::cout << std::setw(3) << indexFace << std::setw(3) << indexVertex << " =" << std::setw(3) << mMesh.size() <<
+/*std::cout << std::setw(3) << indexFace << std::setw(3) << indexVertex << " =" << std::setw(3) << mMesh.size() <<
 std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex0(0)) < 0.001f ? 0.0f : originalCommonVertex0(0)) <<
 std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex0(1)) < 0.001f ? 0.0f : originalCommonVertex0(1)) <<
 std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex0(2)) < 0.001f ? 0.0f : originalCommonVertex0(2)) << "  -" <<
@@ -116,16 +116,16 @@ if((v2-v1).norm()<0.01f) {
 stuff.push_back({v0, v1, v2});
 stuff.push_back({v0, v1, v3});
 stuff.push_back({v0, v2, v3});
-stuff.push_back({v1, v2, v3});
+stuff.push_back({v1, v2, v3});*/
       mMesh.emplace_back(BezierTriangle(originalCommonVertex0, originalCommonVertex1, originalCentroid,
                                                averageNormal0, averageNormal1, planeBetweenOriginalNeighbours,
                                                newNeighbourIndices));
     }
   }
-for(auto const &[key, value] : neighPlanes) {
+/*for(auto const &[key, value] : neighPlanes) {
   std::cout << value << ' ';
 }
-std::cout << '\n';
+std::cout << '\n';*/
   setMissingFields(aMesh, &BezierTriangle::setMissingFields1);
   setMissingFields(aMesh, &BezierTriangle::setMissingFields2);
   setMissingFields(aMesh, &BezierTriangle::setMissingFields3);
