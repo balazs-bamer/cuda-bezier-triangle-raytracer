@@ -33,6 +33,11 @@ Vector<tReal> getNormal(Vertex<tReal> const &aVertex0, Vertex<tReal> const &aVer
   return (aVertex1 - aVertex0).cross(aVertex2 - aVertex0);
 }
 
+template<typename tReal>
+tReal getPerimeter(Triangle<tReal> const &aTriangle) {
+  return (aTriangle[0u] - aTriangle[1u]).norm() + (aTriangle[1u] - aTriangle[2u]).norm() + (aTriangle[2u] - aTriangle[0u]).norm();
+}
+
 // Assumes sum(aB*) == 1
 template<typename tReal>
 Vertex<tReal> barycentric2cartesian(Triangle<tReal> const &aTriangle, tReal const aB0, tReal const aB1, tReal const aB2) {
@@ -66,6 +71,7 @@ struct Plane final {
 
   static Plane         createFrom1proportion2points(tReal const aProportion, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1);
   static Plane         createFrom3points(Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1, Vertex<tReal> const &aPoint2);
+  static Plane         createFromTriangle(Triangle<tReal> const &aTriangle) { return createFrom3points(aTriangle[0u], aTriangle[1u], aTriangle[2u]); }
   static Plane         createFrom1vector2points(Vector<tReal> const &aDirection, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1);
   static Plane         createFrom2vectors1point(Vertex<tReal> const &aDirection0, Vertex<tReal> const &aDirection1, Vertex<tReal> const &aPoint);
   static Vertex<tReal> intersect(Plane const &aPlane0, Plane const &aPlane1, Plane const &aPlane2);

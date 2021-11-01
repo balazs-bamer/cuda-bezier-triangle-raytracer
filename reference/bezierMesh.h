@@ -1,14 +1,18 @@
-#ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_BEZIERMESH
+﻿#ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_BEZIERMESH
 #define CUDA_BEZIER_TRIANGLE_RAYTRACER_BEZIERMESH
 
 #include "mesh.h"
 #include "bezierTriangle.h"
 #include <functional>
+#include <numeric>
 
 template<typename tReal>
 class BezierMesh final {
 private:
-  std::vector<BezierTriangle<tReal>> mMesh;
+  static constexpr tReal csBezierHeightPerPerimeterLimit = 0.1f;      // TODO consider
+
+  std::vector<BezierTriangle<tReal>>    mMesh;
+  typename Mesh<tReal>::Face2neighbours mOriginalNeighbours;
   
   using Vector              = ::Vector<tReal>;
   using Vertex              = ::Vertex<tReal>;
@@ -29,12 +33,16 @@ public:
 
   Mesh<tReal> interpolate(int32_t const aDivisor) const;
   std::vector<Vertex> dumpControlPoints() const;
+  Mesh<tReal> splitThickBezierTriangles() const;
 
 /*Mesh<tReal> stuff;
 Mesh<tReal> const& getStuff() const { return stuff; }*/
 
 private:
   void setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod);
+  void append2split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
+  void append3split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
+  void append4split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
 };
 
 /////////////////////////////////
@@ -46,15 +54,14 @@ private:
 #include<iomanip>*/
 
 template<typename tReal>
-BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) {
+BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) : mOriginalNeighbours(aMesh.getFace2neighbours()) {
   mMesh.clear();
   mMesh.reserve(aMesh.size() * 3u);
   auto const &mesh                  = aMesh.getMesh();
-  auto const &neighbours            = aMesh.getFace2neighbours();
   auto const &vertex2averageNormals = aMesh.getVertex2averageNormals();
 //std::map<Plane, uint32_t> neighPlanes;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
-    auto const &neigh = neighbours[indexFace];
+    auto const &neigh = mOriginalNeighbours[indexFace];
     auto const &originalTriangle = aMesh[indexFace];
     auto const originalCentroid = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
     auto normal = getNormal(originalTriangle).normalized();
@@ -173,6 +180,72 @@ std::vector<Vertex<tReal>> BezierMesh<tReal>::dumpControlPoints() const {
     }
   }
   return result;
+}
+
+template<typename tReal>
+Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
+  static constexpr uint8_t csSplitMask[3u]  = { 1u, 2u, 4u };
+  static constexpr uint8_t csSplitAll       = 7u;
+  static constexpr uint8_t csSplitCount[8u] = { 1u, 2u, 2u, 3u, 2u, 3u, 3u, 4u };
+  std::vector<uint8_t> splitSides(mOriginalNeighbours.size(), 0u);
+
+  for(uint32_t indexOriginal = 0u; indexOriginal < mOriginalNeighbours.size(); ++indexOriginal) {
+    Vertex bezierAboveOriginalCentroid = mMesh[indexOriginal * 3u].interpolateAboveOriginalCentroid();
+    Triangle original { mMesh[indexOriginal * 3u].getControlPoint(0u),
+                        mMesh[indexOriginal * 3u + 1u].getControlPoint(0u),
+                        mMesh[indexOriginal * 3u + 2u].getControlPoint(0u) };
+    if((original / bezierAboveOriginalCentroid / getPerimeter(original)) > csBezierHeightPerPerimeterLimit) {
+      splitSides[indexOriginal] = csSplitAll;
+      auto const &neigh = mOriginalNeighbours[indexOriginal];
+      for(uint32_t side = 0u; side < 3u; ++side) {
+        splitSides[neigh.mFellowTriangles[side]] |= csSplitMask[neigh.mFellowCommonSideStarts[side]];
+      }
+    }
+    else { // Nothing to do
+    }
+  }
+
+  uint32_t newCount = 0u;
+  newCount = std::accumulate(splitSides.cbegin(), splitSides.cend(), newCount, [](uint32_t aSofar, uint8_t aNew){ return aSofar + csSplitCount[aNew]; });
+  Mesh<tReal> result;
+  result.reserve(newCount);
+  for(uint32_t indexOriginal = 0u; indexOriginal < mOriginalNeighbours.size(); ++indexOriginal) {
+    Triangle original { mMesh[indexOriginal * 3u].getControlPoint(0u),
+                        mMesh[indexOriginal * 3u + 1u].getControlPoint(0u),
+                        mMesh[indexOriginal * 3u + 2u].getControlPoint(0u) };
+    uint8_t split = splitSides[indexOriginal];
+    newCount = csSplitCount[split];
+    if(newCount == 1u) {
+      result.push_back(original);
+    }
+    else if(newCount == 2u) {
+      append2split(result, original, split);
+    }
+    else if(newCount == 3u) {
+      append3split(result, original, split);
+    }
+    else { // newCount == 4u
+      append4split(result, original, split);
+    }
+  }
+  return result;
+}
+
+template<typename tReal>
+void BezierMesh<tReal>::append2split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
+  static constexpr uint8_t csIndexFor2onSide[8u] = { 3u, 0u, 1u, 3u, 2u, 3u, 3u, 3u };
+  uint32_t index2 = csIndexFor2onSide[aSplit];
+
+}
+
+template<typename tReal>
+void BezierMesh<tReal>::append3split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
+
+}
+
+template<typename tReal>
+void BezierMesh<tReal>::append4split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
+
 }
 
 #endif

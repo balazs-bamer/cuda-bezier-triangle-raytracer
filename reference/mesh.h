@@ -456,7 +456,9 @@ void Mesh<tReal>::calculateNormalAverages4vertices() {
     auto const range = vertex2triangleIndex.equal_range(vertex);
     Vector sum = Vector::Zero();
     for (auto inRange = range.first; inRange != range.second; ++inRange) {
-      sum += getNormal(mMesh[inRange->second]).normalized();
+      sum += getNormal(mMesh[inRange->second]).normalized();            // TODO consider something in between this and the below version.
+                                                                        // Moreover perhaps also include triangles further away with less weight.
+      //sum += getNormal(mMesh[inRange->second]);                       // No normalizing, this way the average is wieghted by triangle areas.
     }
     sum.normalize();
     mVertex2averageNormals.emplace(std::make_pair(vertex, sum));
@@ -540,7 +542,7 @@ void Mesh<tReal>::divideTriangle(TheMesh &result, Triangle const &aTriangle, int
   divide(aTriangle, aDivisor, [&result](Triangle && aNew){ result.push_back(aNew); } );
 }
 
-template<typename tReal>
+template<typename tReal>                                              // TODO replace with smart version providing equally divided sides for both containing triangles.
 void Mesh<tReal>::splitTriangles(tReal const aMaxTriangleSide) {
   TheMesh result;
   for(auto const &triangle : mMesh) {

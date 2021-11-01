@@ -58,7 +58,8 @@ public:
 
   Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
   Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
-  Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary[0u], aBary[1u], aBary[2u]); }
+  Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary(0u), aBary(1u), aBary(2u)); }
+  Vertex interpolateAboveOriginalCentroid() const { return mControlPoints[csControlIndexAboveOriginalCentroid]; }
 };
 
 /////////////////////////////////
