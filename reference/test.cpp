@@ -149,7 +149,7 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   parameters.writeMesh(name);*/
 }
 
-void testCustomStl(char * const aName, int32_t const aDivisor) {
+void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
   Mesh<Real> mesh;
   mesh.readMesh(aName);
 
