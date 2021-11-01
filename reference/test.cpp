@@ -149,20 +149,27 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   parameters.writeMesh(name);*/
 }
 
-void testCustomStl(char * const aName) {
+void testCustomStl(char * const aName, int32_t const aDivisor) {
   Mesh<Real> mesh;
   mesh.readMesh(aName);
 
   mesh.standardizeVertices();
   mesh.standardizeNormals();
 
-  std::string nameBack{"back_"};
-  nameBack += aName;
-  mesh.writeMesh(nameBack);
+  std::string name{"back_"};
+  name += aName;
+  mesh.writeMesh(name);
 
-  std::string nameNorm{"norm_"};
-  nameNorm += aName;
-  visualizeNormals(mesh).writeMesh(nameNorm);
+  name = "norm_";
+  name += aName;
+  visualizeNormals(mesh).writeMesh(name);
+
+  BezierMesh<Real> bezier(mesh);
+  auto planified = bezier.interpolate(aDivisor);
+
+  name = "bary2plane_";
+  name += aName;
+  planified.writeMesh(name);
 }
 
 int main(int argc, char **argv) {
@@ -231,7 +238,7 @@ int main(int argc, char **argv) {
   }*/
 
   if(argc > 1) {
-    testCustomStl(argv[1]);
+    testCustomStl(argv[1], 4);
   }
   else { // Nothing to do
   }
