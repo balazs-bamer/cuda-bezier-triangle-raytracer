@@ -33,16 +33,19 @@ public:
 
   Mesh<tReal> interpolate(int32_t const aDivisor) const;
   std::vector<Vertex> dumpControlPoints() const;
-  Mesh<tReal> splitThickBezierTriangles() const;
+  Mesh<tReal> splitThickBezierTriangles() const;        // TODO consider automatic mechanism to iterate until either
+                                                        // - no more split or under a percentage
+                                                        // - absolute height left is below a value
+                                                        // - minimal triangle perimeter is below a value or percentage of the original
 
 /*Mesh<tReal> stuff;
 Mesh<tReal> const& getStuff() const { return stuff; }*/
 
 private:
   void setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod);
-  void append2split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
-  void append3split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
-  void append4split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
+  void append2split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
+  void append3split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
+  void append4split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle) const;
 };
 
 /////////////////////////////////
@@ -219,33 +222,83 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
       result.push_back(original);
     }
     else if(newCount == 2u) {
-      append2split(result, original, split);
+      append2split(result, indexOriginal * 3u, original, split);
     }
     else if(newCount == 3u) {
-      append3split(result, original, split);
+      append3split(result, indexOriginal * 3u, original, split);
     }
     else { // newCount == 4u
-      append4split(result, original, split);
+      append4split(result, indexOriginal * 3u, original);
     }
   }
   return result;
 }
 
+//       1
+//      /|\
+//     / | \
+//    /  |  \
+//   /   |   \
+//  /____|____\
+// 0           2   index2 == 2
+//
 template<typename tReal>
-void BezierMesh<tReal>::append2split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
+void BezierMesh<tReal>::append2split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
   static constexpr uint8_t csIndexFor2onSide[8u] = { 3u, 0u, 1u, 3u, 2u, 3u, 3u, 3u };
   uint32_t index2 = csIndexFor2onSide[aSplit];
-
+  auto splitVertex = mMesh[aIndexBase + index2].interpolate(0.5f, 0.5f, 0.0f);
+  uint32_t indexAfter2 = (index2 + 1u) % 3u;
+  uint32_t indexBefore2 = (index2 + 2u) % 3u;
+  aResult.push_back(Triangle{ aOriginalTriangle[indexAfter2], aOriginalTriangle[indexBefore2], splitVertex });
+  aResult.push_back(Triangle{ aOriginalTriangle[indexBefore2], aOriginalTriangle[index2], splitVertex });
 }
 
+//       1
+//      /|\
+//     / | \SA1
+//    /  | /\
+//   /   |/  \     or not 1-SB1 but 0-SA1, whichever is shorter 
+//  /____/____\
+// 0    SB1    2   index1 == 0
+//
 template<typename tReal>
-void BezierMesh<tReal>::append3split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
-
+void BezierMesh<tReal>::append3split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
+  static constexpr uint8_t csIndexFor1onSide[8u] = { 3u, 3u, 3u, 2u, 3u, 1u, 0u, 3u };
+  uint32_t index1 = csIndexFor1onSide[aSplit];
+  uint32_t indexAfter1 = (index1 + 1u) % 3u;
+  uint32_t indexBefore1 = (index1 + 2u) % 3u;
+  auto splitVertexBefore1 = mMesh[aIndexBase + indexBefore1].interpolate(0.5f, 0.5f, 0.0f);
+  auto splitVertexAfter1  = mMesh[aIndexBase + indexAfter1 ].interpolate(0.5f, 0.5f, 0.0f);
+  aResult.push_back(Triangle{ aOriginalTriangle[indexBefore1], splitVertexBefore1, splitVertexAfter1 });
+  if((aOriginalTriangle[indexAfter1] - splitVertexBefore1).norm < (aOriginalTriangle[index1] - splitVertexAfter1).norm) {
+    aResult.push_back(Triangle{ aOriginalTriangle[indexAfter1], splitVertexAfter1, splitVertexBefore1 });
+    aResult.push_back(Triangle{ aOriginalTriangle[index1], aOriginalTriangle[indexAfter1], splitVertexBefore1 });
+  }
+  else {
+    aResult.push_back(Triangle{ aOriginalTriangle[indexAfter1], splitVertexAfter1, aOriginalTriangle[index1] });
+    aResult.push_back(Triangle{ aOriginalTriangle[index1], splitVertexAfter1, splitVertexBefore1 });
+  }
 }
 
+//        1
+//       /\
+//      /  \
+//   S0/____\S1
+//    /\    /\
+//   /  \  /  \
+//  /____\/____\
+// 0     S2     2
+//
 template<typename tReal>
-void BezierMesh<tReal>::append4split(Mesh<tReal> &aResult, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
-
+void BezierMesh<tReal>::append4split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle) const {
+  Triangle middle;
+  for(uint32_t i = 0u; i < 3u; ++i) {
+    middle[i] = mMesh[aIndexBase + i].interpolate(0.5f, 0.5f, 0.0f);
+  }
+  aResult.push_back(middle);
+  for(uint32_t i = 0u; i < 3u; ++i) {
+    aResult.push_back(Triangle{ aOriginalTriangle[i], middle[i], middle[(i + 2u) % 3u] });
+  }
 }
 
 #endif
