@@ -197,7 +197,7 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
     Triangle original { mMesh[indexOriginal * 3u].getControlPoint(0u),
                         mMesh[indexOriginal * 3u + 1u].getControlPoint(0u),
                         mMesh[indexOriginal * 3u + 2u].getControlPoint(0u) };
-    if((original / bezierAboveOriginalCentroid / getPerimeter(original)) > csBezierHeightPerPerimeterLimit) {
+    if((Plane::createFromTriangle(original) / bezierAboveOriginalCentroid / getPerimeter(original)) > csBezierHeightPerPerimeterLimit) {
       splitSides[indexOriginal] = csSplitAll;
       auto const &neigh = mOriginalNeighbours[indexOriginal];
       for(uint32_t side = 0u; side < 3u; ++side) {
@@ -270,7 +270,7 @@ void BezierMesh<tReal>::append3split(Mesh<tReal> &aResult, uint32_t const aIndex
   auto splitVertexBefore1 = mMesh[aIndexBase + indexBefore1].interpolate(0.5f, 0.5f, 0.0f);
   auto splitVertexAfter1  = mMesh[aIndexBase + indexAfter1 ].interpolate(0.5f, 0.5f, 0.0f);
   aResult.push_back(Triangle{ aOriginalTriangle[indexBefore1], splitVertexBefore1, splitVertexAfter1 });
-  if((aOriginalTriangle[indexAfter1] - splitVertexBefore1).norm < (aOriginalTriangle[index1] - splitVertexAfter1).norm) {
+  if((aOriginalTriangle[indexAfter1] - splitVertexBefore1).norm() < (aOriginalTriangle[index1] - splitVertexAfter1).norm()) {
     aResult.push_back(Triangle{ aOriginalTriangle[indexAfter1], splitVertexAfter1, splitVertexBefore1 });
     aResult.push_back(Triangle{ aOriginalTriangle[index1], aOriginalTriangle[indexAfter1], splitVertexBefore1 });
   }

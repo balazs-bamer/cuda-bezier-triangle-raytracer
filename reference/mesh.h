@@ -106,7 +106,8 @@ public:
 
   void writeMesh(std::string const &aFilename) const;
 
-  void makeUnitSphere(int32_t const aSectors, int32_t const aBelts);
+  void makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Vector const &aSize);
+  void makeUnitSphere(int32_t const aSectors, int32_t const aBelts) { makeEllipsoid(aSectors, aBelts, Vector(1.0f, 1.0f, 1.0f)); }
 
 private:
   tReal getSmallestSide() const;
@@ -606,7 +607,7 @@ void Mesh<tReal>::writeMesh(std::string const& aFilename) const {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename tReal>
-void Mesh<tReal>::makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
+void Mesh<tReal>::makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Vector const &aSize) {
   mMesh.clear();
   mMesh.reserve(static_cast<uint32_t>(2 * aSectors * aBelts));
   mFace2neighbours.clear();
@@ -620,19 +621,19 @@ void Mesh<tReal>::makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
   tReal beltRadiusUp = 0.0f;
   tReal beltRadiusMiddle = std::sin(beltAngleMiddle);
   tReal beltRadiusDown = std::sin(beltAngleDown);
-  tReal beltZup = 1.0f;
-  tReal beltZmiddle = std::cos(beltAngleMiddle);
-  tReal beltZdown = std::cos(beltAngleDown);
+  tReal beltZup = aSize(2);
+  tReal beltZmiddle = aSize(2) * std::cos(beltAngleMiddle);
+  tReal beltZdown = aSize(2) * std::cos(beltAngleDown);
   for(int32_t belt = 0; belt < aBelts; ++belt) {
     tReal sectorAngleUpDown = bias + sectorAngleHalf;
     tReal sectorAngleMiddle1 = bias + 0.0f;
     tReal sectorAngleMiddle2 = bias + sectorAngleFull;
     for(int32_t sector = 0; sector < aSectors; ++sector) {
-      Vertex corner1(beltRadiusUp * std::sin(sectorAngleUpDown), beltRadiusUp * std::cos(sectorAngleUpDown), beltZup);
-      Vertex corner2(beltRadiusMiddle * std::sin(sectorAngleMiddle1), beltRadiusMiddle * std::cos(sectorAngleMiddle1), beltZmiddle);
-      Vertex corner3(beltRadiusMiddle * std::sin(sectorAngleMiddle2), beltRadiusMiddle * std::cos(sectorAngleMiddle2), beltZmiddle);
+      Vertex corner1(aSize(0) * beltRadiusUp * std::sin(sectorAngleUpDown), aSize(1) * beltRadiusUp * std::cos(sectorAngleUpDown), beltZup);
+      Vertex corner2(aSize(0) * beltRadiusMiddle * std::sin(sectorAngleMiddle1), aSize(1) * beltRadiusMiddle * std::cos(sectorAngleMiddle1), beltZmiddle);
+      Vertex corner3(aSize(0) * beltRadiusMiddle * std::sin(sectorAngleMiddle2), aSize(1) * beltRadiusMiddle * std::cos(sectorAngleMiddle2), beltZmiddle);
       mMesh.push_back({corner1, corner2, corner3});
-      corner1 = {beltRadiusDown * std::sin(sectorAngleUpDown), beltRadiusDown * std::cos(sectorAngleUpDown), beltZdown};
+      corner1 = {aSize(0) * beltRadiusDown * std::sin(sectorAngleUpDown), aSize(1) * beltRadiusDown * std::cos(sectorAngleUpDown), beltZdown};
       mMesh.push_back({corner2, corner3, corner1});
       sectorAngleUpDown += sectorAngleFull;
       sectorAngleMiddle1 = sectorAngleMiddle2;
@@ -646,7 +647,7 @@ void Mesh<tReal>::makeUnitSphere(int32_t const aSectors, int32_t const aBelts) {
     beltRadiusDown = std::sin(beltAngleDown);
     beltZup = beltZmiddle;
     beltZmiddle = beltZdown;
-    beltZdown = std::cos(beltAngleDown);
+    beltZdown = aSize(2) * std::cos(beltAngleDown);
     bias += sectorAngleHalf;
   }
 }

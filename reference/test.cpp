@@ -100,7 +100,7 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   visualizeVertexNormals(back).writeMesh(nameVertexNorm);
 }
 
-void testBarycentric2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
+void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
   Mesh<Real> sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
   Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
@@ -149,6 +149,34 @@ void testBarycentric2plane(char const * const aName, int32_t const aSectors, int
   parameters.writeMesh(name);*/
 }
 
+void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
+  Mesh<Real> shape;
+  shape.makeEllipsoid(aSectors, aBelts, aSize);
+  shape.standardizeVertices();
+  shape.standardizeNormals();
+
+  std::string name{"barySplitOrig_"};
+  name += aName;
+  name += ".stl";
+  shape.writeMesh(name);
+
+  BezierMesh<Real> bezier0(shape);
+  Mesh<Real> split1 = bezier0.splitThickBezierTriangles();
+
+  name = "barySplit1_";
+  name += aName;
+  name += ".stl";
+  split1.writeMesh(name);
+
+  BezierMesh<Real> bezier1(split1);
+  Mesh<Real> split2 = bezier1.splitThickBezierTriangles();
+
+  name = "barySplit2_";
+  name += aName;
+  name += ".stl";
+  split2.writeMesh(name);
+}
+
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
   Mesh<Real> mesh;
   mesh.readMesh(aName);
@@ -176,8 +204,9 @@ int main(int argc, char **argv) {
   testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
   testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
-  testBarycentric2plane("4x2", 4, 2, 3.0f, 4);
-  testBarycentric2plane("7x5", 7, 5, 3.0f, 4);
+  testBezier2plane("4x2", 4, 2, 3.0f, 4);
+  testBezier2plane("7x5", 7, 5, 3.0f, 4);
+  testBezierSplitTall("7x3", 7, 3, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
 
 
  /* Mesh<Real> sphere;
