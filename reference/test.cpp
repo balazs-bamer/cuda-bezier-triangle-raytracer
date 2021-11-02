@@ -162,6 +162,8 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
 
   BezierMesh<Real> bezier0(shape);
   Mesh<Real> split1 = bezier0.splitThickBezierTriangles();
+  split1.standardizeVertices();
+  split1.standardizeNormals();
 
   name = "barySplit1_";
   name += aName;
