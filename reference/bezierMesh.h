@@ -9,7 +9,7 @@
 template<typename tReal>
 class BezierMesh final {
 private:
-  static constexpr tReal csBezierHeightPerPerimeterLimit = 0.1f;      // TODO consider
+  static constexpr tReal csBezierHeightPerPerimeterLimit = 0.03f;      // TODO consider
 
   std::vector<BezierTriangle<tReal>>    mMesh;
   typename Mesh<tReal>::Face2neighbours mOriginalNeighbours;
@@ -207,7 +207,8 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
     else { // Nothing to do
     }
   }
-
+  // TODO go over original edges to see if that edge is not split but other edges of the 2 containing
+  // original triangles are. In this case this edge should be split as well to prevent it become a depressed edge.
   uint32_t newCount = 0u;
   newCount = std::accumulate(splitSides.cbegin(), splitSides.cend(), newCount, [](uint32_t aSofar, uint8_t aNew){ return aSofar + csSplitCount[aNew]; });
   Mesh<tReal> result;

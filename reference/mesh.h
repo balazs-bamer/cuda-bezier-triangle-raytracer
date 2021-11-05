@@ -73,9 +73,6 @@ public:
   Face2neighbours const&       getFace2neighbours() const       { return mFace2neighbours; }
   Vertex2averageNormals const& getVertex2averageNormals() const { return mVertex2averageNormals; }
 
-// TODO perhaps a function to split triangles having vertex on an edge. Probably not needed.
-// TODO later a function to split triangles using Clough-Tocher method if the Bezier Triangle is too high above the triangle.
-
   void standardizeVertices();
 
 /// Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
@@ -457,9 +454,12 @@ void Mesh<tReal>::calculateNormalAverages4vertices() {
     auto const range = vertex2triangleIndex.equal_range(vertex);
     Vector sum = Vector::Zero();
     for (auto inRange = range.first; inRange != range.second; ++inRange) {
-      sum += getNormal(mMesh[inRange->second]).normalized();            // TODO consider something in between this and the below version.
-                                                                        // Moreover perhaps also include triangles further away with less weight.
-      //sum += getNormal(mMesh[inRange->second]);                       // No normalizing, this way the average is wieghted by triangle areas.
+      auto const &triangle = mMesh[inRange->second];
+      uint32_t const whichVertex = std::find(triangle.cbegin(), triangle.cend(), vertex) - triangle.cbegin();
+      Vector sideA = triangle[(whichVertex + 1u) % 3u] - triangle[whichVertex];         // We use angle here
+      Vector sideB = triangle[(whichVertex + 2u) % 3u] - triangle[whichVertex];         // Because small triangles are equally important
+      tReal cosAngle = sideA.dot(sideB) / (sideA.norm() * sideB.norm());                // as large ones since they probably help the surface bend.
+      sum += getNormal(mMesh[inRange->second]).normalized() * acos(cosAngle);
     }
     sum.normalize();
     mVertex2averageNormals.emplace(std::make_pair(vertex, sum));

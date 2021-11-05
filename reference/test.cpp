@@ -160,6 +160,11 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   name += ".stl";
   shape.writeMesh(name);
 
+  name = "barySplitVertexNorm_";
+  name += aName;
+  name += ".stl";
+  visualizeVertexNormals(shape).writeMesh(name);
+
   BezierMesh<Real> bezier0(shape);
   Mesh<Real> split1 = bezier0.splitThickBezierTriangles();
   split1.standardizeVertices();
@@ -209,6 +214,7 @@ int main(int argc, char **argv) {
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
   testBezier2plane("7x5", 7, 5, 3.0f, 4);
   testBezierSplitTall("7x3", 7, 3, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
+  testBezierSplitTall("15x5", 15, 5, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
 
 
  /* Mesh<Real> sphere;
