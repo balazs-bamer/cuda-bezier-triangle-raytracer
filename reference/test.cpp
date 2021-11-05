@@ -144,22 +144,22 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
 }
 
 void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
-  Mesh<Real> shape;
-  shape.makeEllipsoid(aSectors, aBelts, aSize);
-  shape.standardizeVertices();
-  shape.standardizeNormals();
+  Mesh<Real> ellipsoid;
+  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+  ellipsoid.standardizeVertices();
+  ellipsoid.standardizeNormals();
 
   std::string name{"barySplitOrig_"};
   name += aName;
   name += ".stl";
-  shape.writeMesh(name);
+  ellipsoid.writeMesh(name);
 
   name = "barySplitVertexNorm_";
   name += aName;
   name += ".stl";
-  visualizeVertexNormals(shape).writeMesh(name);
+  visualizeVertexNormals(ellipsoid).writeMesh(name);
 
-  BezierMesh<Real> bezier0(shape);
+  BezierMesh<Real> bezier0(ellipsoid);
   Mesh<Real> split1 = bezier0.splitThickBezierTriangles();
   split1.standardizeVertices();
   split1.standardizeNormals();
@@ -176,6 +176,46 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   name += aName;
   name += ".stl";
   split2.writeMesh(name);
+}
+
+void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
+  Mesh<Real> ellipsoid;
+  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+  ellipsoid.standardizeVertices();
+  ellipsoid.standardizeNormals();
+
+  for(int32_t i = 0u; i < aSplitSteps; ++i) {
+    BezierMesh<Real> bezier(ellipsoid);
+    ellipsoid = bezier.splitThickBezierTriangles();
+    ellipsoid.standardizeVertices();
+    ellipsoid.standardizeNormals();
+  }
+
+  BezierMesh<Real> bezier(ellipsoid);
+  auto planified = bezier.interpolate(aDivisor);
+  planified.standardizeVertices();
+  auto vertices = planified.getVertices();
+
+  Real sum = 0.0f;
+  for(auto const &vertex : vertices) {
+    Spherical spherical(vertex(0) / aSize(0), vertex(1) / aSize(1), vertex(2) / aSize(2));
+    Vertex<Real> ethalon { aSize(0) * sin(spherical.mLatitude) * sin(spherical.mLongitude),
+                           aSize(1) * sin(spherical.mLatitude) * cos(spherical.mLongitude),
+                           aSize(2) * cos(spherical.mLatitude) };
+std::cout << "v: " << std::setw(10) << std::setprecision(4) << vertex(0) << ' '
+                   << std::setw(10) << std::setprecision(4) << vertex(1) << ' '
+                   << std::setw(10) << std::setprecision(4) << vertex(2) << " e: " <<
+                      std::setw(10) << std::setprecision(4) << ethalon(0) << ' ' <<
+                      std::setw(10) << std::setprecision(4) << ethalon(1) << ' ' <<
+                      std::setw(10) << std::setprecision(4) << ethalon(2) << " lo: " <<
+                      std::setw(10) << std::setprecision(4) << spherical.mLongitude << " la: " <<
+                      std::setw(10) << std::setprecision(4) << spherical.mLatitude << '\n';
+    sum += (vertex - ethalon).squaredNorm() / ethalon.squaredNorm();
+  }
+  auto error = sum / vertices.size();
+  std::cout << "SplitSteps: " << aSplitSteps << " Sectors: " << aSectors << " Belts: " << aBelts <<
+               " Size: " << aSize(0) << ' ' << aSize(1) << ' ' << aSize(2) << " Divisor: " << aDivisor <<
+               " error: " << sum << '\n';
 }
 
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
@@ -202,13 +242,24 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
 }
 
 int main(int argc, char **argv) {
-  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+  /*testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
   testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
+
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
   testBezier2plane("7x5", 7, 5, 3.0f, 4);
-  testBezierSplitTall("7x3", 7, 3, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
-  testBezierSplitTall("15x5", 15, 5, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
+
+  Vector<Real> ellisoidAxes(1.0f, 4.0f, 2.0f);
+
+  testBezierSplitTall("7x3", 7, 3, ellisoidAxes, 1);
+  testBezierSplitTall("15x5", 15, 5, ellisoidAxes, 1);*/
+
+  measureApproximation(0, 4, 1, Vector<Real>(1.0f, 1.0f, 1.0f), 1);
+/*  measureApproximation(0, 7, 3, ellisoidAxes, 3);
+  measureApproximation(0, 15, 5, ellisoidAxes, 3);
+  measureApproximation(1, 7, 3, ellisoidAxes, 3);
+  measureApproximation(1, 15, 5, ellisoidAxes, 3);*/
 
   if(argc > 1) {
     testCustomStl(argv[1], 4);

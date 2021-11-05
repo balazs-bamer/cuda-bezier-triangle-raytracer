@@ -75,7 +75,7 @@ public:
   Vertex2averageNormals const& getVertex2averageNormals() const { return mVertex2averageNormals; }
 
   void standardizeVertices();
-  Vertices gatherVertices() const;
+  Vertices getVertices() const;
 
 /// Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
 /// Should run after standardizeVertices.
@@ -242,7 +242,7 @@ void Mesh<tReal>::standardizeVertices() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename tReal>
-typename Mesh<tReal>::Vertices Mesh<tReal>::gatherVertices() const {
+typename Mesh<tReal>::Vertices Mesh<tReal>::getVertices() const {
   Vertices result;
   for(auto const &triangle : mMesh) {
     for(auto const &vertex : triangle) {
