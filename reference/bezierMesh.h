@@ -55,17 +55,12 @@ private:
 //       IMPLEMENTATION        //
 /////////////////////////////////
 
-/*#include<fstream>
-#include<iostream>
-#include<iomanip>*/
-
 template<typename tReal>
 BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) : mOriginalNeighbours(aMesh.getFace2neighbours()) {
   mMesh.clear();
   mMesh.reserve(aMesh.size() * 3u);
   auto const &mesh                  = aMesh.getMesh();
   auto const &vertex2averageNormals = aMesh.getVertex2averageNormals();
-//std::map<Plane, uint32_t> neighPlanes;
   for(uint32_t indexFace = 0u; indexFace < aMesh.size(); ++indexFace) {
     auto const &neigh = mOriginalNeighbours[indexFace];
     auto const &originalTriangle = aMesh[indexFace];
@@ -83,62 +78,11 @@ BezierMesh<tReal>::BezierMesh(Mesh<tReal> const &aMesh) : mOriginalNeighbours(aM
       std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex],
                                                      currentBase + (indexVertex + 1u) % 3u,
                                                      currentBase + (indexVertex + 2u) % 3u });
-/*std::cout << std::setw(3) << indexFace << std::setw(3) << indexVertex << " =" << std::setw(3) << mMesh.size() <<
-std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex0(0)) < 0.001f ? 0.0f : originalCommonVertex0(0)) <<
-std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex0(1)) < 0.001f ? 0.0f : originalCommonVertex0(1)) <<
-std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex0(2)) < 0.001f ? 0.0f : originalCommonVertex0(2)) << "  -" <<
-std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex1(0)) < 0.001f ? 0.0f : originalCommonVertex1(0)) <<
-std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex1(1)) < 0.001f ? 0.0f : originalCommonVertex1(1)) <<
-std::setprecision(4) << std::setw(9) << (::abs(originalCommonVertex1(2)) < 0.001f ? 0.0f : originalCommonVertex1(2)) << "  |" <<
-std::setprecision(4) << std::setw(9) << (::abs(planeBetweenOriginalNeighbours.mNormal(0)) < 0.001f ? 0.0f : planeBetweenOriginalNeighbours.mNormal(0)) <<
-std::setprecision(4) << std::setw(9) << (::abs(planeBetweenOriginalNeighbours.mNormal(1)) < 0.001f ? 0.0f : planeBetweenOriginalNeighbours.mNormal(1)) <<
-std::setprecision(4) << std::setw(9) << (::abs(planeBetweenOriginalNeighbours.mNormal(2)) < 0.001f ? 0.0f : planeBetweenOriginalNeighbours.mNormal(2)) << " ," <<
-std::setprecision(4) << std::setw(9) << (::abs(planeBetweenOriginalNeighbours.mConstant) < 0.001f ? 0.0f : planeBetweenOriginalNeighbours.mConstant) << "  |" <<
-std::setprecision(4) << std::setw(9) << (::abs(averageNormal0(0)) < 0.001f ? 0.0f : averageNormal0(0)) <<
-std::setprecision(4) << std::setw(9) << (::abs(averageNormal0(1)) < 0.001f ? 0.0f : averageNormal0(1)) <<
-std::setprecision(4) << std::setw(9) << (::abs(averageNormal0(2)) < 0.001f ? 0.0f : averageNormal0(2)) << "  -" <<
-std::setprecision(4) << std::setw(9) << (::abs(averageNormal1(0)) < 0.001f ? 0.0f : averageNormal1(0)) <<
-std::setprecision(4) << std::setw(9) << (::abs(averageNormal1(1)) < 0.001f ? 0.0f : averageNormal1(1)) <<
-std::setprecision(4) << std::setw(9) << (::abs(averageNormal1(2)) < 0.001f ? 0.0f : averageNormal1(2)) << '\n';
-Plane v = planeBetweenOriginalNeighbours;
-v.mNormal(0) = ::round(v.mNormal(0) * 128.0f) / 128.0f;
-v.mNormal(1) = ::round(v.mNormal(1) * 128.0f) / 128.0f;
-v.mNormal(2) = ::round(v.mNormal(2) * 128.0f) / 128.0f;
-v.mConstant = ::round(v.mConstant * 128.0f) / 128.0f;
-Plane vm;
-vm.mNormal = -v.mNormal;
-vm.mConstant = -v.mConstant;
-auto found = neighPlanes.find(v);
-auto foundm = neighPlanes.find(vm);
-if(found != neighPlanes.end()) {
-  ++found->second;
-}
-else if(foundm != neighPlanes.end()) {
-  ++foundm->second;
-}
-else {
-  neighPlanes.insert(std::make_pair(v, 1u));
-}
-Vertex v0 = originalCommonVertex0;
-Vertex v1 = originalCommonVertex0 + averageNormal0;
-Vertex v2 = planeBetweenOriginalNeighbours * v1;
-Vertex v3 = originalCommonVertex1;
-if((v2-v1).norm()<0.01f) {
-  v2 = v1 + (v1-v0).cross(v3-v0)/(v3-v0).norm()/10.0f;
-}
-stuff.push_back({v0, v1, v2});
-stuff.push_back({v0, v1, v3});
-stuff.push_back({v0, v2, v3});
-stuff.push_back({v1, v2, v3});*/
       mMesh.emplace_back(BezierTriangle(originalCommonVertex0, originalCommonVertex1, originalCentroid,
                                                averageNormal0, averageNormal1, planeBetweenOriginalNeighbours,
                                                newNeighbourIndices));
     }
   }
-/*for(auto const &[key, value] : neighPlanes) {
-  std::cout << value << ' ';
-}
-std::cout << '\n';*/
   setMissingFields(aMesh, &BezierTriangle::setMissingFields1);
   setMissingFields(aMesh, &BezierTriangle::setMissingFields2);
   setMissingFields(aMesh, &BezierTriangle::setMissingFields3);

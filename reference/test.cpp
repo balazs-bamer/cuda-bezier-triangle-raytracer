@@ -141,12 +141,6 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   name += aName;
   name += ".stl";
   result.writeMesh(name);
-
-/*  auto parameters = bezier.getStuff();
-  name = "baryPara_";
-  name += aName;
-  name += ".stl";
-  parameters.writeMesh(name);*/
 }
 
 void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
@@ -215,64 +209,6 @@ int main(int argc, char **argv) {
   testBezier2plane("7x5", 7, 5, 3.0f, 4);
   testBezierSplitTall("7x3", 7, 3, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
   testBezierSplitTall("15x5", 15, 5, Vector<Real>(1.0f, 4.0f, 2.0f), 1);
-
-
- /* Mesh<Real> sphere;
-  sphere.makeUnitSphere(4, 2);
-  sphere.standardizeVertices();
-  sphere.standardizeNormals();
-  auto neighbours = sphere.getFace2neighbours();
-  for(uint32_t i = 0u; i < neighbours.size(); ++i) {
-    auto const &neigh = neighbours[i];
-    auto const &triangle = sphere[i];
-    std::cout << i << '\n';
-    for(uint32_t j = 0u; j < 3u; ++j) {
-      std::cout << "  " << std::setw(3) << neigh.mFellowTriangles[j] << ":   " << (int)(neigh.mFellowCommonSideStarts[j]);
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << (::abs(triangle[j](0)) < 0.001 ? 0.0f : triangle[j](0));
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << (::abs(triangle[j](1)) < 0.001 ? 0.0f : triangle[j](1));
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << (::abs(triangle[j](2)) < 0.001 ? 0.0f : triangle[j](2));
-      std::cout << " -=-";
-
-      auto fellow = sphere[neigh.mFellowTriangles[j]];
-      auto fellowCommonStart = (int)(neigh.mFellowCommonSideStarts[j]);
-      Vector<Real> ownSide = triangle[j] - triangle[(j+1)%3];
-      Vector<Real> fellowSide = fellow[fellowCommonStart] - fellow[(fellowCommonStart+1)%3];
-      for(int k = 0; k < 3; ++k) {
-        if(::abs(ownSide(k)) < 0.001) ownSide(k) = 0.0;
-        if(::abs(fellowSide(k)) < 0.001) fellowSide(k) = 0.0;
-      }
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << ownSide(0);
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << ownSide(1);
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << ownSide(2);
-      std::cout << " -";
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(0);
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(1);
-      std::cout << ' ' << std::setw(10) << std::setprecision(3) << fellowSide(2);
-      std::cout << '\n';
-      if((ownSide - fellowSide).norm() > 0.01f && (ownSide + fellowSide).norm() > 0.01f) throw "own fellow sides mismatch";
-    }
-  }
-
-
-  for(uint32_t indexFace = 0u; indexFace < sphere.size(); ++indexFace) {
-    auto const &neigh = neighbours[indexFace];
-    auto const &originalTriangle = sphere[indexFace];
-    auto normal = getNormal(originalTriangle);
-    std::cout << std::setw(14) << normal(0) << std::setw(14) << normal(1) << std::setw(14) << normal(2) << "   " << indexFace << "\n";
-    for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) {
-      auto other = getNormal(sphere[neigh.mFellowTriangles[indexVertex]]);
-      std::cout << std::setw(14) << other(0) << std::setw(14) << other(1) << std::setw(14) << other(2) << "   " << indexFace << ' ' << indexVertex << '\n';
-    }
-  }*/
-
-/*  BezierMesh<Real> bezier(sphere);
-  for(uint32_t i = 0u; i < bezier.size(); ++i) {
-    auto const neighbours = bezier[i].getNeighbours();
-    std::cout << i << '\n';
-    for(uint32_t j = 0u; j < 3u; ++j) {
-      std::cout << "  " << std::setw(3) << neighbours[j] << '\n';
-    }
-  }*/
 
   if(argc > 1) {
     testCustomStl(argv[1], 4);
