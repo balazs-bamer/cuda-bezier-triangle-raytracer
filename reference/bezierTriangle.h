@@ -56,6 +56,10 @@ public:
   Vertex getControlPoint(uint32_t const aI) const { return mControlPoints[aI]; }
   std::array<uint32_t, 3u> getNeighbours() const { return mNeighbours; }           // TODO remove
 
+  Vertex interpolateLinear(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
+  Vertex interpolateLinear(tReal const aBary0, tReal const aBary1) const { return interpolateLinear(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
+  Vertex interpolateLinear(Vertex const &aBary) const { return interpolateLinear(aBary(0u), aBary(1u), aBary(2u)); }
+
   Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
   Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
   Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary(0u), aBary(1u), aBary(2u)); }
@@ -152,6 +156,13 @@ void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle con
   mNeighbourDividerPlanes[2u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTrianglePrevious.mUnderlyingPlane.mNormal,
                                                                 mControlPoints[csControlIndexOriginalVertex0],
                                                                 mControlPoints[csControlIndexAboveOriginalCentroid]);
+}
+
+template<typename tReal>
+Vertex<tReal> BezierTriangle<tReal>::interpolateLinear(tReal const aBary0, tReal const aBary1, tReal const aBary2) const {
+  return mControlPoints[csControlIndexOriginalVertex0]       * aBary0 +
+         mControlPoints[csControlIndexOriginalVertex1]       * aBary1 +
+         mControlPoints[csControlIndexAboveOriginalCentroid] * aBary2;
 }
 
 template<typename tReal>

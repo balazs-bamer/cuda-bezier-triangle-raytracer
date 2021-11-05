@@ -9,7 +9,9 @@
 template<typename tReal>
 class BezierMesh final {
 private:
-  static constexpr tReal csBezierHeightPerPerimeterLimit = 0.03f;      // TODO consider
+  static constexpr tReal csBezierHeightPerPerimeterLimit = 0.03f;
+  static constexpr tReal csSplitBezierInterpolateFactor  = 0.5f;   // For triangle splitting, new vertex is computed as
+                                                                   // barycentricSplit * (1.0 - csSBIF) + interpolate(barycentricSplit) * csSBIF
 
   std::vector<BezierTriangle<tReal>>    mMesh;
   typename Mesh<tReal>::Face2neighbours mOriginalNeighbours;
@@ -46,6 +48,7 @@ private:
   void append2split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
   void append3split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const;
   void append4split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle) const;
+  Vertex interpolate(uint32_t const aIndex, tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
 };
 
 /////////////////////////////////
@@ -209,6 +212,7 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
   }
   // TODO go over original edges to see if that edge is not split but other edges of the 2 containing
   // original triangles are. In this case this edge should be split as well to prevent it become a depressed edge.
+  // Or perhaps inspect each remaining original edge if the convexity changes there.
   uint32_t newCount = 0u;
   newCount = std::accumulate(splitSides.cbegin(), splitSides.cend(), newCount, [](uint32_t aSofar, uint8_t aNew){ return aSofar + csSplitCount[aNew]; });
   Mesh<tReal> result;
@@ -247,7 +251,7 @@ template<typename tReal>
 void BezierMesh<tReal>::append2split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle, uint8_t const aSplit) const {
   static constexpr uint8_t csIndexFor2onSide[8u] = { 3u, 0u, 1u, 3u, 2u, 3u, 3u, 3u };
   uint32_t index2 = csIndexFor2onSide[aSplit];
-  auto splitVertex = mMesh[aIndexBase + index2].interpolate(0.5f, 0.5f, 0.0f);
+  auto splitVertex = interpolate(aIndexBase + index2, 0.5f, 0.5f, 0.0f);
   uint32_t indexAfter2 = (index2 + 1u) % 3u;
   uint32_t indexBefore2 = (index2 + 2u) % 3u;
   aResult.push_back(Triangle{ aOriginalTriangle[indexAfter2], aOriginalTriangle[indexBefore2], splitVertex });
@@ -268,8 +272,8 @@ void BezierMesh<tReal>::append3split(Mesh<tReal> &aResult, uint32_t const aIndex
   uint32_t index1 = csIndexFor1onSide[aSplit];
   uint32_t indexAfter1 = (index1 + 1u) % 3u;
   uint32_t indexBefore1 = (index1 + 2u) % 3u;
-  auto splitVertexBefore1 = mMesh[aIndexBase + indexBefore1].interpolate(0.5f, 0.5f, 0.0f);
-  auto splitVertexAfter1  = mMesh[aIndexBase + indexAfter1 ].interpolate(0.5f, 0.5f, 0.0f);
+  auto splitVertexBefore1 = interpolate(aIndexBase + indexBefore1, 0.5f, 0.5f, 0.0f);
+  auto splitVertexAfter1  = interpolate(aIndexBase + indexAfter1, 0.5f, 0.5f, 0.0f);
   aResult.push_back(Triangle{ aOriginalTriangle[indexBefore1], splitVertexBefore1, splitVertexAfter1 });
   if((aOriginalTriangle[indexAfter1] - splitVertexBefore1).norm() < (aOriginalTriangle[index1] - splitVertexAfter1).norm()) {
     aResult.push_back(Triangle{ aOriginalTriangle[indexAfter1], splitVertexAfter1, splitVertexBefore1 });
@@ -294,12 +298,19 @@ template<typename tReal>
 void BezierMesh<tReal>::append4split(Mesh<tReal> &aResult, uint32_t const aIndexBase, Triangle const &aOriginalTriangle) const {
   Triangle middle;
   for(uint32_t i = 0u; i < 3u; ++i) {
-    middle[i] = mMesh[aIndexBase + i].interpolate(0.5f, 0.5f, 0.0f);
+    middle[i] = interpolate(aIndexBase + i, 0.5f, 0.5f, 0.0f);
   }
   aResult.push_back(middle);
   for(uint32_t i = 0u; i < 3u; ++i) {
     aResult.push_back(Triangle{ aOriginalTriangle[i], middle[i], middle[(i + 2u) % 3u] });
   }
+}
+
+template<typename tReal>
+Vertex<tReal> BezierMesh<tReal>::interpolate(uint32_t const aIndex, tReal const aBary0, tReal const aBary1, tReal const aBary2) const {
+  auto const &triangle = mMesh[aIndex];
+  return triangle.interpolate(aBary0, aBary1, aBary2) * csSplitBezierInterpolateFactor +
+         triangle.interpolateLinear(aBary0, aBary1, aBary2) * (1.0f - csSplitBezierInterpolateFactor);
 }
 
 #endif
