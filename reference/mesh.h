@@ -46,6 +46,7 @@ public:
 
   using Face2neighbours       = std::vector<Neighbours>;
   using Vertex2averageNormals = std::unordered_map<Vertex, Vector, VertexHash>;
+  using Vertices              = std::unordered_set<Vertex, VertexHash>;
 
 private:
   TheMesh               mMesh;
@@ -74,6 +75,7 @@ public:
   Vertex2averageNormals const& getVertex2averageNormals() const { return mVertex2averageNormals; }
 
   void standardizeVertices();
+  Vertices gatherVertices() const;
 
 /// Makes all normalvectors (V[1]-V[0])x(V[2]-V[0]) point outwards.
 /// Should run after standardizeVertices.
@@ -117,7 +119,6 @@ private:
   tReal makeProximityIntervals(ProjectedIndices const &aCurrentProjectedSorted, Intervals &aCurrentIntervals, tReal const aEpsilon) const;
   void standardizeInIntervals(Intervals const &aIntervals, tReal const aEpsilonSquared);
   static uint32_t getIndependentFrom(Triangle const &aFaceTarget, Triangle const &aFaceOther);
-  static Vector getAltitude(Vertex const &aCommon1, Vertex const &aCommon2, Vertex const &aIndependent);
 
   struct PairHash {
     template<typename t1, typename t2>
@@ -241,6 +242,19 @@ void Mesh<tReal>::standardizeVertices() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename tReal>
+typename Mesh<tReal>::Vertices Mesh<tReal>::gatherVertices() const {
+  Vertices result;
+  for(auto const &triangle : mMesh) {
+    for(auto const &vertex : triangle) {
+      result.insert(vertex);
+    }
+  }
+  return result;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename tReal>
 uint32_t Mesh<tReal>::getIndependentFrom(Triangle const &aFaceTarget, Triangle const &aFaceOther) {
   for(uint32_t i = 0u; i < 3u; ++i) {
     if(std::find(aFaceOther.cbegin(), aFaceOther.cend(), aFaceTarget[i]) == aFaceOther.cend()) {
@@ -250,14 +264,6 @@ uint32_t Mesh<tReal>::getIndependentFrom(Triangle const &aFaceTarget, Triangle c
     }
   }
   return 3u;                                                          // Won't get here, but avoid compiler complaint.
-}
-
-template<typename tReal>
-typename Mesh<tReal>::Vector Mesh<tReal>::getAltitude(Vertex const &aCommon1, Vertex const &aCommon2, Vertex const &aIndependent) {
-  auto commonVector = aCommon2 - aCommon1;
-  auto independentVector = aIndependent - aCommon1;
-  auto footFactor = commonVector.dot(independentVector) / commonVector.squaredNorm();
-  return independentVector - commonVector * footFactor; 
 }
 
 template<typename tReal>
@@ -426,7 +432,7 @@ void Mesh<tReal>::normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) 
     auto newFaceUnknown = aFaceUnknown;
     newFaceUnknown[independentIndexUnknown] = newIndependentUnknown;
 
-    altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], newIndependentUnknown);
+    altitudeUnknown = getAltitude<tReal>(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], newIndependentUnknown);
     dotFaceAltitudes = altitudeKnown.dot(altitudeUnknown);
     normalUnknown = getNormal(newFaceUnknown);
     knownDotUnknown = normalKnown.dot(normalUnknown);

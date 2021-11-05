@@ -61,6 +61,9 @@ Vertex<tReal> barycentric2cartesian(Vertex<tReal> const &aV0, Vertex<tReal> cons
 }
 
 template<typename tReal>
+Vector<tReal> getAltitude(Vertex<tReal> const &aCommon1, Vertex<tReal> const &aCommon2, Vertex<tReal> const &aIndependent);
+
+template<typename tReal>
 struct Plane final {
   Vector<tReal> mNormal;
   tReal         mConstant;
@@ -86,6 +89,19 @@ struct Plane final {
                                                          || mNormal(0) == aOther.mNormal(0) && mNormal(1) < aOther.mNormal(1)
                                                          || mNormal(0) == aOther.mNormal(0) && mNormal(1) == aOther.mNormal(1) && mNormal(2) < aOther.mNormal(2)
                                                          || mNormal(0) == aOther.mNormal(0) && mNormal(1) == aOther.mNormal(1) && mNormal(2) == aOther.mNormal(2) && mConstant < aOther.mConstant; }
+};
+
+template<typename tReal>
+struct Spherical final {
+  tReal mR;
+  tReal mLongitude; // or sector
+  tReal mLatitude;  // or belt
+
+  // Assumes the conversion can be done.
+  Spherical(tReal const aX, tReal const aY, tReal const aZ)
+  : mR(::sqrt(aX * aX + aY * aY + aZ * aZ))
+  , mLatitude(::acos(aZ / mR))
+  , mLongitude(::atan2(aY, aX)) {}
 };
 
 /////////////////////////////////
@@ -117,6 +133,15 @@ void divide(Triangle<tReal> const &aTriangle, int32_t const aDivisor, tLambda &&
   }
   aCollector({base0, aTriangle[1], base2});
 }
+
+template<typename tReal>
+Vector<tReal> getAltitude(Vertex<tReal> const &aCommon1, Vertex<tReal> const &aCommon2, Vertex<tReal> const &aIndependent) {
+  auto commonVector = aCommon2 - aCommon1;
+  auto independentVector = aIndependent - aCommon1;
+  auto footFactor = commonVector.dot(independentVector) / commonVector.squaredNorm();
+  return independentVector - commonVector * footFactor;
+}
+
 
 // If aProportion < 0.5, the result will be closer to aPoint0
 template<typename tReal>
@@ -168,7 +193,7 @@ Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1
   }
   return result;
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #endif
