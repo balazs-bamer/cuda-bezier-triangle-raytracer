@@ -3,9 +3,6 @@
 
 #include "util.h"
 
-extern float    csProportionControlOnOriginalSide; // TODO remove
-
-
 template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
 public:
@@ -22,9 +19,9 @@ private:
   static constexpr uint32_t csControlIndexOnSideFromOriginalCentroid1 = 8u;
   static constexpr uint32_t csControlIndexMiddle                      = 9u;
 
-//  static constexpr tReal    csProportionControlOnOriginalSide           = 0.31f;
-  static constexpr tReal    csProportionControlOnOriginalVertexCentroid = 0.333f;
-  static constexpr tReal    csProportionControlOnOriginalMedian         = 0.333f;
+  static constexpr tReal    csProportionControlOnOriginalSide           = 0.291f;
+  static constexpr tReal    csProportionControlOnOriginalVertexCentroid = 0.304f;
+  static constexpr tReal    csProportionControlOnOriginalMedian         = 0.2f;
 
   using Vector     = ::Vector<tReal>;
   using Vertex     = ::Vertex<tReal>;

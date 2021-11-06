@@ -178,8 +178,6 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   split2.writeMesh(name);
 }
 
-float csSplitBezierInterpolateFactor;
-
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
@@ -210,14 +208,7 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
   auto error = sum / vertices.size();
   std::cout << "SplitSteps: " << aSplitSteps << " Sectors: " << std::setw(2) << aSectors << " Belts: " << std::setw(2) << aBelts <<
                " Size: " << aSize(0) << ' ' << aSize(1) << ' ' << aSize(2) << " Divisor: " << aDivisor <<
-               " error: " << std::setw(10) << std::setprecision(4) << error;
-if(error > 100) {
-  planified.writeMesh("error.stl");
-  std::cout << '\n';
-  throw " too big";
-}
-else
-  std::cout << " OK\n";
+               " error: " << std::setw(14) << std::setprecision(8) << error << '\n';
 }
 
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
@@ -243,32 +234,28 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
   planified.writeMesh(name);
 }
 
-float csProportionControlOnOriginalSide;
-
 int main(int argc, char **argv) {
-  /*testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
   testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
 
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
-  testBezier2plane("7x5", 7, 5, 3.0f, 4);*/
+  testBezier2plane("7x5", 7, 5, 3.0f, 4);
 
   Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
 
-/*  testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
-  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
+  testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
+  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
 
-for(csProportionControlOnOriginalSide = 0.0f; csProportionControlOnOriginalSide <= 0.5f; csProportionControlOnOriginalSide += 0.05f) {
-std::cout << csProportionControlOnOriginalSide << '\n';
-  measureApproximation(0, 4, 1, ellipsoidAxes, 1);
-  measureApproximation(0, 7, 3, ellipsoidAxes, 3);
-  measureApproximation(0, 15, 5, ellipsoidAxes, 3);
-  measureApproximation(1, 7, 3, ellipsoidAxes, 3);
-  measureApproximation(1, 15, 5, ellipsoidAxes, 3);
-  measureApproximation(2, 7, 3, ellipsoidAxes, 3);
-  measureApproximation(2, 15, 5, ellipsoidAxes, 3);
-}
+/*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
+  measureApproximation(0, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 0 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0022721614
+  measureApproximation(0, 15, 5, ellipsoidAxes, 3);      // SplitSteps: 0 Sectors: 15 Belts:  5 Size: 1 4 2 Divisor: 3 error:  1.9426199e-05
+  measureApproximation(1, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 1 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:  0.00070956006
+  measureApproximation(1, 15, 5, ellipsoidAxes, 3);      // SplitSteps: 1 Sectors: 15 Belts:  5 Size: 1 4 2 Divisor: 3 error:  0.00040229771
+  measureApproximation(2, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 2 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0011259826
+  measureApproximation(2, 15, 5, ellipsoidAxes, 3);      // SplitSteps: 2 Sectors: 15 Belts:  5 Size: 1 4 2 Divisor: 3 error:  6.7134395e-05
+*/
 
   if(argc > 1) {
     testCustomStl(argv[1], 4);
