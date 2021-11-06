@@ -178,6 +178,8 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   split2.writeMesh(name);
 }
 
+float csSplitBezierInterpolateFactor;
+
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
@@ -206,9 +208,16 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
     sum += (vertex - ethalon).squaredNorm() / ethalon.squaredNorm();
   }
   auto error = sum / vertices.size();
-  std::cout << "SplitSteps: " << aSplitSteps << " Sectors: " << aSectors << " Belts: " << aBelts <<
+  std::cout << "SplitSteps: " << aSplitSteps << " Sectors: " << std::setw(2) << aSectors << " Belts: " << std::setw(2) << aBelts <<
                " Size: " << aSize(0) << ' ' << aSize(1) << ' ' << aSize(2) << " Divisor: " << aDivisor <<
-               " error: " << sum << '\n';
+               " error: " << std::setw(10) << std::setprecision(4) << error;
+if(error > 100) {
+  planified.writeMesh("error.stl");
+  std::cout << '\n';
+  throw " too big";
+}
+else
+  std::cout << " OK\n";
 }
 
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
@@ -234,6 +243,8 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
   planified.writeMesh(name);
 }
 
+float csProportionControlOnOriginalSide;
+
 int main(int argc, char **argv) {
   /*testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 
@@ -248,11 +259,16 @@ int main(int argc, char **argv) {
 /*  testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
+for(csProportionControlOnOriginalSide = 0.0f; csProportionControlOnOriginalSide <= 0.5f; csProportionControlOnOriginalSide += 0.05f) {
+std::cout << csProportionControlOnOriginalSide << '\n';
   measureApproximation(0, 4, 1, ellipsoidAxes, 1);
   measureApproximation(0, 7, 3, ellipsoidAxes, 3);
   measureApproximation(0, 15, 5, ellipsoidAxes, 3);
   measureApproximation(1, 7, 3, ellipsoidAxes, 3);
   measureApproximation(1, 15, 5, ellipsoidAxes, 3);
+  measureApproximation(2, 7, 3, ellipsoidAxes, 3);
+  measureApproximation(2, 15, 5, ellipsoidAxes, 3);
+}
 
   if(argc > 1) {
     testCustomStl(argv[1], 4);
