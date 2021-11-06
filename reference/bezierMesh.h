@@ -10,7 +10,7 @@ template<typename tReal>
 class BezierMesh final {
 private:
   static constexpr tReal csBezierHeightPerPerimeterLimit = 0.03f;
-  static constexpr tReal csSplitBezierInterpolateFactor  = 0.5f;   // For triangle splitting, new vertex is computed as
+  static constexpr tReal csSplitBezierInterpolateFactor  = 0.7f;   // For triangle splitting, new vertex is computed as
                                                                    // barycentricSplit * (1.0 - csSBIF) + interpolate(barycentricSplit) * csSBIF
 
   std::vector<BezierTriangle<tReal>>    mMesh;
