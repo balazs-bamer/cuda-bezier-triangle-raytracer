@@ -194,22 +194,15 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
   BezierMesh<Real> bezier(ellipsoid);
   auto planified = bezier.interpolate(aDivisor);
   planified.standardizeVertices();
-  auto vertices = planified.getVertices();
-
+  auto vertices = planified.getVertices();  // Due to Clough-Tocher division of small meshes, this will introduce big errors
+                                            // Results are only meaningful for sufficiently fine initial meshes, which are easy
+                                            // to follow with cubic Bezier triangles.
   Real sum = 0.0f;
   for(auto const &vertex : vertices) {
     Spherical spherical(vertex(0) / aSize(0), vertex(1) / aSize(1), vertex(2) / aSize(2));
-    Vertex<Real> ethalon { aSize(0) * sin(spherical.mLatitude) * sin(spherical.mLongitude),
-                           aSize(1) * sin(spherical.mLatitude) * cos(spherical.mLongitude),
+    Vertex<Real> ethalon { aSize(0) * sin(spherical.mLatitude) * cos(spherical.mLongitude),
+                           aSize(1) * sin(spherical.mLatitude) * sin(spherical.mLongitude),
                            aSize(2) * cos(spherical.mLatitude) };
-std::cout << "v: " << std::setw(10) << std::setprecision(4) << vertex(0) << ' '
-                   << std::setw(10) << std::setprecision(4) << vertex(1) << ' '
-                   << std::setw(10) << std::setprecision(4) << vertex(2) << " e: " <<
-                      std::setw(10) << std::setprecision(4) << ethalon(0) << ' ' <<
-                      std::setw(10) << std::setprecision(4) << ethalon(1) << ' ' <<
-                      std::setw(10) << std::setprecision(4) << ethalon(2) << " lo: " <<
-                      std::setw(10) << std::setprecision(4) << spherical.mLongitude << " la: " <<
-                      std::setw(10) << std::setprecision(4) << spherical.mLatitude << '\n';
     sum += (vertex - ethalon).squaredNorm() / ethalon.squaredNorm();
   }
   auto error = sum / vertices.size();
@@ -248,18 +241,18 @@ int main(int argc, char **argv) {
   testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
 
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
-  testBezier2plane("7x5", 7, 5, 3.0f, 4);
+  testBezier2plane("7x5", 7, 5, 3.0f, 4);*/
 
-  Vector<Real> ellisoidAxes(1.0f, 4.0f, 2.0f);
+  Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
 
-  testBezierSplitTall("7x3", 7, 3, ellisoidAxes, 1);
-  testBezierSplitTall("15x5", 15, 5, ellisoidAxes, 1);*/
+/*  testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
+  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
-  measureApproximation(0, 4, 1, Vector<Real>(1.0f, 1.0f, 1.0f), 1);
-/*  measureApproximation(0, 7, 3, ellisoidAxes, 3);
-  measureApproximation(0, 15, 5, ellisoidAxes, 3);
-  measureApproximation(1, 7, 3, ellisoidAxes, 3);
-  measureApproximation(1, 15, 5, ellisoidAxes, 3);*/
+  measureApproximation(0, 4, 1, ellipsoidAxes, 1);
+  measureApproximation(0, 7, 3, ellipsoidAxes, 3);
+  measureApproximation(0, 15, 5, ellipsoidAxes, 3);
+  measureApproximation(1, 7, 3, ellipsoidAxes, 3);
+  measureApproximation(1, 15, 5, ellipsoidAxes, 3);
 
   if(argc > 1) {
     testCustomStl(argv[1], 4);

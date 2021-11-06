@@ -106,6 +106,8 @@ void BezierMesh<tReal>::setMissingFields(Mesh<tReal> const &aMesh, MissingFields
   }
 }
 
+#include<iostream> // TODO remove
+
 template<typename tReal>
 Mesh<tReal> BezierMesh<tReal>::interpolate(int32_t const aDivisor) const {
   Mesh<tReal> result;
