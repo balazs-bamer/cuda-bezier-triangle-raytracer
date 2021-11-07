@@ -96,7 +96,7 @@ public:
   }
 
 /// WARNING! Likely to put new vertices on edges!
-  void splitTriangles(tReal aMaxTriangleSide);
+  void splitTriangles(tReal const aMaxTriangleSide);
 
 /// Splits every triangle such that each will become (aDivisor + 1)(aDivisor + 2)/2 new small ones.
   void splitTriangles(int32_t const aDivisor);
