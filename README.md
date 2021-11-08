@@ -28,8 +28,9 @@ This file contain common type declarations for all other sources, some geometry 
 
 This is the home of the `Mesh` class template. I know there are several good STL and mesh processing libraries, but I've created this class for three reasons:
 1. I wanted full control over mesh processing.
-2. It contains important preprocessing steps for later stages, which belong to triangle mesh processing, not Bezier triangle meshes.
-3. I enjoy working with geometry vectors.
+2. I wanted to preserve original vertices. If the mesh creation algorithm is sophisticated enough, it knows better where and how to place vertices. Any postprocessing can only make it worse.
+3. It contains important preprocessing steps for later stages, which belong to triangle mesh processing, not Bezier triangle meshes.
+4. I enjoy working with geometry vectors.
 
 The `Mesh` class exposes a set of STL vector-like interface functions for easier use. It also provides overloaded operators for displace and inflate operations, STL file I/O. Here I only write about the more interesting functions.
 Note, this class can only handle a mesh consisting of **exactly one totally filled** shape.
@@ -86,26 +87,32 @@ Apart of the constructor, important public interface is the `interpolateLinear` 
 ### reference/bezierMesh.h
 
 The `BezierMesh` class is similar to and based on the `Mesh` class, and is responsible of
-* Constructing the Bezier triangle mesh of `BezierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. TODO docs.
-* Obtaining a triangular mesh approximation (`interpolate`) with evenly splitting each subtriangle side into `aDivisor` parts.
+* Constructing the Bezier triangle mesh of `BezierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. Input is plain trinagle `Mesh`.
+* Obtaining a triangular mesh approximation (`interpolate`) with evenly subdividing each subtriangle side into `aDivisor` parts.
 * Split "thick" Bezier triangles into smaller, "thinner" ones.
-
-#### BezierMesh::BezierMesh
-
-TODO docs.
 
 #### BezierMesh::splitThickBezierTriangles
 
-TODO docs.
+I've implemented this function because the raytracing will inspect mesh and ray intersections using the underlying triangle mesh (after Clough-Tocher subdivision). When we have the planar intersection, it will be used to calculate the ray intersection with the Bezier triangle above it. However, if the Bezier triangle forms a relatively too "tall" dome above the underlying triangle, it is more likely a ray can travel through it without intersecting any planar triangle. Of course it is still possible when the Bezier triangles are "close" to the underlying triangles, but much less likely. In such a rare case, the simulation will find the ray pass just right beside the object.
+
+The idea here is to take all Bezier triangles, and subdivide each one proven to be too tall. Note, as we are in the Bezier triangle domain, each triangle is the reasult of the Clough-Tocher subdivision. I could have gone with taking that subdivision of the tall triangle, but it tends to create "thin" triangles, as the edges won't ever be split. I know there are well-known subdivision algorithm, but I wanted to make a very simple implementation and take advantage of the Bezier triangle control point information, which already takes into account the neighbouring triangles.
+
+The algorithm is simple: I take the underlying side midpoints of a "tall" Bezier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
+
+New (dividing) vertices are calculated as a fixed linear combination of the side midpoint of the underlying triangle edge and the Bezier interpolation of that point (which is "above" the underlying triangle). The linear combination factor has been found out empirically, see below. The function gives back a new finer `Mesh` instance, which then needs to be preprocessed again and used in creation of a new, finer `BezierMesh`.
 
 #### Ellipse approximation test
 
-I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety if radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
+I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
 TODO add details.
+
+I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
 
 #### Shortcomings
 
-In theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles). In practice, I've tried so far only ellipsoids, and a fairly complicated machine part STL, which caused numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges. Such shapes are not quite practical for photographic image rendering.
+In theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice apart of ellipsoids, I have tried the algorithm only with a fairly complicated machine part STL. It caused numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges. Such shapes are not quite practical for photographic image rendering.
+
+I have tested and adjusted algorithm parameters so far only with ellipsoids. TODO later construct some more complicated shapes, including concave ones.
 
 ## References
 
