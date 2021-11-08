@@ -97,6 +97,8 @@ I've implemented this function because the raytracing will inspect mesh and ray 
 
 The idea here is to take all Bezier triangles, and subdivide each one proven to be too tall. Note, as we are in the Bezier triangle domain, each triangle is the reasult of the Clough-Tocher subdivision. I could have gone with taking that subdivision of the tall triangle, but it tends to create "thin" triangles, as the edges won't ever be split. I know there are well-known subdivision algorithm, but I wanted to make a very simple implementation and take advantage of the Bezier triangle control point information, which already takes into account the neighbouring triangles.
 
+Curently I take the approximate Bezier triangle height (at the underlying triangle centroid) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
+
 The algorithm is simple: I take the underlying side midpoints of a "tall" Bezier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
 
 New (dividing) vertices are calculated as a fixed linear combination of the side midpoint of the underlying triangle edge and the Bezier interpolation of that point (which is "above" the underlying triangle). The linear combination factor has been found out empirically, see below. The function gives back a new finer `Mesh` instance, which then needs to be preprocessed again and used in creation of a new, finer `BezierMesh`.
