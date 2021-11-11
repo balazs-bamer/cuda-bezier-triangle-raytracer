@@ -97,7 +97,7 @@ I've implemented this function because the raytracing will inspect mesh and ray 
 
 The idea here is to take all Bézier triangles, and subdivide each one proven to be too tall. Note, as we are in the Bézier triangle domain, each triangle is the reasult of the Clough-Tocher subdivision. I could have gone with taking that subdivision of the tall triangle, but it tends to create "thin" triangles, as the edges won't ever be split. I know there are well-known subdivision algorithm, but I wanted to make a very simple implementation and take advantage of the Bézier triangle control point information, which already takes into account the neighbouring triangles.
 
-Curently I take the approximate Bézier triangle height (at the underlying triangle centroid) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
+Curently I take the approximate Bézier triangle height (maximum at the original triangle centroid and quarter points of the original sides) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
 
 The algorithm is simple: I take the underlying side midpoints of a "tall" Bézier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
 
@@ -122,9 +122,14 @@ See [Wikipedia](https://wikipedia.org) for well-known or simpler stuff.
 <a id="1">[1]</a> 
 Shaoming Wang (2004). 
 A smooth surface interpolation to 3D triangulations
-Journal of Computational and Applied Mathematics, Volume 163, Issue 11, February 2004, pp 287–293
+Journal of Computational and Applied Mathematics, Volume 163, Issue 11 (February 2004), pp 287–293
 
 <a id="2">[2]</a> 
 Chang Geng-zhe, Feng Yu-yu (1983).
 Error bound for Bernstein-Bézier triangulation approximation
 Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340
+
+<a id="3">[3]</a>
+S.H.M. Roth, P. Diezi, M.H. Gross (2000).
+Triangular Bezier clipping
+Proceedings the Eighth Pacific Conference on Computer Graphics and Applications (October 2000)

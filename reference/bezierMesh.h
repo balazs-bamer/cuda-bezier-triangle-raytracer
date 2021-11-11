@@ -9,6 +9,7 @@
 template<typename tReal>
 class BezierMesh final {
 private:
+  static constexpr std::array<tReal, 3u> csSampleRatiosOriginalSide = { 0.25f, 0.5f, 0.75f };
   static constexpr tReal csBezierHeightPerPerimeterLimit = 0.03f;
   static constexpr tReal csSplitBezierInterpolateFactor  = 0.7f;   // For triangle splitting, new vertex is computed as
                                                                    // barycentricSplit * (1.0 - csSBIF) + interpolate(barycentricSplit) * csSBIF
@@ -142,11 +143,18 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
   std::vector<uint8_t> splitSides(mOriginalNeighbours.size(), 0u);
 
   for(uint32_t indexOriginal = 0u; indexOriginal < mOriginalNeighbours.size(); ++indexOriginal) {
-    Vertex bezierAboveOriginalCentroid = mMesh[indexOriginal * 3u].interpolateAboveOriginalCentroid();
-    Triangle original { mMesh[indexOriginal * 3u].getControlPoint(0u),
-                        mMesh[indexOriginal * 3u + 1u].getControlPoint(0u),
-                        mMesh[indexOriginal * 3u + 2u].getControlPoint(0u) };
-    if((Plane::createFromTriangle(original) / bezierAboveOriginalCentroid / getPerimeter(original)) > csBezierHeightPerPerimeterLimit) {
+    auto indexSplit = indexOriginal * 3u;
+    Triangle original { mMesh[indexSplit].getControlPoint(0u),
+                        mMesh[indexSplit + 1u].getControlPoint(0u),
+                        mMesh[indexSplit + 2u].getControlPoint(0u) };
+    auto plane = Plane::createFromTriangle(original);
+    tReal max = ::abs(plane / mMesh[indexOriginal * 3u].interpolateAboveOriginalCentroid());
+    for(uint32_t i = 0; i < 3u; ++i) {
+      for(auto const ratio : csSampleRatiosOriginalSide) {
+        max = std::max(max, ::abs(plane / mMesh[indexSplit + i].interpolate(ratio, 1.0f - ratio, 0.0f)));
+      }
+    }
+    if(max / getPerimeter(original) > csBezierHeightPerPerimeterLimit) {
       splitSides[indexOriginal] = csSplitAll;
       auto const &neigh = mOriginalNeighbours[indexOriginal];
       for(uint32_t side = 0u; side < 3u; ++side) {
