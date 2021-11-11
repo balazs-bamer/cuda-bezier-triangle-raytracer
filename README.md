@@ -1,9 +1,9 @@
-# Cuda-based Bezier triangle mesh raytracer
+# Cuda-based Bézier triangle mesh raytracer
 
-The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bezier triangle interpolation. It will be possible to simulate aspheric and anomorphic lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.)
+The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate aspheric and anomorphic lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
 
 This work is divided into 3 parts:
-1. C++ utilities and preprocessor. These parts check the input and produce the Bezier mesh appropriate to implement raytracing.
+1. C++ utilities and preprocessor. These parts check the input and produce the Bézier mesh appropriate to implement raytracing.
 2. Reference single ray tracing implementation in C++. I use it actually to develop all geometry and raytracing algorithms, which will later be modified for GPU usage.
 3. Initial implementation in NVIDIA Thrust, a quick proof-of-concept implementation based on the reference to produce images.
 4. An iteratively developed CUDA version for best performance.
@@ -29,7 +29,7 @@ This file contain common type declarations for all other sources, some geometry 
 This is the home of the `Mesh` class template. I know there are several good STL and mesh processing libraries, but I've created this class for three reasons:
 1. I wanted full control over mesh processing.
 2. I wanted to preserve original vertices. If the mesh creation algorithm is sophisticated enough, it knows better where and how to place vertices. Any postprocessing can only make it worse.
-3. It contains important preprocessing steps for later stages, which belong to triangle mesh processing, not Bezier triangle meshes.
+3. It contains important preprocessing steps for later stages, which belong to triangle mesh processing, not Bézier triangle meshes.
 4. I enjoy working with geometry vectors.
 
 The `Mesh` class exposes a set of STL vector-like interface functions for easier use. It also provides overloaded operators for displace and inflate operations, STL file I/O. Here I only write about the more interesting functions.
@@ -67,48 +67,47 @@ Must be run after `Mesh::standardizeNormals`.
 
 #### Mesh::getVertex2averageNormals
 
-Returns a map of vertices to the "vertice normals", which will be the Bezier triangle normals in the vertices. "Vertex normals" are the weighted average of triangle normals containing the vertex, weighted by the triangle angles at thaty vertex. Must be run after `Mesh::standardizeNormals`.
+Returns a map of vertices to the "vertice normals", which will be the Bézier triangle normals in the vertices. "Vertex normals" are the weighted average of triangle normals containing the vertex, weighted by the triangle angles at thaty vertex. Must be run after `Mesh::standardizeNormals`. Perhaps it would be important to implement a way to import these values along with the triangles when the original surface is known and dervatives are present. This would enable much more exact approximation.
 
 ### reference/bezierTriangle.h
 
-Here resides the `BezierTriangle` class which is capable of
-* Creating a Bezier triangle over a regular triangle, considering its neighbours, in a way that the neighbouring Bezier surfaces will give a surface with C1 continuity. [[1]](#1) I chosed C1 because cubic Bezier triangles are sufficient for this, and the interpolation and thus the surface intersection calculations will be faster.
-* Linear interpolation on the underlying planar triangle using barycentric coordinates whithin the underlying triangle.
-* Bezier interpolation using barycentric coordinates whithin the underlying triangle.
+Here resides the `BézierTriangle` class which is capable of
+* Creating a Bézier triangle over a regular triangle, considering its neighbours, in a way that the neighbouring Bézier surfaces will give a surface with C1 continuity. [[1]](#1) I chosed C1 because cubic Bézier triangles are sufficient for this, and the interpolation and thus the surface intersection calculations will be faster.
+* Linear interpolation on the underlying planar triangle using barycentric coordinates within the underlying triangle.
+* Bézier interpolation using barycentric coordinates within the underlying triangle.
 * Ray and underlying planar triangle intersection with barycentric output. TODO implement.
-* Ray and Bezier triangle intersection with barycentric output. TODO implement.
+* Ray and Bézier triangle intersection with barycentric output. TODO implement.
 * Normal vector calculation on the barycentric triangle using barycentric coordinates. TODO implement.
 
-The Bezier triangle will contain all the original triangle vertices. Control point calculations follow [[1]](#1) with the details figured out by myself where the paper was not specific. There are 3 `constexpr` parameters influencing control point placement, which were empirically estimated TODO see where
+The Bézier triangle will contain all the original triangle vertices. Control point calculations follow [[1]](#1) with the details figured out by myself where the paper was not specific. There are 3 `constexpr` parameters influencing control point placement, which were empirically estimated TODO see where
 TODO perhaps write control point calculation in detail.
 
-Apart of the constructor, important public interface is the `interpolateLinear` and `interpolate` (Bezier) function families, which are self-explanatory.
+Apart of the constructor, important public interface is the `interpolateLinear` and `interpolate` (Bézier) function families, which are self-explanatory.
 
 ### reference/bezierMesh.h
 
-The `BezierMesh` class is similar to and based on the `Mesh` class, and is responsible of
-* Constructing the Bezier triangle mesh of `BezierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. Input is plain trinagle `Mesh`.
+The `BézierMesh` class is similar to and based on the `Mesh` class, and is responsible of
+* Constructing the Bézier triangle mesh of `BézierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. Input is plain trinagle `Mesh`.
 * Obtaining a triangular mesh approximation (`interpolate`) with evenly subdividing each subtriangle side into `aDivisor` parts.
-* Split "thick" Bezier triangles into smaller, "thinner" ones.
+* Split "thick" Bézier triangles into smaller, "thinner" ones.
 
-#### BezierMesh::splitThickBezierTriangles
+#### BézierMesh::splitThickBézierTriangles
 
-I've implemented this function because the raytracing will inspect mesh and ray intersections using the underlying triangle mesh (after Clough-Tocher subdivision). When we have the planar intersection, it will be used to calculate the ray intersection with the Bezier triangle above it. However, if the Bezier triangle forms a relatively too "tall" dome above the underlying triangle, it is more likely a ray can travel through it without intersecting any planar triangle. Of course it is still possible when the Bezier triangles are "close" to the underlying triangles, but much less likely. In such a rare case, the simulation will find the ray pass just right beside the object.
+I've implemented this function because the raytracing will inspect mesh and ray intersections using the underlying triangle mesh (after Clough-Tocher subdivision). When we have the planar intersection, it will be used to calculate the ray intersection with the Bézier triangle above it. However, if the Bézier triangle forms a relatively too "tall" dome above the underlying triangle, it is more likely a ray can travel through it without intersecting any planar triangle. Of course it is still possible when the Bézier triangles are "close" to the underlying triangles, but much less likely. In such a rare case, the simulation will find the ray pass just right beside the object.
 
-The idea here is to take all Bezier triangles, and subdivide each one proven to be too tall. Note, as we are in the Bezier triangle domain, each triangle is the reasult of the Clough-Tocher subdivision. I could have gone with taking that subdivision of the tall triangle, but it tends to create "thin" triangles, as the edges won't ever be split. I know there are well-known subdivision algorithm, but I wanted to make a very simple implementation and take advantage of the Bezier triangle control point information, which already takes into account the neighbouring triangles.
+The idea here is to take all Bézier triangles, and subdivide each one proven to be too tall. Note, as we are in the Bézier triangle domain, each triangle is the reasult of the Clough-Tocher subdivision. I could have gone with taking that subdivision of the tall triangle, but it tends to create "thin" triangles, as the edges won't ever be split. I know there are well-known subdivision algorithm, but I wanted to make a very simple implementation and take advantage of the Bézier triangle control point information, which already takes into account the neighbouring triangles.
 
-Curently I take the approximate Bezier triangle height (at the underlying triangle centroid) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
+Curently I take the approximate Bézier triangle height (at the underlying triangle centroid) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
 
-The algorithm is simple: I take the underlying side midpoints of a "tall" Bezier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
+The algorithm is simple: I take the underlying side midpoints of a "tall" Bézier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
 
-New (dividing) vertices are calculated as a fixed linear combination of the side midpoint of the underlying triangle edge and the Bezier interpolation of that point (which is "above" the underlying triangle). The linear combination factor has been found out empirically, see below. The function gives back a new finer `Mesh` instance, which then needs to be preprocessed again and used in creation of a new, finer `BezierMesh`.
+New (dividing) vertices are calculated as a fixed linear combination of the side midpoint of the underlying triangle edge and the Bézier interpolation of that point (which is "above" the underlying triangle). The linear combination factor has been found out empirically, see below. The function gives back a new finer `Mesh` instance, which then needs to be preprocessed again and used in creation of a new, finer `BézierMesh`.
 
 #### Ellipse approximation test
 
 I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
-TODO add details.
-
 I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
+There are general error limits for surface approximation using Bézier triangles like in [[2]](#2). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
 
 #### Shortcomings
 
@@ -125,3 +124,7 @@ Shaoming Wang (2004).
 A smooth surface interpolation to 3D triangulations
 Journal of Computational and Applied Mathematics, Volume 163, Issue 11, February 2004, pp 287–293
 
+<a id="2">[2]</a> 
+Chang Geng-zhe, Feng Yu-yu (1983).
+Error bound for Bernstein-Bézier triangulation approximation
+Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340
