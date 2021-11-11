@@ -11,8 +11,14 @@
 **/Testing/
 **/cmake-build-debug/
 **/cmake_install.cmake
+**/*~
+**/*swp
+**/.cmake/
+**/CMakeLists.txt.user
+**/CTestTestfile.cmake
 reference/rayTracer
 reference/stl/
 reference/test
-**/*~
-**/*swp
+reference/output/**
+reference/googleTest
+reference/manual-test

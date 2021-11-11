@@ -8,6 +8,8 @@
 
 using Real = float;
 
+std::string const cgBaseDir("output/");
+
 auto visualizeNormals(Mesh<Real> const &aMesh) {
   Mesh<Real> result;
   Mesh<Real> sphere;
@@ -50,10 +52,10 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   sphere.makeUnitSphere(aSectors, aBelts);
   Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
   sphere *= inflate;
-  sphere.writeMesh(name);
+  sphere.writeMesh(cgBaseDir + name);
 
   Mesh<Real> back;
-  back.readMesh(name);
+  back.readMesh(cgBaseDir + name);
   back *= inflate;
 
   back.splitTriangles(aDivisor);
@@ -63,13 +65,13 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   auto nameBack = "back_" + name;
   back.standardizeVertices();
   back.standardizeNormals();
-  back.writeMesh(nameBack);
+  back.writeMesh(cgBaseDir + nameBack);
 
   auto nameNorm = "norm_" + name;
-  visualizeNormals(back).writeMesh(nameNorm);
+  visualizeNormals(back).writeMesh(cgBaseDir + nameNorm);
 
   auto nameVertexNorm = "vertexNorm_" + name;
-  visualizeVertexNormals(back).writeMesh(nameVertexNorm);
+  visualizeVertexNormals(back).writeMesh(cgBaseDir + nameVertexNorm);
 }
 
 void testVectorMax(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, float const aMaxSide) {
@@ -81,23 +83,23 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   sphere.makeUnitSphere(aSectors, aBelts);
   Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
   sphere *= inflate;
-  sphere.writeMesh(name);
+  sphere.writeMesh(cgBaseDir + name);
 
   Mesh<Real> back;
-  back.readMesh(name);
+  back.readMesh(cgBaseDir + name);
   back *= inflate;
 
   back.splitTriangles(aMaxSide);
   auto nameBack = "back_" + name;
   back.standardizeVertices();
   back.standardizeNormals();
-  back.writeMesh(nameBack);
+  back.writeMesh(cgBaseDir + nameBack);
 
   auto nameNorm = "norm_" + name;
-  visualizeNormals(back).writeMesh(nameNorm);
+  visualizeNormals(back).writeMesh(cgBaseDir + nameNorm);
 
   auto nameVertexNorm = "vertexNorm_" + name;
-  visualizeVertexNormals(back).writeMesh(nameVertexNorm);
+  visualizeVertexNormals(back).writeMesh(cgBaseDir + nameVertexNorm);
 }
 
 void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
@@ -111,7 +113,7 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   std::string name{"baryOrig_"};
   name += aName;
   name += ".stl";
-  sphere.writeMesh(name);
+  sphere.writeMesh(cgBaseDir + name);
 
   BezierMesh<Real> bezier(sphere);
   auto planified = bezier.interpolate(aDivisor);
@@ -119,7 +121,7 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   name = "bary2plane_";
   name += aName;
   name += ".stl";
-  planified.writeMesh(name);
+  planified.writeMesh(cgBaseDir + name);
 
   Mesh<Real> result;
   auto controlPoints = bezier.dumpControlPoints();
@@ -140,7 +142,7 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   name = "baryControl_";
   name += aName;
   name += ".stl";
-  result.writeMesh(name);
+  result.writeMesh(cgBaseDir + name);
 }
 
 void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
@@ -152,12 +154,12 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   std::string name{"barySplitOrig_"};
   name += aName;
   name += ".stl";
-  ellipsoid.writeMesh(name);
+  ellipsoid.writeMesh(cgBaseDir + name);
 
   name = "barySplitVertexNorm_";
   name += aName;
   name += ".stl";
-  visualizeVertexNormals(ellipsoid).writeMesh(name);
+  visualizeVertexNormals(ellipsoid).writeMesh(cgBaseDir + name);
 
   BezierMesh<Real> bezier0(ellipsoid);
   Mesh<Real> split1 = bezier0.splitThickBezierTriangles();
@@ -167,7 +169,7 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   name = "barySplit1_";
   name += aName;
   name += ".stl";
-  split1.writeMesh(name);
+  split1.writeMesh(cgBaseDir + name);
 
   BezierMesh<Real> bezier1(split1);
   Mesh<Real> split2 = bezier1.splitThickBezierTriangles();
@@ -175,7 +177,7 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   name = "barySplit2_";
   name += aName;
   name += ".stl";
-  split2.writeMesh(name);
+  split2.writeMesh(cgBaseDir + name);
 }
 
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
@@ -213,25 +215,25 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
 
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
   Mesh<Real> mesh;
-  mesh.readMesh(aName);
+  mesh.readMesh(cgBaseDir + aName);
 
   mesh.standardizeVertices();
   mesh.standardizeNormals();
 
   std::string name{"back_"};
   name += aName;
-  mesh.writeMesh(name);
+  mesh.writeMesh(cgBaseDir + name);
 
   name = "norm_";
   name += aName;
-  visualizeNormals(mesh).writeMesh(name);
+  visualizeNormals(mesh).writeMesh(cgBaseDir + name);
 
   BezierMesh<Real> bezier(mesh);
   auto planified = bezier.interpolate(aDivisor);
 
   name = "bary2plane_";
   name += aName;
-  planified.writeMesh(name);
+  planified.writeMesh(cgBaseDir + name);
 }
 
 int main(int argc, char **argv) {
