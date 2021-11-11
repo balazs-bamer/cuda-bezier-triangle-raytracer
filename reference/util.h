@@ -64,8 +64,27 @@ template<typename tReal>
 Vector<tReal> getAltitude(Vertex<tReal> const &aCommon1, Vertex<tReal> const &aCommon2, Vertex<tReal> const &aIndependent);
 
 template<typename tReal>
+struct Ray final {
+  Vertex<tReal> mStart;
+  Vector<tReal> mDirection; // normalized
+
+  Ray(Vertex<tReal> const &aStart, Vector<tReal> const &aDirection)
+  : mStart(aStart)
+  , mDirection(aDirection.normalized()) {}
+};
+
+template<typename tReal>
+struct Intersection final {
+  bool          mValid;
+  Vertex<tReal> mPoint;
+};
+
+// Plane equation is in the form of point.dot(mNormal) == mConstant where point is any point in the plane.
+template<typename tReal>
 struct Plane final {
-  Vector<tReal> mNormal;
+  static constexpr tReal csRayPlaneIntersectionEpsilon = 0.00001f;
+
+  Vector<tReal> mNormal;        // normalized
   tReal         mConstant;
 
   Plane() = default;
@@ -78,6 +97,7 @@ struct Plane final {
   static Plane         createFrom1vector2points(Vector<tReal> const &aDirection, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1);
   static Plane         createFrom2vectors1point(Vertex<tReal> const &aDirection0, Vertex<tReal> const &aDirection1, Vertex<tReal> const &aPoint);
   static Vertex<tReal> intersect(Plane const &aPlane0, Plane const &aPlane1, Plane const &aPlane2);
+  Intersection<tReal>  intersect(Ray<tReal> const &aRay) const;
 
   // Point projection on this plane
   Vector<tReal>        operator*(Vector<tReal> const &aPoint) const { return aPoint - mNormal * (aPoint.dot(mNormal) - mConstant); }
@@ -194,6 +214,25 @@ Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1
   return result;
 }
 
+template<typename tReal>
+Intersection<tReal> Plane<tReal>::intersect(Ray<tReal> const &aRay) const {
+  Intersection<tReal> result;
+  tReal denominator = aRay.mDirection.dot(mNormal);
+  if(::abs(denominator) >= csRayPlaneIntersectionEpsilon) {
+    tReal displacement = (mConstant - mNormal.dot(aRay.mStart)) / denominator;
+    if(displacement > 0.0f) {
+      result.mValid = true;
+      result.mPoint = aRay.mStart + displacement * aRay.mDirection;
+    }
+    else {
+      result.mValid = false;
+    }
+  }
+  else {
+    result.mValid = false;
+  }
+  return result;
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #endif

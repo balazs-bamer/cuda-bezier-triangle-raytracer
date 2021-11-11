@@ -1,3 +1,4 @@
+#include "util.h"
 #include "mesh.h"
 #include "bezierMesh.h"
 
@@ -126,21 +127,6 @@ Vertex<Real> getPlaneIntersection1vector2points(Vertex<Real> aCommon,
   Plane<Real> plane1 = Plane<Real>::createFrom1vector2points(aDir1, aOne1, aCommon);
   Plane<Real> plane2 = Plane<Real>::createFrom1vector2points(aDir2, aOne2, aCommon);
   Plane<Real> plane3 = Plane<Real>::createFrom1vector2points(aDir3, aOne3, aCommon);
-/*  Matrix<Real> matrix {
-    { plane1.mNormal(0), plane1.mNormal(1), plane1.mNormal(2) },
-    { plane2.mNormal(0), plane2.mNormal(1), plane2.mNormal(2) },
-    { plane3.mNormal(0), plane3.mNormal(1), plane3.mNormal(2) }
-  };
-  std::cout << "p1: " << plane1 << "\np2: " << plane2 << "\np3: " << plane3 << '\n';
-  std::cout << "m:\n" << matrix << '\n';
-  Vector<Real> vector{ plane1.mConstant, plane2.mConstant, plane3.mConstant };
-  std::cout << "v:\n" << vector << '\n';
-  Matrix<Real> inverse = matrix.inverse();
-  std::cout << "i:\n" << inverse << '\n';
-  Vertex<Real> result = Plane<Real>::intersect(plane1, plane2, plane3);
-  std::cout << "det:\n" << matrix.determinant() << "\n";
-  std::cout << "res:\n" << result << "\n";
-  std::cout << "error: " << ((matrix * result - vector).norm() / vector.norm()) << "\n\n";*/
   return Plane<Real>::intersect(plane1, plane2, plane3);
 }
 
@@ -192,6 +178,33 @@ TEST(planeIntersection, VectorsPoint) {
                                                              {0.0f, 10.0f, 1.0f}, {0.0f, 1.0f, 10.0f},
                                                              {1.0f, 0.0f, 10.0f}, {10.0f, 0.0f, 1.0f});
     EXPECT_LT((common - result).norm(), cgEpsilon);
+  }
+}
+
+TEST(planeIntersection, Ray) {
+  {
+    Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{1.0f, 1.0f, 1.0f});
+    Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 1.0f, 2.0f}, Vertex<Real>{11.0f, 11.1f, 2.0f}, Vertex<Real>{12.0f, 1.1f, 4.4f});
+    auto result = plane.intersect(ray);
+    EXPECT_TRUE(result.mValid);
+  }
+  {
+    Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{-1.0f, 2.0f, 3.0f});
+    Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 1.0f, 2.0f}, Vertex<Real>{11.0f, 11.1f, 2.0f}, Vertex<Real>{12.0f, 1.1f, 4.4f});
+    auto result = plane.intersect(ray);
+    EXPECT_FALSE(result.mValid);
+  }
+  {
+    Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{0.0f, 2.0f, 0.0f});
+    Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 1.0f, 2.0f}, Vertex<Real>{10.0f, 11.1f, 2.0f}, Vertex<Real>{10.0f, 1.1f, 4.4f});
+    auto result = plane.intersect(ray);
+    EXPECT_FALSE(result.mValid);
+  }
+  {
+    Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{0.0f, 2.0f, 0.0f});
+    Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 10.0f, 2.0f}, Vertex<Real>{0.0f, 10.0f, 2.0f}, Vertex<Real>{10.0f, 10.0f, 10.4f});
+    auto result = plane.intersect(ray);
+    EXPECT_TRUE(result.mValid && (result.mPoint - Vertex<Real>{1.0f, 10.0f, -3.0f}).norm() < 0.00001f);
   }
 }
 

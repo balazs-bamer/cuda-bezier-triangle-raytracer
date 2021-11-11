@@ -23,13 +23,15 @@ private:
   static constexpr tReal    csProportionControlOnOriginalVertexCentroid = 0.304f;
   static constexpr tReal    csProportionControlOnOriginalMedian         = 0.2f;
 
-  using Vector     = ::Vector<tReal>;
-  using Vertex     = ::Vertex<tReal>;
-  using Matrix     = ::Matrix<tReal>;
-  using Triangle   = ::Triangle<tReal>;
-  using Plane      = ::Plane<tReal>;
+  using Vector       = ::Vector<tReal>;
+  using Vertex       = ::Vertex<tReal>;
+  using Matrix       = ::Matrix<tReal>;
+  using Triangle     = ::Triangle<tReal>;
+  using Ray          = ::Ray<tReal>;
+  using Intersection = ::Intersection<tReal>;
+  using Plane        = ::Plane<tReal>;
 
-  Plane                    mUnderlyingPlane;         // Plane span by mControlPoints[0-2]
+  Plane                    mUnderlyingPlane;         // Plane span by mControlPoints[0-2], normal is normalized and points outwards.
   std::array<Plane, 3u>    mNeighbourDividerPlanes;  // For indices 1 and 2, these are about the plane going through each edge in direction the average of the adjacent side normals.
                                                      // Index 0 will be aPlaneBetweenOriginalNeighbours
   std::array<uint32_t, 3u> mNeighbours;              // With new indices after Clough-Tocher split.
@@ -64,6 +66,8 @@ public:
   Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
   Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary(0u), aBary(1u), aBary(2u)); }
   Vertex interpolateAboveOriginalCentroid() const { return mControlPoints[csControlIndexAboveOriginalCentroid]; }
+
+  Intersection intersect(Ray const &aRay) const;
 };
 
 /////////////////////////////////
@@ -183,4 +187,12 @@ Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const
          mControlPoints[csControlIndexOnSideFromOriginalCentroid1] * aBary2 * bary0_2) +
          mControlPoints[csControlIndexMiddle]                      * aBary0 * aBary1 * aBary2 * 6.0f;
 }
+
+template<typename tReal>
+Intersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay) const {
+  auto result = mUnderlyingPlane.intersect(aRay);
+  // TODO implement
+  return result;
+}
+
 #endif
