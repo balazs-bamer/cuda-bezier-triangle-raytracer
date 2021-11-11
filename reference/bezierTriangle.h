@@ -190,8 +190,23 @@ Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const
 
 template<typename tReal>
 Intersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay) const {
-  auto result = mUnderlyingPlane.intersect(aRay);
-  // TODO implement
+  auto inPlane = mUnderlyingPlane.intersect(aRay);
+  Intersection result;
+  if(inPlane.mValid) {
+    Vector barycentric = mBarycentricInverse * inPlane.mPoint;
+    if(barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
+       barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
+       barycentric(2) >= 0.0f && barycentric(2) <= 1.0f) {
+
+      result.mValid = true;
+    }
+    else {
+      result.mValid = false;
+    }
+  }
+  else {
+    result.mValid = false;
+  }
   return result;
 }
 

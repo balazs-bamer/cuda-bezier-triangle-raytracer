@@ -200,9 +200,9 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
   Real sum = 0.0f;
   for(auto const &vertex : vertices) {
     Spherical spherical(vertex(0) / aSize(0), vertex(1) / aSize(1), vertex(2) / aSize(2));
-    Vertex<Real> ethalon { aSize(0) * sin(spherical.mLatitude) * cos(spherical.mLongitude),
-                           aSize(1) * sin(spherical.mLatitude) * sin(spherical.mLongitude),
-                           aSize(2) * cos(spherical.mLatitude) };
+    Vertex<Real> ethalon { aSize(0) * sin(spherical.mInclination) * cos(spherical.mAzimuth),
+                           aSize(1) * sin(spherical.mInclination) * sin(spherical.mAzimuth),
+                           aSize(2) * cos(spherical.mInclination) };
     sum += (vertex - ethalon).squaredNorm() / ethalon.squaredNorm();
   }
   auto error = sum / vertices.size();

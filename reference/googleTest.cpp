@@ -193,6 +193,7 @@ TEST(planeIntersection, Ray) {
     Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 1.0f, 2.0f}, Vertex<Real>{11.0f, 11.1f, 2.0f}, Vertex<Real>{12.0f, 1.1f, 4.4f});
     auto result = plane.intersect(ray);
     EXPECT_FALSE(result.mValid);
+    EXPECT_LT(result.mDistance, 0.0f);
   }
   {
     Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{0.0f, 2.0f, 0.0f});
@@ -204,7 +205,9 @@ TEST(planeIntersection, Ray) {
     Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{0.0f, 2.0f, 0.0f});
     Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 10.0f, 2.0f}, Vertex<Real>{0.0f, 10.0f, 2.0f}, Vertex<Real>{10.0f, 10.0f, 10.4f});
     auto result = plane.intersect(ray);
-    EXPECT_TRUE(result.mValid && (result.mPoint - Vertex<Real>{1.0f, 10.0f, -3.0f}).norm() < 0.00001f);
+    EXPECT_TRUE(result.mValid);
+    EXPECT_LT((result.mPoint - Vertex<Real>{1.0f, 10.0f, -3.0f}).norm(), 0.00001f);
+    EXPECT_GT(::abs(result.mCosIncidence), 0.9999f);
   }
 }
 

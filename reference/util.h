@@ -77,6 +77,8 @@ template<typename tReal>
 struct Intersection final {
   bool          mValid;
   Vertex<tReal> mPoint;
+  tReal         mCosIncidence;
+  tReal         mDistance;
 };
 
 // Plane equation is in the form of point.dot(mNormal) == mConstant where point is any point in the plane.
@@ -114,14 +116,14 @@ struct Plane final {
 template<typename tReal>
 struct Spherical final {
   tReal mR;
-  tReal mLongitude; // or sector
-  tReal mLatitude;  // or belt
+  tReal mAzimuth; // or sector
+  tReal mInclination;  // or belt
 
   // Assumes the conversion can be done.
   Spherical(tReal const aX, tReal const aY, tReal const aZ)
   : mR(::sqrt(aX * aX + aY * aY + aZ * aZ))
-  , mLatitude(::acos(aZ / mR))
-  , mLongitude(::atan2(aY, aX)) {}
+  , mInclination(::acos(aZ / mR))
+  , mAzimuth(::atan2(aY, aX)) {}
 };
 
 /////////////////////////////////
@@ -217,12 +219,12 @@ Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1
 template<typename tReal>
 Intersection<tReal> Plane<tReal>::intersect(Ray<tReal> const &aRay) const {
   Intersection<tReal> result;
-  tReal denominator = aRay.mDirection.dot(mNormal);
-  if(::abs(denominator) >= csRayPlaneIntersectionEpsilon) {
-    tReal displacement = (mConstant - mNormal.dot(aRay.mStart)) / denominator;
-    if(displacement > 0.0f) {
+  result.mCosIncidence = aRay.mDirection.dot(mNormal);
+  if(::abs(result.mCosIncidence) >= csRayPlaneIntersectionEpsilon) {
+    result.mDistance = (mConstant - mNormal.dot(aRay.mStart)) / result.mCosIncidence;
+    if(result.mDistance > 0.0f) {
       result.mValid = true;
-      result.mPoint = aRay.mStart + displacement * aRay.mDirection;
+      result.mPoint = aRay.mStart + result.mDistance * aRay.mDirection;
     }
     else {
       result.mValid = false;
