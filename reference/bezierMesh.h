@@ -148,10 +148,10 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
                         mMesh[indexSplit + 1u].getControlPoint(0u),
                         mMesh[indexSplit + 2u].getControlPoint(0u) };
     auto plane = Plane::createFromTriangle(original);
-    tReal max = ::abs(plane / mMesh[indexOriginal * 3u].interpolateAboveOriginalCentroid());
+    tReal max = ::abs(plane.distance(mMesh[indexOriginal * 3u].interpolateAboveOriginalCentroid()));
     for(uint32_t i = 0; i < 3u; ++i) {
       for(auto const ratio : csSampleRatiosOriginalSide) {
-        max = std::max(max, ::abs(plane / mMesh[indexSplit + i].interpolate(ratio, 1.0f - ratio, 0.0f)));
+        max = std::max(max, ::abs(plane.distance(mMesh[indexSplit + i].interpolate(ratio, 1.0f - ratio, 0.0f))));
       }
     }
     if(max / getPerimeter(original) > csBezierHeightPerPerimeterLimit) {

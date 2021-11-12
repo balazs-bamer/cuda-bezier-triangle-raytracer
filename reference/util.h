@@ -75,7 +75,7 @@ struct Ray final {
 
 template<typename tReal>
 struct Intersection final {
-  bool          mValid;
+  bool          mValid;         // Will be true even if distance < 0, because it can be important.
   Vertex<tReal> mPoint;
   tReal         mCosIncidence;
   tReal         mDistance;
@@ -102,10 +102,10 @@ struct Plane final {
   Intersection<tReal>  intersect(Ray<tReal> const &aRay) const;
 
   // Point projection on this plane
-  Vector<tReal>        operator*(Vector<tReal> const &aPoint) const { return aPoint - mNormal * (aPoint.dot(mNormal) - mConstant); }
+  Vector<tReal>        project(Vector<tReal> const &aPoint) const { return aPoint - mNormal * (aPoint.dot(mNormal) - mConstant); }
 
   // Distance of point and this plane
-  tReal                operator/(Vector<tReal> const &aPoint) const { return ::abs(aPoint.dot(mNormal) - mConstant); }
+  tReal                distance(Vector<tReal> const &aPoint) const { return ::abs(aPoint.dot(mNormal) - mConstant); }
 
   bool operator<(Plane<tReal> const &aOther) const { return mNormal(0) < aOther.mNormal(0) // TODO remove: only for debugging
                                                          || mNormal(0) == aOther.mNormal(0) && mNormal(1) < aOther.mNormal(1)
@@ -222,13 +222,8 @@ Intersection<tReal> Plane<tReal>::intersect(Ray<tReal> const &aRay) const {
   result.mCosIncidence = aRay.mDirection.dot(mNormal);
   if(::abs(result.mCosIncidence) >= csRayPlaneIntersectionEpsilon) {
     result.mDistance = (mConstant - mNormal.dot(aRay.mStart)) / result.mCosIncidence;
-    if(result.mDistance > 0.0f) {
-      result.mValid = true;
-      result.mPoint = aRay.mStart + result.mDistance * aRay.mDirection;
-    }
-    else {
-      result.mValid = false;
-    }
+    result.mValid = true;
+    result.mPoint = aRay.mStart + result.mDistance * aRay.mDirection;
   }
   else {
     result.mValid = false;
