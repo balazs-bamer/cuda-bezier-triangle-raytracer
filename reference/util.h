@@ -78,7 +78,7 @@ struct Intersection final {
   bool          mValid;         // Will be true even if distance < 0, because it can be important.
   Vertex<tReal> mPoint;
   tReal         mCosIncidence;
-  tReal         mDistance;
+  tReal         mDistance;      // Distance of ray source point and intersection point.
 };
 
 // Plane equation is in the form of point.dot(mNormal) == mConstant where point is any point in the plane.
