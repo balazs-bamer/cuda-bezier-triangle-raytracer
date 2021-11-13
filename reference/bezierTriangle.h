@@ -42,6 +42,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
+  static constexpr tReal    csRootSearchEpsilonFactor                   = 0.001f;       // TODO consider
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -66,6 +67,7 @@ private:
                                                      // multiplication by the inverse proven to be much faster than solving the linear equation under Eigen.
   tReal                    mHeightInside;            // Sampled biggest distance of the Bezier triangle measured from the underlying triangle, < 0
   tReal                    mHeightOutside;           // this is > 0
+  tReal                    mRootSearchEpsilon;
 
 public:
   // Vertices in argument are in order such that the normal points to the desired direction.
@@ -93,7 +95,8 @@ public:
   BezierIntersection intersect(Ray const &aRay, bool const aCheckBarycentricLimits) const;
 
 private:
-  BezierIntersection intersect(Ray const &aRay, Intersection const &aInPlane, tReal const aParameterCloser, tReal const aParameterFurther) const;
+  Intersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
+  std::pair<tReal, Vertex> getLineBezierDifferenceSignumSurface(Ray const &aRay, tReal const aDistance) const;
 };
 
 /////////////////////////////////
@@ -176,16 +179,9 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
     { column0(2), column1(2), column2(2) },
   };
   mBarycentricInverse = vertices.inverse();
-}
 
-template<typename tReal>
-void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious) {
-  mNeighbourDividerPlanes[1u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTriangleNext.mUnderlyingPlane.mNormal,
-                                                                mControlPoints[csControlIndexOriginalVertex1],
-                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
-  mNeighbourDividerPlanes[2u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTrianglePrevious.mUnderlyingPlane.mNormal,
-                                                                mControlPoints[csControlIndexOriginalVertex0],
-                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
+  mRootSearchEpsilon = csRootSearchEpsilonFactor * ((column0 - column1).norm() + (column1 - column2).norm() + (column2 - column0).norm());
+
   Vertex bary{csOneThird, csOneThird, csOneThird};
   tReal distance = mUnderlyingPlane.distance(interpolate(bary));
   mHeightInside = std::min(0.0f, distance);
@@ -200,6 +196,16 @@ void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle con
       mHeightOutside = std::max(0.0f, distance);
     }
   }
+}
+
+template<typename tReal>
+void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious) {
+  mNeighbourDividerPlanes[1u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTriangleNext.mUnderlyingPlane.mNormal,
+                                                                mControlPoints[csControlIndexOriginalVertex1],
+                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
+  mNeighbourDividerPlanes[2u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTrianglePrevious.mUnderlyingPlane.mNormal,
+                                                                mControlPoints[csControlIndexOriginalVertex0],
+                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
 }
 
 template<typename tReal>
@@ -238,24 +244,18 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, bool
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
         barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
         barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
-      tReal parameterCloser;
-      tReal parameterFurther;
-      if(inPlane.mCosIncidence > 0.0f) {        // Ray from inside outwards
-        parameterCloser = inPlane.mDistance + mHeightInside / inPlane.mCosIncidence;
-        parameterFurther = inPlane.mDistance + mHeightOutside / inPlane.mCosIncidence;
-      }
-      else {                                     // Ray from outside inwards
-        parameterCloser = inPlane.mDistance + mHeightOutside / inPlane.mCosIncidence;
-        parameterFurther = inPlane.mDistance + mHeightInside / inPlane.mCosIncidence;
-      }
+      auto distanceInside = mHeightInside / inPlane.mCosIncidence;
+      auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
+      tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
+      tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
       auto totalInterestingRange = parameterFurther - parameterCloser;
       if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half
-        result = intersect(aRay, inPlane, parameterCloser, inPlane.mDistance);
+        result = intersect(aRay, parameterCloser, inPlane.mDistance);
       }
       else { // nothing to do
       }
       if(result.mWhat == BezierIntersection::What::cNone && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
-        result = intersect(aRay, inPlane, inPlane.mDistance, parameterFurther);
+        result = intersect(aRay, inPlane.mDistance, parameterFurther);
       }
       else { // nothing to do
       }
@@ -271,7 +271,37 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, bool
 }
 
 template<typename tReal>
-BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Intersection const &aInPlane, tReal const aParameterCloser, tReal const aParameterFurther) const {
-
+Intersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const {
+  Intersection result;
+  auto closer = aParameterCloser;
+  auto further = aParameterFurther;
+  auto [signumCloser, dontCare] = getLineBezierDifferenceSignum(aRay, closer);
+  auto [signumFurther, dontCareEither] = getLineBezierDifferenceSignum(aRay, further);
+  if(signumCloser == signumFurther) {
+    result.mValid = false;
+  }
+  else {
+    while(further - closer > mRootSearchEpsilon) {
+      auto middle = (closer + further) / 2.0f;
+      auto [signumMiddle, result.] = getLineBezierDifferenceSignum(aRay, middle);
+      if(signumCloser == signumMiddle) {
+        closer = middle;
+        signumCloser = signumMiddle;
+      }
+      else {
+        further = middle;
+        signumFurther = signumMiddle;
+      }
+    }
+    result.mValid = true;
+  }
+  return result;
+}
+                                // TODO one of these should somehow return barycentric
+template<typename tReal>
+std::pair<tReal, Vertex<tReal>> BezierTriangle<tReal>::getLineBezierDifferenceSignumSurface(Ray const &aRay, tReal const aDistance) const {
+  Vertex pointOnRay = aRay.mStart + aRay.mDirection * aDistance;
+  Vertex pointOnSurface = interpolate(mBarycentricInverse * (mUnderlyingPlane.project(pointOnRay)));
+  return std::make_pair(::copysign(1.0f, ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(pointOnSurface))), pointOnSurface);
 }
 #endif
