@@ -14,6 +14,7 @@ struct BezierIntersection final {
   };
 
   Intersection<tReal> mIntersection;
+  Vertex<tReal>       mBarycentric;
   Vector<tReal>       mNormal;
   What                mWhat;
 };
@@ -95,8 +96,8 @@ public:
   BezierIntersection intersect(Ray const &aRay, bool const aCheckBarycentricLimits) const;
 
 private:
-  Intersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
-  std::pair<tReal, Vertex> getLineBezierDifferenceSignumSurface(Ray const &aRay, tReal const aDistance) const;
+  BezierIntersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
+  std::tuple<tReal, Vertex, Vertex> getLineBezierDifferenceSignumBarySurface(Ray const &aRay, tReal const aDistance) const;
 };
 
 /////////////////////////////////
@@ -259,6 +260,11 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, bool
       }
       else { // nothing to do
       }
+      if(result.mWhat == BezierIntersection::What::cIntersect) {
+        // TODO mCosIncidence, it needs surface normal, which in turn needs partial derivatives
+      }
+      else { // Nothing to do
+      }
     }
     else {
       result.mWhat = BezierIntersection::What::cNone;
@@ -271,37 +277,51 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, bool
 }
 
 template<typename tReal>
-Intersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const {
-  Intersection result;
+BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const {
+  BezierIntersection result;
   auto closer = aParameterCloser;
   auto further = aParameterFurther;
-  auto [signumCloser, dontCare] = getLineBezierDifferenceSignum(aRay, closer);
-  auto [signumFurther, dontCareEither] = getLineBezierDifferenceSignum(aRay, further);
+  auto [signumCloser, barycentricCloser, surfaceCloser] = getLineBezierDifferenceSignum(aRay, closer);
+  tReal signumFurther;
+  std::tie(signumFurther, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignum(aRay, further);
+  result.mIntersection.mDistance = further;
   if(signumCloser == signumFurther) {
-    result.mValid = false;
+    result.mWhat = BezierIntersection::What::cNone;
   }
   else {
     while(further - closer > mRootSearchEpsilon) {
       auto middle = (closer + further) / 2.0f;
-      auto [signumMiddle, result.] = getLineBezierDifferenceSignum(aRay, middle);
+      tReal signumMiddle;
+      std::tie(signumMiddle, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignum(aRay, middle);
+      result.mIntersection.mDistance = middle;
       if(signumCloser == signumMiddle) {
         closer = middle;
-        signumCloser = signumMiddle;
       }
       else {
         further = middle;
-        signumFurther = signumMiddle;
       }
     }
-    result.mValid = true;
+    if(result.mBarycentric[0u] < -mRootSearchEpsilon) {      // At most one of them can be negative.
+      result.mWhat = BezierIntersection::What::cFollowSide1;
+    }
+    else if(result.mBarycentric[1u] < -mRootSearchEpsilon) {
+      result.mWhat = BezierIntersection::What::cFollowSide2;
+    }
+    else if(result.mBarycentric[2u] < -mRootSearchEpsilon) {
+      result.mWhat = BezierIntersection::What::cFollowSide0;
+    }
+    else {
+      result.mWhat = BezierIntersection::What::cIntersect;
+    }
   }
   return result;
 }
-                                // TODO one of these should somehow return barycentric
+
 template<typename tReal>
-std::pair<tReal, Vertex<tReal>> BezierTriangle<tReal>::getLineBezierDifferenceSignumSurface(Ray const &aRay, tReal const aDistance) const {
+std::tuple<tReal, Vertex<tReal>, Vertex<tReal>> BezierTriangle<tReal>::getLineBezierDifferenceSignumBarySurface(Ray const &aRay, tReal const aDistance) const {
   Vertex pointOnRay = aRay.mStart + aRay.mDirection * aDistance;
-  Vertex pointOnSurface = interpolate(mBarycentricInverse * (mUnderlyingPlane.project(pointOnRay)));
-  return std::make_pair(::copysign(1.0f, ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(pointOnSurface))), pointOnSurface);
+  Vertex barycentric = mBarycentricInverse * (mUnderlyingPlane.project(pointOnRay));
+  Vertex pointOnSurface = interpolate(barycentric);
+  return std::make_tuple(::copysign(1.0f, ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(pointOnSurface))), barycentric, pointOnSurface);
 }
 #endif
