@@ -82,7 +82,11 @@ Here resides the `BézierTriangle` class which is capable of
 The Bézier triangle will contain all the original triangle vertices. Control point calculations follow [[1]](#1) with the details figured out by myself where the paper was not specific. There are 3 `constexpr` parameters influencing control point placement, which were empirically estimated TODO see where
 TODO perhaps write control point calculation in detail.
 
-Apart of the constructor, important public interface is the `interpolateLinear` and `interpolate` (Bézier) function families, which are self-explanatory.
+#### BezierTriangle::intersection
+
+There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data. So I've implemented a rather simple algorithm with one or two identical computation-intensive loops, which are easy to run parallel for many rays. TODO add details.
+
+TODO add details about directional derivatives in [[3](#3)
 
 ### reference/bezierMesh.h
 
@@ -91,7 +95,7 @@ The `BézierMesh` class is similar to and based on the `Mesh` class, and is resp
 * Obtaining a triangular mesh approximation (`interpolate`) with evenly subdividing each subtriangle side into `aDivisor` parts.
 * Split "thick" Bézier triangles into smaller, "thinner" ones.
 
-#### BézierMesh::splitThickBézierTriangles
+#### BezierMesh::splitThickBézierTriangles
 
 I've implemented this function because the raytracing will inspect mesh and ray intersections using the underlying triangle mesh (after Clough-Tocher subdivision). When we have the planar intersection, it will be used to calculate the ray intersection with the Bézier triangle above it. However, if the Bézier triangle forms a relatively too "tall" dome above the underlying triangle, it is more likely a ray can travel through it without intersecting any planar triangle. Of course it is still possible when the Bézier triangles are "close" to the underlying triangles, but much less likely. In such a rare case, the simulation will find the ray pass just right beside the object.
 
@@ -107,7 +111,7 @@ New (dividing) vertices are calculated as a fixed linear combination of the side
 
 I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
 I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
-There are general error limits for surface approximation using Bézier triangles like in [[2]](#2). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
+There are general error limits for surface approximation using Bézier triangles like in [[4]](#4). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
 
 #### Shortcomings
 
@@ -125,11 +129,16 @@ A smooth surface interpolation to 3D triangulations
 Journal of Computational and Applied Mathematics, Volume 163, Issue 11 (February 2004), pp 287–293
 
 <a id="2">[2]</a> 
-Chang Geng-zhe, Feng Yu-yu (1983).
-Error bound for Bernstein-Bézier triangulation approximation
-Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340
-
-<a id="3">[3]</a>
 S.H.M. Roth, P. Diezi, M.H. Gross (2000).
 Triangular Bezier clipping
 Proceedings the Eighth Pacific Conference on Computer Graphics and Applications (October 2000)
+
+<a id="3">[3]</a>
+Gerald Farin (1986).
+Triangular Bernstein-Bézier patches
+Computer Aided Geometric Design 3, pp 83-127
+
+<a id="4">[4]</a>
+Chang Geng-zhe, Feng Yu-yu (1983).
+Error bound for Bernstein-Bézier triangulation approximation
+Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340

@@ -37,6 +37,17 @@ private:
   static constexpr uint32_t csControlIndexOnSideFromOriginalCentroid1 = 8u;
   static constexpr uint32_t csControlIndexMiddle                      = 9u;
 
+  static constexpr uint32_t csControlIndex300 = csControlIndexOriginalVertex0;
+  static constexpr uint32_t csControlIndex030 = csControlIndexOriginalVertex1;
+  static constexpr uint32_t csControlIndex003 = csControlIndexAboveOriginalCentroid;
+  static constexpr uint32_t csControlIndex210 = csControlIndexOnOriginalSide0;
+  static constexpr uint32_t csControlIndex120 = csControlIndexOnOriginalSide1;
+  static constexpr uint32_t csControlIndex021 = csControlIndexOnSideToOriginalCentroid0;
+  static constexpr uint32_t csControlIndex012 = csControlIndexOnSideToOriginalCentroid1;
+  static constexpr uint32_t csControlIndex102 = csControlIndexOnSideFromOriginalCentroid0;
+  static constexpr uint32_t csControlIndex201 = csControlIndexOnSideFromOriginalCentroid1;
+  static constexpr uint32_t csControlIndex111 = csControlIndexMiddle;
+
   static constexpr tReal    csProportionControlOnOriginalSide           = 0.291f;
   static constexpr tReal    csProportionControlOnOriginalVertexCentroid = 0.304f;
   static constexpr tReal    csProportionControlOnOriginalMedian         = 0.2f;
@@ -69,6 +80,8 @@ private:
   tReal                    mHeightInside;            // Sampled biggest distance of the Bezier triangle measured from the underlying triangle, < 0
   tReal                    mHeightOutside;           // this is > 0
   tReal                    mRootSearchEpsilon;
+  Vector                   mBezierDerivativeDirectionVectorA; // We calculate directional derivatives in two perpendicular directions
+  Vector                   mBezierDerivativeDirectionVectorB; // and their cross product will yield the Bezier surface normal
 
 public:
   // Vertices in argument are in order such that the normal points to the desired direction.
@@ -98,6 +111,7 @@ public:
 private:
   BezierIntersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
   std::tuple<tReal, Vertex, Vertex> getLineBezierDifferenceSignumBarySurface(Ray const &aRay, tReal const aDistance) const;
+  Vector getDirectionalDerivative(Vector const &aBarycentric, Vector const &aDirection) const;
 };
 
 /////////////////////////////////
@@ -197,6 +211,11 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
       mHeightOutside = std::max(0.0f, distance);
     }
   }
+
+  mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f};  // No matter how long.
+  mBezierDerivativeDirectionVectorB = mBarycentricInverse *
+      (mControlPoints[csControlIndexOriginalVertex0] - mControlPoints[csControlIndexAboveOriginalCentroid]).cross(mUnderlyingPlane.mNormal);
+  // TODO check direction, reverse if needed
 }
 
 template<typename tReal>
@@ -323,5 +342,10 @@ std::tuple<tReal, Vertex<tReal>, Vertex<tReal>> BezierTriangle<tReal>::getLineBe
   Vertex barycentric = mBarycentricInverse * (mUnderlyingPlane.project(pointOnRay));
   Vertex pointOnSurface = interpolate(barycentric);
   return std::make_tuple(::copysign(1.0f, ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(pointOnSurface))), barycentric, pointOnSurface);
+}
+
+template<typename tReal>
+Vector<tReal> BezierTriangle<tReal>::getDirectionalDerivative(Vector const &aBarycentric, Vector const &aDirection) const {
+
 }
 #endif
