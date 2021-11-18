@@ -104,8 +104,11 @@ struct Plane final {
   // Point projection on this plane
   Vector<tReal>        project(Vector<tReal> const &aPoint) const { return aPoint - mNormal * (aPoint.dot(mNormal) - mConstant); }
 
-  // Distance of point and this plane
-  tReal                distance(Vector<tReal> const &aPoint) const { return ::abs(aPoint.dot(mNormal) - mConstant); }
+  // Distance of point and this plane, >0 if the normal points towards the point.
+  tReal                distance(Vector<tReal> const &aPoint) const { return aPoint.dot(mNormal) - mConstant; }
+
+  void                 makeDistancePositive(Vector<tReal> const aPoint);
+  void                 makeDistanceNegative(Vector<tReal> const aPoint);
 
   bool operator<(Plane<tReal> const &aOther) const { return mNormal(0) < aOther.mNormal(0) // TODO remove: only for debugging
                                                          || mNormal(0) == aOther.mNormal(0) && mNormal(1) < aOther.mNormal(1)
@@ -230,6 +233,27 @@ Intersection<tReal> Plane<tReal>::intersect(Ray<tReal> const &aRay) const {
   }
   return result;
 }
+
+template<typename tReal>
+void Plane<tReal>::makeDistancePositive(Vector<tReal> const aPoint) {
+  if(distance(aPoint) < 0.0f) {
+    mNormal = -mNormal;
+    mConstant = -mConstant;
+  }
+  else { // Nothing to do
+  }
+}
+
+template<typename tReal>
+void Plane<tReal>::makeDistanceNegative(Vector<tReal> const aPoint) {
+  if(distance(aPoint) > 0.0f) {
+    mNormal = -mNormal;
+    mConstant = -mConstant;
+  }
+  else { // Nothing to do
+  }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #endif
