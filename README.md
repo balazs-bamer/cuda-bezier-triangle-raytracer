@@ -86,12 +86,12 @@ TODO perhaps write control point calculation in detail.
 
 There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data. So I've implemented a rather simple algorithm with one or two identical computation-intensive loops, which are easy to run parallel for many rays. TODO add details.
 
-TODO add details about directional derivatives in [[3](#3)
+TODO add details about directional derivatives in [[3]](#3)
 
 ### reference/bezierMesh.h
 
 The `BézierMesh` class is similar to and based on the `Mesh` class, and is responsible of
-* Constructing the Bézier triangle mesh of `BézierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. Input is plain trinagle `Mesh`.
+* Constructing the Bézier triangle mesh of `BézierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. Input is plain triangle `Mesh`.
 * Obtaining a triangular mesh approximation (`interpolate`) with evenly subdividing each subtriangle side into `aDivisor` parts.
 * Split "thick" Bézier triangles into smaller, "thinner" ones.
 

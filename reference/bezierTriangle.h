@@ -3,6 +3,8 @@
 
 #include "util.h"
 
+#include<iostream> // TODO remove
+
 template<typename tReal>
 struct BezierIntersection final {
   enum class What : uint8_t {
@@ -68,6 +70,7 @@ private:
   Plane                    mUnderlyingPlane;         // Plane span by mControlPoints[0-2], normal is normalized and points outwards.
   std::array<Plane, 3u>    mNeighbourDividerPlanes;  // For indices 1 and 2, these are about the plane going through each edge in direction the average of the adjacent side normals.
                                                      // Index 0 will be aPlaneBetweenOriginalNeighbours
+                                                     // Their normal is such that for all planes any point P belonging to this Bezier triangle has plane.distance(P) >= 0
   std::array<uint32_t, 3u> mNeighbours;              // With new indices after Clough-Tocher split.
   // 0-1 identical to original triangle vertices, named aOriginalCommonVertex0, aOriginalCommonVertex1 in constructor
   // 2 somewhere above the middle of the original triangle center, to be calculated
@@ -157,6 +160,7 @@ BezierTriangle<tReal>::BezierTriangle(Vertex const &aOriginalCommonVertex0, Vert
                                                           perpendicularToOriginalMedianInProportion);
 
   mNeighbourDividerPlanes[0u] = aPlaneBetweenOriginalNeighbours;
+  mNeighbourDividerPlanes[0u].makeDistancePositive(mControlPoints[csControlIndexMiddle]);
 }
 
 template<typename tReal>
@@ -214,8 +218,7 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
 
   mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f};  // No matter how long.
   mBezierDerivativeDirectionVectorB = mBarycentricInverse *
-      (mControlPoints[csControlIndexOriginalVertex0] - mControlPoints[csControlIndexAboveOriginalCentroid]).cross(mUnderlyingPlane.mNormal);
-  // TODO check direction, reverse if needed
+      (mControlPoints[csControlIndexAboveOriginalCentroid] - mControlPoints[csControlIndexOriginalVertex0]).cross(mUnderlyingPlane.mNormal);
 }
 
 template<typename tReal>
@@ -226,6 +229,8 @@ void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle con
   mNeighbourDividerPlanes[2u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTrianglePrevious.mUnderlyingPlane.mNormal,
                                                                 mControlPoints[csControlIndexOriginalVertex0],
                                                                 mControlPoints[csControlIndexAboveOriginalCentroid]);
+  mNeighbourDividerPlanes[1u].makeDistancePositive(mControlPoints[csControlIndexMiddle]);
+  mNeighbourDividerPlanes[2u].makeDistancePositive(mControlPoints[csControlIndexMiddle]);
 }
 
 template<typename tReal>
@@ -269,7 +274,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, bool
       tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
       tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
       auto totalInterestingRange = parameterFurther - parameterCloser;
-      if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half
+      if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
         result = intersect(aRay, parameterCloser, inPlane.mDistance);
       }
       else { // nothing to do
@@ -321,16 +326,20 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
         further = middle;
       }
     }
-    if(result.mBarycentric[0u] < -mRootSearchEpsilon) {      // At most one of them can be negative.
-      result.mWhat = BezierIntersection::What::cFollowSide1;
-    }
-    else if(result.mBarycentric[1u] < -mRootSearchEpsilon) {
-      result.mWhat = BezierIntersection::What::cFollowSide2;
-    }
-    else if(result.mBarycentric[2u] < -mRootSearchEpsilon) {
+
+    uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
+    outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
+    outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
+    if(outside == 1u) {
       result.mWhat = BezierIntersection::What::cFollowSide0;
     }
-    else {
+    else if(outside == 2u) {
+      result.mWhat = BezierIntersection::What::cFollowSide1;
+    }
+    else if(outside == 4u) {
+      result.mWhat = BezierIntersection::What::cFollowSide0;
+    }
+    else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
       result.mWhat = BezierIntersection::What::cIntersect;
     }
   }
@@ -381,6 +390,6 @@ Vector<tReal> BezierTriangle<tReal>::getNormal(Vector const &aBarycentric) const
   Vector componentB = mBezierDerivativeDirectionVectorB(0) * component0 +
                       mBezierDerivativeDirectionVectorB(1) * component1 +
                       mBezierDerivativeDirectionVectorB(2) * component2;
-  return componentA.cross(componentB).normalized();                             // TODO make sure the direction is correct
+  return componentA.cross(componentB).normalized();
 }
 #endif

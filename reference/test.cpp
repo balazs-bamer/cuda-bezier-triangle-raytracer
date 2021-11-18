@@ -237,10 +237,10 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
 }
 
 int main(int argc, char **argv) {
-  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
+/*  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
-  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
+  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);*/
 
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
   testBezier2plane("7x5", 7, 5, 3.0f, 4);
