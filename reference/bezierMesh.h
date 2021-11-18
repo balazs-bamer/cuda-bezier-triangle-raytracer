@@ -21,7 +21,9 @@ private:
   using Matrix              = ::Matrix<tReal>;
   using Triangle            = ::Triangle<tReal>;
   using Plane               = ::Plane<tReal>;
+  using Ray                 = ::Ray<tReal>;
   using BezierTriangle      = ::BezierTriangle<tReal>;
+  using BezierIntersection  = ::BezierIntersection<tReal>;
   using Neighbours          = typename Mesh<tReal>::Neighbours;
   using MissingFieldsMethod = std::function<void(BezierTriangle &, Vertex const &aOriginalCentroid, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious)>;
 
@@ -39,9 +41,7 @@ public:
                                                         // - no more split or under a percentage
                                                         // - absolute height left is below a value
                                                         // - minimal triangle perimeter is below a value or percentage of the original
-
-/*Mesh<tReal> stuff;
-Mesh<tReal> const& getStuff() const { return stuff; }*/
+  BezierIntersection intersect(Ray const &aRay) const;
 
 private:
   void setMissingFields(Mesh<tReal> const &aMesh, MissingFieldsMethod aMissingFieldsMethod);
@@ -264,6 +264,22 @@ Vertex<tReal> BezierMesh<tReal>::interpolate(uint32_t const aIndex, tReal const 
   auto const &triangle = mMesh[aIndex];
   return triangle.interpolate(aBary0, aBary1, aBary2) * csSplitBezierInterpolateFactor +
          triangle.interpolateLinear(aBary0, aBary1, aBary2) * (1.0f - csSplitBezierInterpolateFactor);
+}
+
+template<typename tReal>
+BezierIntersection<tReal> BezierMesh<tReal>::intersect(Ray const &aRay) const {
+  // Brute-force for now
+  BezierIntersection result;
+  result.mIntersection.mDistance = std::numeric_limits<float>::max();
+  for(auto const &bezier : mMesh) {
+    auto candidate = bezier.intersect(aRay, BezierTriangle::LimitPlaneIntersection::cThis);
+    if(candidate.mWhat == BezierIntersection::What::cIntersect && candidate.mIntersection.mDistance < result.mIntersection.mDistance) {
+      result = candidate;
+    }
+    else { // Nothing now, but later:   TODO handle cFollowSide*
+    }
+  }
+  return result;
 }
 
 #endif

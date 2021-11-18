@@ -75,7 +75,6 @@ public:
   Vertex2averageNormals const& getVertex2averageNormals() const { return mVertex2averageNormals; } // TODO perhaps implement a way to import these values
                                                                                                    // along with the triangles when the original surface is known
                                                                                                    // and dervatives are present.
-
   void standardizeVertices();
   Vertices getVertices() const;
 

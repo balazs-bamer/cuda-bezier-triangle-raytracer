@@ -24,6 +24,10 @@ struct BezierIntersection final {
 template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
 public:
+  enum class LimitPlaneIntersection : uint8_t {
+    cThis = 0u,
+    cNone = 1u
+  };
   static constexpr std::array<tReal, 3u>   csSampleRatiosOriginalSide = { 0.25f, 0.5f, 0.75f };
 
   static constexpr uint32_t csControlPointsSize                       = 10u;
@@ -109,7 +113,7 @@ public:
   Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary(0u), aBary(1u), aBary(2u)); }
   Vertex interpolateAboveOriginalCentroid() const { return mControlPoints[csControlIndexAboveOriginalCentroid]; }
 
-  BezierIntersection intersect(Ray const &aRay, bool const aCheckBarycentricLimits) const;
+  BezierIntersection intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const;
 
 private:
   BezierIntersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
@@ -260,12 +264,12 @@ Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const
 }
 
 template<typename tReal>
-BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, bool const aCheckBarycentricLimits) const {
+BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
   auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
   if(inPlane.mValid) {
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
-    if(!aCheckBarycentricLimits ||
+    if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
         barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
         barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
@@ -306,9 +310,9 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   BezierIntersection result;
   auto closer = aParameterCloser;
   auto further = aParameterFurther;
-  auto [signumCloser, barycentricCloser, surfaceCloser] = getLineBezierDifferenceSignum(aRay, closer);
+  auto [signumCloser, barycentricCloser, surfaceCloser] = getLineBezierDifferenceSignumBarySurface(aRay, closer);
   tReal signumFurther;
-  std::tie(signumFurther, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignum(aRay, further);
+  std::tie(signumFurther, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignumBarySurface(aRay, further);
   result.mIntersection.mDistance = further;
   if(signumCloser == signumFurther) {
     result.mWhat = BezierIntersection::What::cNone;
@@ -317,7 +321,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
     while(further - closer > mRootSearchEpsilon) {
       auto middle = (closer + further) / 2.0f;
       tReal signumMiddle;
-      std::tie(signumMiddle, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignum(aRay, middle);
+      std::tie(signumMiddle, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignumBarySurface(aRay, middle);
       result.mIntersection.mDistance = middle;
       if(signumCloser == signumMiddle) {
         closer = middle;

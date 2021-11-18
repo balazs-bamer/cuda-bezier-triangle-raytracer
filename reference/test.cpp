@@ -180,6 +180,58 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   split2.writeMesh(cgBaseDir + name);
 }
 
+void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize) {
+  Mesh<Real> ellipsoid;
+  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+  ellipsoid.standardizeVertices();
+  ellipsoid.standardizeNormals();
+
+  Mesh<Real> bullet;
+  bullet.makeEllipsoid(5, 3, aSize / 20.0f);
+  Mesh<Real> intersections;
+  Mesh<Real> objects;
+
+  Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, Vector<Real>(1.0f, 0.05f, 0.02f));
+  Vector<Real> displacement{5.0f, 0.0f, 0.0f};
+  ellipsoid += displacement;                    // We start from outside.
+
+  for(;;) {
+    BezierMesh<Real> bezier(ellipsoid);
+    auto object = bezier.interpolate(5);
+    std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
+
+    auto intersection = bezier.intersect(ray);
+    if(intersection.mWhat == BezierIntersection<Real>::What::cNone) {
+      break;
+    }
+    else { // Nothing to do
+    }
+
+    auto copy = bullet;
+    copy += intersection.mIntersection.mPoint;
+    ray.mStart = intersection.mIntersection.mPoint;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+
+    intersection = bezier.intersect(ray);
+    copy = bullet;
+    copy += intersection.mIntersection.mPoint;
+    ray.mStart = intersection.mIntersection.mPoint;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+
+    ellipsoid += displacement;
+  }
+
+  std::string name{"intersectionObject_"};
+  name += aName;
+  name += ".stl";
+  objects.writeMesh(cgBaseDir + name);
+
+  name = "intersectionLocation_";
+  name += aName;
+  name += ".stl";
+  intersections.writeMesh(cgBaseDir + name);
+}
+
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
@@ -249,6 +301,8 @@ int main(int argc, char **argv) {
 
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
+
+  testBezierIntersection("7x3", 7, 3, ellipsoidAxes);
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
   measureApproximation(0, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 0 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0022721614
