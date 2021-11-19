@@ -201,6 +201,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   bullet *= 0.05f;
   Mesh<Real> intersections;
   Mesh<Real> objects;
+  Mesh<Real> raws;
 
   Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, Vector<Real>(1.0f, 0.05f, 0.02f));
   Vector<Real> displacement{5.0f, 0.0f, 0.0f};
@@ -209,6 +210,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     ellipsoid += displacement;                    // We start from outside.
     ellipsoid.standardizeVertices();
     ellipsoid.standardizeNormals();
+    std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
     BezierMesh<Real> bezier(ellipsoid);
     auto object = bezier.interpolate(5);
     std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
@@ -220,14 +222,13 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
-
     auto copy = bullet;
-    copy += intersection.mIntersection.mPoint;
+    copy += intersection.mIntersection.mPoint;    // TODO why are these not in straight line?
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
-    intersection = bezier.intersect(ray);
-    dump(intersection);
+    intersection = bezier.intersect(ray);         // TODO why doesn't the ray come out of the last shape? It wants a neighbouring triangle, and in turn a neighbouring one.
+    dump(intersection);                           // Double doesn't help.
     if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
       break;
     }
@@ -243,6 +244,11 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   name += aName;
   name += ".stl";
   objects.writeMesh(cgBaseDir + name);
+
+  name ="intersectionRaw_";
+  name += aName;
+  name += ".stl";
+  raws.writeMesh(cgBaseDir + name);
 
   name = "intersectionLocation_";
   name += aName;
