@@ -4,6 +4,7 @@
 #include "util.h"
 
 #include<iostream> // TODO remove
+#include<iomanip> // TODO remove
 
 template<typename tReal>
 struct BezierIntersection final {
@@ -273,6 +274,14 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
         barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
         barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
+std::cout << " plane: "
+          << std::setw(11) << std::setprecision(4) << inPlane.mPoint(0)
+          << std::setw(11) << std::setprecision(4) << inPlane.mPoint(1)
+          << std::setw(11) << std::setprecision(4) << inPlane.mPoint(2) << " dist: "
+          << std::setw(11) << std::setprecision(4) << inPlane.mDistance << " bary: "
+          << std::setw(11) << std::setprecision(4) << barycentric(0)
+          << std::setw(11) << std::setprecision(4) << barycentric(1)
+          << std::setw(11) << std::setprecision(4) << barycentric(2) << '\n';
       auto distanceInside = mHeightInside / inPlane.mCosIncidence;
       auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
       tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
@@ -289,8 +298,13 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
       else { // nothing to do
       }
       if(result.mWhat == BezierIntersection::What::cIntersect) {
-        result.mNormal = getNormal(result.mBarycentric);
-        result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal); // TODO find out where it should point
+        if(result.mIntersection.mDistance > 0.0f) {
+          result.mNormal = getNormal(result.mBarycentric);
+          result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal); // TODO find out where it should point
+        }
+        else {
+          result.mWhat = BezierIntersection::What::cNone;
+        }
       }
       else { // Nothing to do
       }
@@ -319,6 +333,9 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   }
   else {
     while(further - closer > mRootSearchEpsilon) {
+std::cout << "  loop: "
+          << std::setw(11) << std::setprecision(4) << further
+          << std::setw(11) << std::setprecision(4) << closer << '\n';
       auto middle = (closer + further) / 2.0f;
       tReal signumMiddle;
       std::tie(signumMiddle, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignumBarySurface(aRay, middle);

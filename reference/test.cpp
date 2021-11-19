@@ -180,28 +180,42 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   split2.writeMesh(cgBaseDir + name);
 }
 
+void dump(BezierIntersection<Real> const aIntersection) {
+  std::cout << "result: "
+            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mPoint(0)
+            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mPoint(1)
+            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mPoint(2) << " dist: "
+            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mDistance << " norm: "
+            << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(0)
+            << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(1)
+            << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(2)              << " what: "
+            << std::setw(11) << std::setprecision(4) << static_cast<unsigned>(aIntersection.mWhat) << '\n';
+}
+
 void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize) {
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
-  ellipsoid.standardizeVertices();
-  ellipsoid.standardizeNormals();
 
   Mesh<Real> bullet;
-  bullet.makeEllipsoid(5, 3, aSize / 20.0f);
+  bullet.makeUnitSphere(5, 3);
+  bullet *= 0.05f;
   Mesh<Real> intersections;
   Mesh<Real> objects;
 
   Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, Vector<Real>(1.0f, 0.05f, 0.02f));
   Vector<Real> displacement{5.0f, 0.0f, 0.0f};
-  ellipsoid += displacement;                    // We start from outside.
 
   for(;;) {
+    ellipsoid += displacement;                    // We start from outside.
+    ellipsoid.standardizeVertices();
+    ellipsoid.standardizeNormals();
     BezierMesh<Real> bezier(ellipsoid);
     auto object = bezier.interpolate(5);
     std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
 
     auto intersection = bezier.intersect(ray);
-    if(intersection.mWhat == BezierIntersection<Real>::What::cNone) {
+    dump(intersection);
+    if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
       break;
     }
     else { // Nothing to do
@@ -213,12 +227,16 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
     intersection = bezier.intersect(ray);
+    dump(intersection);
+    if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
+      break;
+    }
+    else { // Nothing to do
+    }
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
-
-    ellipsoid += displacement;
   }
 
   std::string name{"intersectionObject_"};

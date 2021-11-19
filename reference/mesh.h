@@ -86,15 +86,9 @@ public:
 
   void transform(Transform const &aTransform, Vertex const aDisplacement);
 
-  Mesh& operator+=(Vector const aDisplacement) {
-    transform(Transform::Identity(), aDisplacement);
-    return *this;
-  }
-
-  Mesh& operator*=(Transform const &aTransform) {
-    transform(aTransform, Vertex::Zero());
-    return *this;
-  }
+  Mesh& operator+=(Vector const aDisplacement)  { transform(Transform::Identity(),           aDisplacement);  return *this; }
+  Mesh& operator*=(Transform const &aTransform) { transform(aTransform,                      Vertex::Zero()); return *this; }
+  Mesh& operator*=(tReal const &aFactor)        { transform(Transform::Identity() * aFactor, Vertex::Zero()); return *this; }
 
 /// WARNING! Likely to put new vertices on edges!
   void splitTriangles(tReal const aMaxTriangleSide);
