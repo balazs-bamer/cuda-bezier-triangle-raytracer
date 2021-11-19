@@ -189,7 +189,7 @@ void dump(BezierIntersection<Real> const aIntersection) {
             << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(0)
             << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(1)
             << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(2)              << " what: "
-            << std::setw(11) << std::setprecision(4) << static_cast<unsigned>(aIntersection.mWhat) << '\n';
+            << std::setw(11) << std::setprecision(4) << static_cast<unsigned>(aIntersection.mWhat) << "\n\n\n";
 }
 
 void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize) {

@@ -217,6 +217,8 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
       mHeightOutside = std::max(mHeightOutside, distance);
     }
   } );
+  mHeightInside *= csHeightSafetyFactor;
+  mHeightOutside *= csHeightSafetyFactor;
   mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f};            // No matter how long.
   mBezierDerivativeDirectionVectorB = mBarycentricInverse *
       (mControlPoints[csControlIndexAboveOriginalCentroid] - mControlPoints[csControlIndexOriginalVertex0]).cross(mUnderlyingPlane.mNormal);
@@ -264,7 +266,7 @@ template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
   auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
-  if(inPlane.mValid) {
+  if(inPlane.mValid && inPlane.mDistance > mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
     if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
