@@ -284,6 +284,10 @@ std::cout << " plane: "
           << std::setw(11) << std::setprecision(4) << barycentric(2) << '\n';
       auto distanceInside = mHeightInside / inPlane.mCosIncidence;
       auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
+std::cout << " CosInc: "
+          << std::setw(11) << std::setprecision(4) << inPlane.mCosIncidence << " inside: "
+          << std::setw(11) << std::setprecision(4) << mHeightInside << " outside: "
+          << std::setw(11) << std::setprecision(4) << mHeightOutside << "\n";
       tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
       tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
       auto totalInterestingRange = parameterFurther - parameterCloser;
@@ -298,6 +302,8 @@ std::cout << " plane: "
       else { // nothing to do
       }
       if(result.mWhat == BezierIntersection::What::cIntersect) {
+std::cout << "distance "
+    << std::setw(11) << std::setprecision(4) << result.mIntersection.mDistance << '\n';
         if(result.mIntersection.mDistance > 0.0f) {
           result.mNormal = getNormal(result.mBarycentric);
           result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal); // TODO find out where it should point
@@ -308,6 +314,15 @@ std::cout << " plane: "
       }
       else { // Nothing to do
       }
+std::cout << "bezier: "
+    << std::setw(11) << std::setprecision(4) << result.mIntersection.mPoint(0)
+    << std::setw(11) << std::setprecision(4) << result.mIntersection.mPoint(1)
+    << std::setw(11) << std::setprecision(4) << result.mIntersection.mPoint(2) << " dist: "
+    << std::setw(11) << std::setprecision(4) << result.mIntersection.mDistance << " norm: "
+    << std::setw(11) << std::setprecision(4) << result.mNormal(0)
+    << std::setw(11) << std::setprecision(4) << result.mNormal(1)
+    << std::setw(11) << std::setprecision(4) << result.mNormal(2)              << " what: "
+    << std::setw(11) << std::setprecision(4) << static_cast<unsigned>(result.mWhat) << "\n\n";
     }
     else {
       result.mWhat = BezierIntersection::What::cNone;
@@ -330,6 +345,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   result.mIntersection.mDistance = further;
   if(signumCloser == signumFurther) {
     result.mWhat = BezierIntersection::What::cNone;
+std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
   }
   else {
     while(further - closer > mRootSearchEpsilon) {
@@ -348,6 +364,10 @@ std::cout << "  loop: "
       }
     }
 
+std::cout << " neigh: "
+    << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint)
+    << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint)
+    << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) << '\n';
     uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
     outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
     outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
@@ -358,7 +378,7 @@ std::cout << "  loop: "
       result.mWhat = BezierIntersection::What::cFollowSide1;
     }
     else if(outside == 4u) {
-      result.mWhat = BezierIntersection::What::cFollowSide0;
+      result.mWhat = BezierIntersection::What::cFollowSide2;
     }
     else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
       result.mWhat = BezierIntersection::What::cIntersect;
@@ -372,6 +392,10 @@ std::tuple<tReal, Vertex<tReal>, Vertex<tReal>> BezierTriangle<tReal>::getLineBe
   Vertex pointOnRay = aRay.mStart + aRay.mDirection * aDistance;
   Vertex barycentric = mBarycentricInverse * (mUnderlyingPlane.project(pointOnRay));
   Vertex pointOnSurface = interpolate(barycentric);
+std::cout << "   xyz:                                   dist: "
+    << std::setw(11) << std::setprecision(4) << aDistance << " PoR:   "
+    << std::setw(11) << std::setprecision(4) << ::abs(mUnderlyingPlane.distance(pointOnRay)) << "      PoS: "
+    << std::setw(11) << std::setprecision(4) << ::abs(mUnderlyingPlane.distance(pointOnSurface)) << "                    PoR - PoS \n";
   return std::make_tuple(::copysign(1.0f, ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(pointOnSurface))), barycentric, pointOnSurface);
 }
 
