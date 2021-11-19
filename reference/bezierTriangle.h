@@ -62,6 +62,7 @@ private:
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
   static constexpr tReal    csRootSearchEpsilonFactor                   = 0.001f;       // TODO consider
+  static constexpr int32_t  csHeightSampleDivisor                       = 5;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -206,22 +207,17 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
 
   mRootSearchEpsilon = csRootSearchEpsilonFactor * ((column0 - column1).norm() + (column1 - column2).norm() + (column2 - column0).norm());
 
-  Vertex bary{csOneThird, csOneThird, csOneThird};
-  tReal distance = mUnderlyingPlane.distance(interpolate(bary));
-  mHeightInside = std::min(0.0f, distance);
-  mHeightOutside = std::max(0.0f, distance);
-  for(uint32_t i = 0u; i < 3u; ++i) {
-    for(auto const ratio : BezierTriangle::csSampleRatiosOriginalSide) {
-      bary(i) = ratio;
-      bary((i + 1u) % 3u) = 1.0f - ratio;
-      bary((i + 2u) % 3u) = 0.0f;
-      distance = mUnderlyingPlane.distance(interpolate(bary));
-      mHeightInside = std::min(0.0f, distance);
-      mHeightOutside = std::max(0.0f, distance);
+  mHeightInside = 0.0f;
+  mHeightOutside = 0.0f;
+  Triangle barycentric{Vertex{{1.0f, 0.0f, 0.0f}}, Vertex{{0.0f, 1.0f, 0.0f}}, Vertex{{0.0f, 0.0f, 1.0f}}};
+  divide(barycentric, csHeightSampleDivisor, [this](Triangle && aNewBary) {
+    for(uint32_t i = 0u; i < 3u; ++i) {
+      auto distance = mUnderlyingPlane.distance(interpolate(aNewBary[i]));  // Will cont most points 2 or 3 times, but don't care now.
+      mHeightInside = std::min(mHeightInside, distance);
+      mHeightOutside = std::max(mHeightOutside, distance);
     }
-  }
-
-  mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f};  // No matter how long.
+  } );
+  mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f};            // No matter how long.
   mBezierDerivativeDirectionVectorB = mBarycentricInverse *
       (mControlPoints[csControlIndexAboveOriginalCentroid] - mControlPoints[csControlIndexOriginalVertex0]).cross(mUnderlyingPlane.mNormal);
 }
