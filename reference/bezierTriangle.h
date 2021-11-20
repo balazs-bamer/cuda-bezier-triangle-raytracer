@@ -61,7 +61,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr tReal    csRootSearchEpsilonFactor                   = 0.001f;       // TODO consider
+  static constexpr tReal    csRootSearchEpsilonFactor                   = 0.0001f;       // 0.001: error 0.016, 0.0001: 0.01556
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
 
   using Vector             = ::Vector<tReal>;

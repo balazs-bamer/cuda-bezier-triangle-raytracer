@@ -206,6 +206,8 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, Vector<Real>(1.0f, 0.05f, 0.02f));
   Vector<Real> displacement{5.0f, 0.0f, 0.0f};
 
+  auto original = ray;
+  std::vector<Vertex<Real>> points;
   for(;;) {
     ellipsoid += displacement;                    // We start from outside.
     ellipsoid.standardizeVertices();
@@ -224,6 +226,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;    // TODO why are these not in straight line?
+    points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
@@ -236,9 +239,12 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
+    points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
   }
+
+  std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
 
   std::string name{"intersectionObject_"};
   name += aName;

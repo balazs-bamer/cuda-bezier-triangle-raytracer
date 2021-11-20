@@ -31,6 +31,24 @@ Vertex<Real> getPlaneIntersectionNormals(Vertex<Real> aPoint,
   return Plane<Real>::intersect(plane1, plane2, plane3);
 }
 
+TEST(ray, averageErrorSquared) {
+  {
+    Ray<Real> ray({0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f});
+    std::vector<Vertex<Real>> points{};
+    EXPECT_EQ(ray.getAverageErrorSquared(points), 0.0f);
+  }
+  {
+    Ray<Real> ray({0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f});
+    std::vector<Vertex<Real>> points{{2.0f, 0.0f, 0.0f}, {-3.0f, 0.0f, 0.0f}};
+    EXPECT_EQ(ray.getAverageErrorSquared(points), 0.0f);
+  }
+  {
+    Ray<Real> ray({0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f});
+    std::vector<Vertex<Real>> points{{2.0f, 1.0f, 0.0f}, {-3.0f, 0.0f, 1.0f}};
+    EXPECT_GT(ray.getAverageErrorSquared(points), 0.0f);
+  }
+}
+
 TEST(planeIntersection, Normals) {
   {
     Vertex<Real> common{1.0f, 2.0f, 3.0f};
@@ -192,7 +210,7 @@ TEST(planeIntersection, Ray) {
     Ray<Real> ray(Vertex<Real>{1.0f, 2.0f, -3.0f}, Vector<Real>{-1.0f, 2.0f, 3.0f});
     Plane<Real> plane = Plane<Real>::createFrom3points(Vertex<Real>{10.0f, 1.0f, 2.0f}, Vertex<Real>{11.0f, 11.1f, 2.0f}, Vertex<Real>{12.0f, 1.1f, 4.4f});
     auto result = plane.intersect(ray);
-    EXPECT_FALSE(result.mValid);
+    EXPECT_TRUE(result.mValid);
     EXPECT_LT(result.mDistance, 0.0f);
   }
   {
@@ -248,31 +266,31 @@ TEST(planeDistance, Point) {
   {
     Vertex<Real> point{0.0f, 0.0f, 0.0f};
     Plane<Real> plane = Plane<Real>::createFrom3points({2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 0.0f, 2.0f});
-    auto dist = plane.distance(point);
+    auto dist = ::abs(plane.distance(point));
     EXPECT_LT(::abs(dist - 1.15468f), cgEpsilon);
   }
   {
     Vertex<Real> point{0.0f, 0.0f, 0.0f};
     Plane<Real> plane = Plane<Real>::createFrom3points({2.0f, 0.0f, 0.0f}, {2.0f, 1.0f, 0.0f}, {2.0f, 0.0f, 1.0f});
-    auto dist = plane.distance(point);
+    auto dist = ::abs(plane.distance(point));
     EXPECT_LT(::abs(dist - 2.0f), cgEpsilon);
   }
   {
     Vertex<Real> point{1.0f, 2.0f, 3.0f};
     Plane<Real> plane = Plane<Real>::createFrom3points({3.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 3.0f}, {1.0f, 2.0f, 5.0f});
-    auto dist = plane.distance(point);
+    auto dist = ::abs(plane.distance(point));
     EXPECT_LT(::abs(dist - 1.15468f), cgEpsilon);
   }
   {
     Vertex<Real> point{-1.0f, -2.0f, 3.0f};
     Plane<Real> plane = Plane<Real>::createFrom3points({1.0f, -2.0f, 3.0f}, {1.0f, -3.0f, 3.0f}, {1.0f, -2.0f, 4.0f});
-    auto dist = plane.distance(point);
+    auto dist = ::abs(plane.distance(point));
     EXPECT_LT(::abs(dist - 2.0f), cgEpsilon);
   }
   {
     Vertex<Real> point{1.6666f, 2.6666f, 3.6666f};
     Plane<Real> plane = Plane<Real>::createFrom3points({3.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 3.0f}, {1.0f, 2.0f, 5.0f});
-    auto dist = plane.distance(point);
+    auto dist = ::abs(plane.distance(point));
     EXPECT_LT(::abs(dist), cgEpsilon);
   }
 }

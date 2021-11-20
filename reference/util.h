@@ -71,6 +71,8 @@ struct Ray final {
   Ray(Vertex<tReal> const &aStart, Vector<tReal> const &aDirection)
   : mStart(aStart)
   , mDirection(aDirection.normalized()) {}
+
+  tReal getAverageErrorSquared(std::vector<Vertex<tReal>> const &aPoints) const;
 };
 
 template<typename tReal>
@@ -167,6 +169,14 @@ Vector<tReal> getAltitude(Vertex<tReal> const &aCommon1, Vertex<tReal> const &aC
   return independentVector - commonVector * footFactor;
 }
 
+template<typename tReal>
+tReal Ray<tReal>::getAverageErrorSquared(std::vector<Vertex<tReal>> const &aPoints) const {
+  tReal sum = 0.0f;
+  for(auto const &point : aPoints) {
+    sum += (point - mStart - (point - mStart).dot(mDirection) * mDirection).squaredNorm();
+  }
+  return aPoints.size() == 0u ? 0u : sum / aPoints.size();
+}
 
 // If aProportion < 0.5, the result will be closer to aPoint0
 template<typename tReal>
