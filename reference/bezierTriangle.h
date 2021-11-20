@@ -119,7 +119,7 @@ public:
 
 private:
   BezierIntersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
-  std::tuple<tReal, Vertex, Vertex> getLineBezierDifferenceSignumBarySurface(Ray const &aRay, tReal const aDistance) const;
+  tReal getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const;
   Vector getNormal(Vector const &aBarycentric) const;
 };
 
@@ -337,23 +337,34 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   BezierIntersection result;
   auto closer = aParameterCloser;
   auto further = aParameterFurther;
-  auto [signumCloser, barycentricCloser, surfaceCloser] = getLineBezierDifferenceSignumBarySurface(aRay, closer);
-  tReal signumFurther;
-  std::tie(signumFurther, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignumBarySurface(aRay, further);
+
+  Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
+  Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+  auto signumCloser = getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
+
+  pointOnRay = aRay.mStart + aRay.mDirection * further;
+  result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+  result.mIntersection.mPoint = interpolate(result.mBarycentric);
+  auto signumFurther = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
   result.mIntersection.mDistance = further;
+
   if(signumCloser == signumFurther) {
     result.mWhat = BezierIntersection::What::cNone;
 std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
   }
   else {
-    while(further - closer > mRootSearchEpsilon) {
+    while(further - closer > mRootSearchEpsilon) {         // TODO determine a constant limit, which will be good for GPU and allow Bezier projection compensation
 std::cout << "  loop: "
           << std::setw(11) << std::setprecision(4) << further
           << std::setw(11) << std::setprecision(4) << closer << '\n';
       auto middle = (closer + further) / 2.0f;
-      tReal signumMiddle;
-      std::tie(signumMiddle, result.mBarycentric, result.mIntersection.mPoint) = getLineBezierDifferenceSignumBarySurface(aRay, middle);
       result.mIntersection.mDistance = middle;
+
+      pointOnRay = aRay.mStart + aRay.mDirection * middle;
+      result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      result.mIntersection.mPoint = interpolate(result.mBarycentric);
+      auto signumMiddle = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
+
       if(signumCloser == signumMiddle) {
         closer = middle;
       }
@@ -386,15 +397,8 @@ std::cout << " neigh: "
 }
 
 template<typename tReal>
-std::tuple<tReal, Vertex<tReal>, Vertex<tReal>> BezierTriangle<tReal>::getLineBezierDifferenceSignumBarySurface(Ray const &aRay, tReal const aDistance) const {
-  Vertex pointOnRay = aRay.mStart + aRay.mDirection * aDistance;
-  Vertex barycentric = mBarycentricInverse * (mUnderlyingPlane.project(pointOnRay));
-  Vertex pointOnSurface = interpolate(barycentric);
-std::cout << "   xyz:                                   dist: "
-    << std::setw(11) << std::setprecision(4) << aDistance << " PoR:   "
-    << std::setw(11) << std::setprecision(4) << ::abs(mUnderlyingPlane.distance(pointOnRay)) << "      PoS: "
-    << std::setw(11) << std::setprecision(4) << ::abs(mUnderlyingPlane.distance(pointOnSurface)) << "                    PoR - PoS \n";
-  return std::make_tuple(::copysign(1.0f, ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(pointOnSurface))), barycentric, pointOnSurface);
+tReal BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
+  return ::copysign(1.0f, ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)));
 }
 
 template<typename tReal>
