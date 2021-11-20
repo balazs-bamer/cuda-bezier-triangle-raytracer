@@ -61,7 +61,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr tReal    csRootSearchEpsilonFactor                   = 0.0001f;       // 0.001: error 0.016, 0.0001: 0.01556
+  static constexpr tReal    csRootSearchEpsilonFactor                   = 0.00001f;       // 0.00001: 14, 0.0001: 10
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
 
   using Vector             = ::Vector<tReal>;
@@ -353,6 +353,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
 std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
   }
   else {
+    Vector bias{0.0f, 0.0f, 0.0f};
     while(further - closer > mRootSearchEpsilon) {         // TODO determine a constant limit, which will be good for GPU and allow Bezier projection compensation
 std::cout << "  loop: "
           << std::setw(11) << std::setprecision(4) << further
@@ -361,8 +362,10 @@ std::cout << "  loop: "
       result.mIntersection.mDistance = middle;
 
       pointOnRay = aRay.mStart + aRay.mDirection * middle;
-      result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      auto projectedRay = mUnderlyingPlane.project(pointOnRay) + bias;
+      result.mBarycentric = mBarycentricInverse * projectedRay;
       result.mIntersection.mPoint = interpolate(result.mBarycentric);
+      bias = projectedRay - mUnderlyingPlane.project(result.mIntersection.mPoint);
       auto signumMiddle = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
 
       if(signumCloser == signumMiddle) {
