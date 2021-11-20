@@ -34,6 +34,9 @@ Vector<tReal> getNormal(Vertex<tReal> const &aVertex0, Vertex<tReal> const &aVer
 }
 
 template<typename tReal>
+Vector<tReal> getAperpendicular(Vector<tReal> const &aVector);
+
+template<typename tReal>
 tReal getPerimeter(Triangle<tReal> const &aTriangle) {
   return (aTriangle[0u] - aTriangle[1u]).norm() + (aTriangle[1u] - aTriangle[2u]).norm() + (aTriangle[2u] - aTriangle[0u]).norm();
 }
@@ -134,6 +137,24 @@ struct Spherical final {
 /////////////////////////////////
 //       IMPLEMENTATION        //
 /////////////////////////////////
+
+template<typename tReal>
+Vector<tReal> getAperpendicular(Vector<tReal> const &aVector) {
+  static constexpr tReal csEpsilon = 1e-10;
+
+  Vector<tReal> result;
+  result(0) = 0.0f;
+  if(::abs(aVector(1)) < csEpsilon && ::abs(aVector(2)) < csEpsilon) {
+    result(1) = 1.0f;
+    result(2) = 0.0f;
+  }
+  else {
+    auto denominator = ::sqrt(aVector(1) * aVector(1) + aVector(2) * aVector(2));
+    result(1) = -aVector(2) / denominator;
+    result(2) =  aVector(1) / denominator;
+  }
+  return result;
+}
 
 template<typename tReal, typename tLambda>
 void divide(Triangle<tReal> const &aTriangle, int32_t const aDivisor, tLambda &&aCollector) {

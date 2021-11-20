@@ -10,7 +10,7 @@
 
 using Real = float;
 
-constexpr Real cgEpsilon = 0.001f;
+constexpr Real cgEpsilon = 0.0001f;
 
 std::ostream& operator<<(std::ostream &aOut, Plane<Real> const &aPlane) {
   aOut << aPlane.mNormal(0) << ' ' << aPlane.mNormal(1) << ' ' << aPlane.mNormal(2) << ' ' << " : " << aPlane.mConstant;
@@ -29,6 +29,29 @@ Vertex<Real> getPlaneIntersectionNormals(Vertex<Real> aPoint,
   Vector<Real> normal3 = aDir3.normalized();
   Plane<Real> plane3(normal3, normal3.dot(aPoint));
   return Plane<Real>::intersect(plane1, plane2, plane3);
+}
+
+TEST(vector, getAperpendicular) {
+  static constexpr Real csEpsilon = 1e-10;
+  {
+    Vector<Real> vector{1.0f, 0.0f, 0.0f};
+    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+  }
+  {
+    Vector<Real> vector{1.0f, 1.0f, 0.0f};
+    vector.normalize();
+    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+  }
+  {
+    Vector<Real> vector{1.0f, 0.0f, 1.0f};
+    vector.normalize();
+    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+  }
+  {
+    Vector<Real> vector{1.0f, -1.0f, -1.0f};
+    vector.normalize();
+    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+  }
 }
 
 TEST(ray, averageErrorSquared) {
@@ -234,7 +257,7 @@ TEST(planeProjection, Point) {
     Vertex<Real> point{0.0f, 0.0f, 0.0f};
     Plane<Real> plane = Plane<Real>::createFrom3points({2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 0.0f, 2.0f});
     auto projected = plane.project(point);
-    EXPECT_LT((projected - Vertex<Real>(0.6666f, 0.6666f, 0.6666f)).norm(), cgEpsilon);
+    EXPECT_LT((projected - Vertex<Real>(0.666666f, 0.666666f, 0.666666f)).norm(), cgEpsilon);
   }
   {
     Vertex<Real> point{0.0f, 0.0f, 0.0f};
@@ -246,7 +269,7 @@ TEST(planeProjection, Point) {
     Vertex<Real> point{1.0f, 2.0f, 3.0f};
     Plane<Real> plane = Plane<Real>::createFrom3points({3.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 3.0f}, {1.0f, 2.0f, 5.0f});
     auto projected = plane.project(point);
-    EXPECT_LT((projected - Vertex<Real>(1.6666f, 2.6666f, 3.6666f)).norm(), cgEpsilon);
+    EXPECT_LT((projected - Vertex<Real>(1.666666f, 2.666666f, 3.666666f)).norm(), cgEpsilon);
   }
   {
     Vertex<Real> point{-1.0f, -2.0f, 3.0f};
@@ -255,7 +278,7 @@ TEST(planeProjection, Point) {
     EXPECT_LT((projected - Vertex<Real>(1.0f, -2.0f, 3.0f)).norm(), cgEpsilon);
   }
   {
-    Vertex<Real> point{1.6666f, 2.6666f, 3.6666f};
+    Vertex<Real> point{1.666666f, 2.666666f, 3.666666f};
     Plane<Real> plane = Plane<Real>::createFrom3points({3.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 3.0f}, {1.0f, 2.0f, 5.0f});
     auto projected = plane.project(point);
     EXPECT_LT((projected - point).norm(), cgEpsilon);
@@ -288,7 +311,7 @@ TEST(planeDistance, Point) {
     EXPECT_LT(::abs(dist - 2.0f), cgEpsilon);
   }
   {
-    Vertex<Real> point{1.6666f, 2.6666f, 3.6666f};
+    Vertex<Real> point{1.666666f, 2.666666f, 3.666666f};
     Plane<Real> plane = Plane<Real>::createFrom3points({3.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 3.0f}, {1.0f, 2.0f, 5.0f});
     auto dist = ::abs(plane.distance(point));
     EXPECT_LT(::abs(dist), cgEpsilon);
