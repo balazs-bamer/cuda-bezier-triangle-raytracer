@@ -61,7 +61,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr tReal    csRootSearchEpsilonFactor                   = 0.00001f;       // 0.00001: 14, 0.0001: 10
+  static constexpr uint32_t csRootSearchIterations                      = 10u;       // 14 for old epsilon factor 0.00001, 10 for 0.0001
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
 
   using Vector             = ::Vector<tReal>;
@@ -88,7 +88,6 @@ private:
                                                      // multiplication by the inverse proven to be much faster than solving the linear equation under Eigen.
   tReal                    mHeightInside;            // Sampled biggest distance of the Bezier triangle measured from the underlying triangle, < 0
   tReal                    mHeightOutside;           // this is > 0
-  tReal                    mRootSearchEpsilon;
   Vector                   mBezierDerivativeDirectionVectorA; // We calculate directional derivatives in two perpendicular directions
   Vector                   mBezierDerivativeDirectionVectorB; // and their cross product will yield the Bezier surface normal
 
@@ -204,8 +203,6 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
     { column0(2), column1(2), column2(2) },
   };
   mBarycentricInverse = vertices.inverse();
-
-  mRootSearchEpsilon = csRootSearchEpsilonFactor * ((column0 - column1).norm() + (column1 - column2).norm() + (column2 - column0).norm());
 
   mHeightInside = 0.0f;
   mHeightOutside = 0.0f;
@@ -354,7 +351,7 @@ std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
   }
   else {
     Vector bias{0.0f, 0.0f, 0.0f};
-    while(further - closer > mRootSearchEpsilon) {         // TODO determine a constant limit, which will be good for GPU and allow Bezier projection compensation
+    for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
 std::cout << "  loop: "
           << std::setw(11) << std::setprecision(4) << further
           << std::setw(11) << std::setprecision(4) << closer << '\n';

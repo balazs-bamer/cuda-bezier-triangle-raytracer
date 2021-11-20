@@ -250,7 +250,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     else { // Nothing to do
     }
     auto copy = bullet;
-    copy += intersection.mIntersection.mPoint;    // TODO why are these not in straight line?
+    copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
