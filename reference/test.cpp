@@ -43,6 +43,31 @@ auto visualizeVertexNormals(Mesh<Real> const &aMesh) { // Only for spheres
   return result;
 }
 
+auto visualizeRay(Ray<Real> const aRay, Real const aLength, Real const aRadius) {
+  Mesh<Real> result;
+  Vector<Real> const perpendicular0 = getAperpendicular(aRay.mDirection);
+  Vector<Real> const perpendicular1 = aRay.mDirection.cross(perpendicular0);
+  Vector<Real> const rib0 = aRadius * perpendicular0;  // p0 * cos0 + p1 * sin0
+  Vector<Real> const rib1 = aRadius * (perpendicular0 * ::cos(2.0f / 3.0f * cgPi<Real>) + perpendicular1 * ::sin(2.0f / 3.0f * cgPi<Real>));
+  Vector<Real> const rib2 = aRadius * (perpendicular0 * ::cos(4.0f / 3.0f * cgPi<Real>) + perpendicular1 * ::sin(4.0f / 3.0f * cgPi<Real>));
+  Vector<Real> const end = aRay.mStart + aRay.mDirection * aLength;
+  int32_t n = static_cast<int32_t>(::ceil(::abs(aLength) * 0.1f / aRadius));
+  result.push_back({aRay.mStart + rib0, aRay.mStart + rib1, aRay.mStart + rib2});
+  result.push_back({end + rib0, end + rib1, end + rib2});
+  Real delta = aLength / n;
+  for(int i = 0; i < n; ++i) {
+    Vector<Real> section0 = aRay.mStart + aRay.mDirection * delta * i;
+    Vector<Real> section1 = aRay.mStart + aRay.mDirection * delta * (i + 1);
+    result.push_back({section0 + rib0, section1 + rib0, section0 + rib1});
+    result.push_back({section0 + rib1, section1 + rib0, section1 + rib1});
+    result.push_back({section0 + rib1, section1 + rib1, section0 + rib2});
+    result.push_back({section0 + rib2, section1 + rib1, section1 + rib2});
+    result.push_back({section0 + rib2, section1 + rib2, section0 + rib0});
+    result.push_back({section0 + rib0, section1 + rib2, section1 + rib0});
+  }
+  return result;
+}
+
 void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
   std::string name{"test_"};
   name += aName;
@@ -260,6 +285,13 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   name += aName;
   name += ".stl";
   intersections.writeMesh(cgBaseDir + name);
+
+  auto beam = visualizeRay(original, (points.back() - original.mStart).norm(), 0.02f);
+
+  name = "intersectionRay_";
+  name += aName;
+  name += ".stl";
+  beam.writeMesh(cgBaseDir + name);
 }
 
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
