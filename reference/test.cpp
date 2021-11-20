@@ -51,9 +51,9 @@ auto visualizeRay(Ray<Real> const aRay, Real const aLength, Real const aRadius) 
   Vector<Real> const rib1 = aRadius * (perpendicular0 * ::cos(2.0f / 3.0f * cgPi<Real>) + perpendicular1 * ::sin(2.0f / 3.0f * cgPi<Real>));
   Vector<Real> const rib2 = aRadius * (perpendicular0 * ::cos(4.0f / 3.0f * cgPi<Real>) + perpendicular1 * ::sin(4.0f / 3.0f * cgPi<Real>));
   Vector<Real> const end = aRay.mStart + aRay.mDirection * aLength;
-  int32_t n = static_cast<int32_t>(::ceil(::abs(aLength) * 0.1f / aRadius));
   result.push_back({aRay.mStart + rib0, aRay.mStart + rib1, aRay.mStart + rib2});
   result.push_back({end + rib0, end + rib1, end + rib2});
+  int32_t n = static_cast<int32_t>(::ceil(::abs(aLength) * 0.1f / aRadius));
   Real delta = aLength / n;
   for(int i = 0; i < n; ++i) {
     Vector<Real> section0 = aRay.mStart + aRay.mDirection * delta * i;
