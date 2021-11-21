@@ -217,7 +217,7 @@ void dump(BezierIntersection<Real> const aIntersection) {
             << std::setw(11) << std::setprecision(4) << static_cast<unsigned>(aIntersection.mWhat) << "\n\n\n";
 }
 
-void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize) {
+void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
 
@@ -228,7 +228,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   Mesh<Real> objects;
   Mesh<Real> raws;
 
-  Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, Vector<Real>(1.0f, 0.05f, 0.02f));
+  Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, aDirection);
   Vector<Real> displacement{5.0f, 0.0f, 0.0f};
 
   auto original = ray;
@@ -377,7 +377,8 @@ int main(int argc, char **argv) {
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
 
-  testBezierIntersection("7x3", 7, 3, ellipsoidAxes);
+  testBezierIntersection("7x3", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
+  testBezierIntersection("9x4", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
   visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
