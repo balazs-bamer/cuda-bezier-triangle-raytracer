@@ -75,18 +75,40 @@ Here resides the `BézierTriangle` class which is capable of
 * Creating a Bézier triangle over a regular triangle, considering its neighbours, in a way that the neighbouring Bézier surfaces will give a surface with C1 continuity. [[1]](#1) I chosed C1 because cubic Bézier triangles are sufficient for this, and the interpolation and thus the surface intersection calculations will be faster.
 * Linear interpolation on the underlying planar triangle using barycentric coordinates within the underlying triangle.
 * Bézier interpolation using barycentric coordinates within the underlying triangle.
-* Ray and underlying planar triangle intersection with barycentric output. TODO implement.
-* Ray and Bézier triangle intersection with barycentric output. TODO implement.
-* Normal vector calculation on the barycentric triangle using barycentric coordinates. TODO implement.
+* Ray and underlying planar triangle intersection with barycentric output.
+* Ray and Bézier triangle intersection with barycentric output.
+* Normal vector calculation on the barycentric triangle using barycentric coordinates.
 
 The Bézier triangle will contain all the original triangle vertices. Control point calculations follow [[1]](#1) with the details figured out by myself where the paper was not specific. There are 3 `constexpr` parameters influencing control point placement, which were empirically estimated TODO see where
 TODO perhaps write control point calculation in detail.
 
+The class contains some precomputed values useful for intersection calculations, like maximum distances from the underlying triangle inside and outside.
+
 #### BezierTriangle::intersection
 
-There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data. So I've implemented a rather simple algorithm with one or two identical computation-intensive loops, which are easy to run parallel for many rays. TODO add details.
+Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
 
-TODO add details about directional derivatives in [[3]](#3)
+First I check the intersection with the underlying planar triangle, and if it intersects, calculate the lengths along the ray measured from its starting points
+* to the planar intersection
+* to the maximum possible surface point outside
+* to the minimum possible surface point inside - these two come from the maximum distances inside and outside and the incidence to the underlying plane.
+
+I determine whether the inside or the outside case is closer to the ray start point, and calculate first the intersection with the closer one. If there is none, I take the further one. For either case, I pass two of the above distance extremes which are parameters of a binary search.
+
+For any case, the intersection calculation is performed in a fixed number of iterations. The number depends on the wanted accuracy. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change magnitude" along the ray in the given interval. If so, the following binary search yields the result:
+1. Set bias = (0, 0, 0) 3D Cartesian vector.
+2. Project the candidate (middle) point of the ray to the underlying plane, and translate it with the bias (see later why).
+3. Calculate its barycentric coordinates.
+4. Use these to calculate the corresponding surface point.
+5. Project it back to the underlying plane. This is needed, because the projection is in general different from that we started from.
+6. Set bias = last ray point projection - surface point projection.
+7. Goto 2 when there is iteration left.
+
+It is easy to see that the process converges. When ready, it is important to check if the intersection is within the domain of the current Bézier triangle. If not, the intersection would be more accurate when calculated on the appropriate neighbouring triangle. To enable this, in this case I return the side index to be considered for a similar calculation process for the neighbouring triangle. Since its planar intersection will definitely be outside the underlying triangle, I omit that check to let the function finish. TODO figures.
+
+#### BezierTriangle::getNormal
+
+This function is used in the previous one to calculate the surface normal in the intersection point. I used the principle described in [[3]](#3) to calculate closed-formula barycentric derivatives and use them to calculate two perpendicular surface tangent directions in that point. Their cross product gives the desired normal.
 
 ### reference/bezierMesh.h
 
@@ -95,7 +117,7 @@ The `BézierMesh` class is similar to and based on the `Mesh` class, and is resp
 * Obtaining a triangular mesh approximation (`interpolate`) with evenly subdividing each subtriangle side into `aDivisor` parts.
 * Split "thick" Bézier triangles into smaller, "thinner" ones.
 
-#### BezierMesh::splitThickBézierTriangles
+#### BezierMesh::splitThickBezierTriangles
 
 I've implemented this function because the raytracing will inspect mesh and ray intersections using the underlying triangle mesh (after Clough-Tocher subdivision). When we have the planar intersection, it will be used to calculate the ray intersection with the Bézier triangle above it. However, if the Bézier triangle forms a relatively too "tall" dome above the underlying triangle, it is more likely a ray can travel through it without intersecting any planar triangle. Of course it is still possible when the Bézier triangles are "close" to the underlying triangles, but much less likely. In such a rare case, the simulation will find the ray pass just right beside the object.
 
@@ -106,6 +128,10 @@ Curently I take the approximate Bézier triangle height (maximum at the original
 The algorithm is simple: I take the underlying side midpoints of a "tall" Bézier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
 
 New (dividing) vertices are calculated as a fixed linear combination of the side midpoint of the underlying triangle edge and the Bézier interpolation of that point (which is "above" the underlying triangle). The linear combination factor has been found out empirically, see below. The function gives back a new finer `Mesh` instance, which then needs to be preprocessed again and used in creation of a new, finer `BézierMesh`.
+
+#### BezierMesh::intersect
+
+This is now only a simple brute-force search for the intersection giving the shortest ray.
 
 #### Ellipse approximation test
 
