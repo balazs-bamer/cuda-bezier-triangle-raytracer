@@ -205,18 +205,6 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   split2.writeMesh(cgBaseDir + name);
 }
 
-void dump(BezierIntersection<Real> const aIntersection) {
-  std::cout << "result: "
-            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mPoint(0)
-            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mPoint(1)
-            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mPoint(2) << " dist: "
-            << std::setw(11) << std::setprecision(4) << aIntersection.mIntersection.mDistance << " norm: "
-            << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(0)
-            << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(1)
-            << std::setw(11) << std::setprecision(4) << aIntersection.mNormal(2)              << " what: "
-            << std::setw(11) << std::setprecision(4) << static_cast<unsigned>(aIntersection.mWhat) << "\n\n\n";
-}
-
 void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
@@ -243,35 +231,29 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
 
     auto intersection = bezier.intersect(ray);
-    dump(intersection);
     if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
       break;
     }
     else { // Nothing to do
     }
-std::cout << "-------------------------------------------------------------------\n";
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
-    intersection = bezier.intersect(ray);         // TODO why doesn't the ray come out of the last shape? It wants a neighbouring triangle, and in turn a neighbouring one.
-    dump(intersection);                           // Double doesn't help.
+    intersection = bezier.intersect(ray);
     if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
       break;
     }
     else { // Nothing to do
     }
-std::cout << "-------------------------------------------------------------------\n";
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
   }
-
-  std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
 
   std::string name{"intersectionObject_"};
   name += aName;
@@ -332,9 +314,9 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
 std::deque<BezierTriangle<float>> gFollowers;
 
 void visualizeFollowers(char const * const aName) {
-  for(uint32_t i = 0u; i < 1; ++i) {
+/*  for(uint32_t i = 0u; i < 1; ++i) {
     gFollowers.pop_front();            // Remove uninteresting items
-  }
+  }*/
   for(auto const &bezier : gFollowers) {
     std::cout << "what out\n";
   }
