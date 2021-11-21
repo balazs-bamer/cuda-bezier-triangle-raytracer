@@ -24,6 +24,7 @@ struct BezierIntersection final {
 
 template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
+  friend void visualizeFollowers(char const * const aName);    // TODO remove
 public:
   enum class LimitPlaneIntersection : uint8_t {
     cThis = 0u,
@@ -276,7 +277,8 @@ std::cout << " plane: "
           << std::setw(11) << std::setprecision(4) << inPlane.mDistance << " bary: "
           << std::setw(11) << std::setprecision(4) << barycentric(0)
           << std::setw(11) << std::setprecision(4) << barycentric(1)
-          << std::setw(11) << std::setprecision(4) << barycentric(2) << '\n';
+          << std::setw(11) << std::setprecision(4) << barycentric(2) << " nolimit: "
+          << static_cast<int>(aShouldLimitPlaneIntersection) << '\n';
       auto distanceInside = mHeightInside / inPlane.mCosIncidence;
       auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
 std::cout << " CosInc: "
@@ -289,12 +291,16 @@ std::cout << " CosInc: "
       if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
         result = intersect(aRay, parameterCloser, inPlane.mDistance);
       }
-      else { // nothing to do
+      else {
+        result.mWhat = BezierIntersection::What::cNone;
+std::cout << "     search: " << (::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange) << "     imposs: " << csRootSearchImpossibleFactor << '\n';
       }
       if(result.mWhat == BezierIntersection::What::cNone && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
+std::cout << "========================\n";
         result = intersect(aRay, inPlane.mDistance, parameterFurther);
       }
       else { // nothing to do
+std::cout << "     search: " << (::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange) << "     imposs: " << csRootSearchImpossibleFactor << '\n';
       }
       if(result.mWhat == BezierIntersection::What::cIntersect) {
 std::cout << "distance "
@@ -328,6 +334,8 @@ std::cout << "bezier: "
   }
   return result;
 }
+
+extern std::deque<BezierTriangle<float>> gFollowers; // TODO remove
 
 template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const {
@@ -381,12 +389,18 @@ std::cout << " neigh: "
     outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
     outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
     if(outside == 1u) {
+gFollowers.push_back(*this);
+std::cout << "what in\n";
       result.mWhat = BezierIntersection::What::cFollowSide0;
     }
     else if(outside == 2u) {
+gFollowers.push_back(*this);
+std::cout << "what in\n";
       result.mWhat = BezierIntersection::What::cFollowSide1;
     }
     else if(outside == 4u) {
+gFollowers.push_back(*this);
+std::cout << "what in\n";
       result.mWhat = BezierIntersection::What::cFollowSide2;
     }
     else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting

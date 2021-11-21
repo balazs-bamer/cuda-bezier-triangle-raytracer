@@ -249,6 +249,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
+std::cout << "-------------------------------------------------------------------\n";
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -262,6 +263,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
+std::cout << "-------------------------------------------------------------------\n";
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -327,6 +329,17 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
                " error: " << std::setw(14) << std::setprecision(8) << error << '\n';
 }
 
+std::deque<BezierTriangle<float>> gFollowers;
+
+void visualizeFollowers(char const * const aName) {
+  for(uint32_t i = 0u; i < 1; ++i) {
+    gFollowers.pop_front();            // Remove uninteresting items
+  }
+  for(auto const &bezier : gFollowers) {
+    std::cout << "what out\n";
+  }
+}
+
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
   Mesh<Real> mesh;
   mesh.readMesh(cgBaseDir + aName);
@@ -365,6 +378,7 @@ int main(int argc, char **argv) {
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
 
   testBezierIntersection("7x3", 7, 3, ellipsoidAxes);
+  visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
   measureApproximation(0, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 0 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0022721614
