@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include "bezierMesh.h"
+#include "bezierLens.h"
 
 #include<deque>
 #include<vector>
@@ -206,6 +206,8 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
 }
 
 void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
+  std::cout << aName << '\n';
+
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
 
@@ -236,6 +238,10 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
+    BezierLens<Real> lens(1.1f, bezier);
+    auto [dontcare, inside] = lens.refract(ray);
+    std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
+
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -248,6 +254,9 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
+    std::tie(dontcare, inside) = lens.refract(ray);
+    std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
+
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -276,6 +285,8 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   name += aName;
   name += ".stl";
   beam.writeMesh(cgBaseDir + name);
+
+  std::cout << '\n';
 }
 
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {

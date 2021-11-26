@@ -3,9 +3,6 @@
 
 #include "util.h"
 
-#include<iostream> // TODO remove
-#include<iomanip> // TODO remove
-
 template<typename tReal>
 struct BezierIntersection final {
   enum class What : uint8_t {
@@ -288,7 +285,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
       if(result.mWhat == BezierIntersection::What::cIntersect) {
         if(result.mIntersection.mDistance > 0.0f) {
           result.mNormal = getNormal(result.mBarycentric);
-          result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal); // TODO find out where it should point
+          result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal);
         }
         else {
           result.mWhat = BezierIntersection::What::cNone;
