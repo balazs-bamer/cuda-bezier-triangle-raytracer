@@ -37,6 +37,7 @@ std::pair<Ray<tReal>, bool> BezierLens<tReal>::refract(Ray const &aRay) const {
   bool inside;
   auto intersect = mMesh.intersect(aRay);
   if(intersect.mWhat == BezierIntersection::What::cIntersect) {
+std::cout << intersect.mIntersection.mCosIncidence << '\n';
     inside = intersect.mIntersection.mCosIncidence < 0.0f;
     result.mStart = intersect.mIntersection.mPoint;  // TODO implement
     result.mDirection = aRay.mDirection;

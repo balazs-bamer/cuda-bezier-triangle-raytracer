@@ -239,8 +239,9 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     else { // Nothing to do
     }
     BezierLens<Real> lens(1.1f, bezier);
+std::cout << "should be outside ";
     auto [dontcare, inside] = lens.refract(ray);
-    std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
+std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
 
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
@@ -254,8 +255,9 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
+std::cout << "should be inside  ";
     std::tie(dontcare, inside) = lens.refract(ray);
-    std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
+std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
 
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
