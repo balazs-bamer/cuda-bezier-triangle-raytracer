@@ -266,6 +266,8 @@ Vertex<tReal> BezierMesh<tReal>::interpolate(uint32_t const aIndex, tReal const 
          triangle.interpolateLinear(aBary0, aBary1, aBary2) * (1.0f - csSplitBezierInterpolateFactor);
 }
 
+bool gShouldDump = false;
+
 template<typename tReal>
 BezierIntersection<tReal> BezierMesh<tReal>::intersect(Ray const &aRay) const {
   // Brute-force for now
@@ -273,6 +275,9 @@ BezierIntersection<tReal> BezierMesh<tReal>::intersect(Ray const &aRay) const {
   result.mIntersection.mDistance = std::numeric_limits<float>::max();
   result.mWhat = BezierIntersection::What::cNone;
   for(auto const &bezier : mMesh) {
+/*if(gShouldDump) */{
+  std::cout << "# ";
+}
     auto candidate = bezier.intersect(aRay, BezierTriangle::LimitPlaneIntersection::cThis);
     if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide1 ||

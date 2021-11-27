@@ -12,6 +12,8 @@ using Real = float;
 
 constexpr Real cgEpsilon = 0.0001f;
 
+extern bool gSouldDump;
+
 std::ostream& operator<<(std::ostream &aOut, Plane<Real> const &aPlane) {
   aOut << aPlane.mNormal(0) << ' ' << aPlane.mNormal(1) << ' ' << aPlane.mNormal(2) << ' ' << " : " << aPlane.mConstant;
   return aOut;

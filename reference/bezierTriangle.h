@@ -288,6 +288,11 @@ std::cout << " CosInc: "
       tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
       tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
       auto totalInterestingRange = parameterFurther - parameterCloser;
+std::cout << " closer: "
+          << std::setw(16) << std::setprecision(8) << parameterCloser << " inPlane: "
+          << std::setw(16) << std::setprecision(8) << inPlane.mDistance << " further: "
+          << std::setw(16) << std::setprecision(8) << parameterFurther << " total:"
+          << std::setw(16) << std::setprecision(8) << totalInterestingRange << "\n";
       if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
         result = intersect(aRay, parameterCloser, inPlane.mDistance);
       }
@@ -295,8 +300,8 @@ std::cout << " CosInc: "
         result.mWhat = BezierIntersection::What::cNone;
 std::cout << "     search: " << (::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange) << "     imposs: " << csRootSearchImpossibleFactor << '\n';
       }
-      if(result.mWhat == BezierIntersection::What::cNone && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
 std::cout << "========================\n";
+      if(result.mWhat == BezierIntersection::What::cNone && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
         result = intersect(aRay, inPlane.mDistance, parameterFurther);
       }
       else { // nothing to do
@@ -345,11 +350,13 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
 
   Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
   Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+std::cout << "closer:  ";
   auto signumCloser = getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
 
   pointOnRay = aRay.mStart + aRay.mDirection * further;
   result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
   result.mIntersection.mPoint = interpolate(result.mBarycentric);
+std::cout << "further: ";
   auto signumFurther = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
   result.mIntersection.mDistance = further;
 
@@ -412,6 +419,10 @@ std::cout << "what in\n";
 
 template<typename tReal>
 tReal BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
+std::cout << "POR: "
+          << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnRay)) << " POS: "
+          << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnSurface)) << " diff: "
+          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';
   return ::copysign(1.0f, ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)));
 }
 

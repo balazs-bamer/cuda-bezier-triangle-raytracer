@@ -218,6 +218,7 @@ void dump(BezierIntersection<Real> const aIntersection) {
 }
 
 void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
+  std::cout << aName << '\n';
   Mesh<Real> ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
 
@@ -250,6 +251,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     else { // Nothing to do
     }
 std::cout << "-------------------------------------------------------------------\n";
+std::cout << "after intersect should be inside  " << intersection.mIntersection.mDistance << "\n";
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -264,6 +266,8 @@ std::cout << "------------------------------------------------------------------
     else { // Nothing to do
     }
 std::cout << "-------------------------------------------------------------------\n";
+std::cout << "after intersect should be outside " << intersection.mIntersection.mDistance << "\n";
+gShouldDump = ::abs(intersection.mIntersection.mDistance - 1.17f) < 0.02f;
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -294,6 +298,8 @@ std::cout << "------------------------------------------------------------------
   name += aName;
   name += ".stl";
   beam.writeMesh(cgBaseDir + name);
+
+  std::cout << '\n';
 }
 
 void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
@@ -378,7 +384,7 @@ int main(int argc, char **argv) {
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
 
   testBezierIntersection("7x3", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
-  testBezierIntersection("9x4", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
+//  testBezierIntersection("9x4", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
   visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
