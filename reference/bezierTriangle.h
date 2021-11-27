@@ -3,6 +3,7 @@
 
 #include "util.h"
 
+#include "mesh.h"
 #include<iostream> // TODO remove
 #include<iomanip> // TODO remove
 
@@ -62,7 +63,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 10u;       // 14 for old epsilon factor 0.00001, 10 for 0.0001
+  static constexpr uint32_t csRootSearchIterations                      = 12u;       // 14 for old epsilon factor 0.00001, 10 for 0.0001
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
 
   using Vector             = ::Vector<tReal>;
@@ -260,8 +261,13 @@ Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const
          mControlPoints[csControlIndexMiddle]                      * aBary0 * aBary1 * aBary2 * 6.0f;
 }
 
+extern bool gShouldDump;
+int gCounter = 0;
+Mesh<float> gOutput;
+
 template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
+gOutput.clear();
   auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
   if(inPlane.mValid && inPlane.mDistance > mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
@@ -270,6 +276,19 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
         barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
         barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
+gOutput.push_back(Triangle{mControlPoints[csControlIndex300], mControlPoints[csControlIndex030], mControlPoints[csControlIndex003]});
+auto factor = ((mControlPoints[csControlIndex300] - mControlPoints[csControlIndex030]).norm() +
+             (mControlPoints[csControlIndex030] - mControlPoints[csControlIndex003]).norm() +
+             (mControlPoints[csControlIndex003] - mControlPoints[csControlIndex300]).norm()) * 0.1f;
+for(int i = 0; i < 3; ++i) {
+  auto& vertexA = mControlPoints[i];
+  auto& vertexB = mControlPoints[(i + 1) % 3];
+  Vector disp = (vertexA - vertexB).cross(mNeighbourDividerPlanes[i].mNormal).normalized() * factor;
+  gOutput.push_back(Triangle{vertexA, vertexB, vertexA + disp});
+  gOutput.push_back(Triangle{vertexA + disp, vertexB + disp, vertexB});
+  gOutput.push_back(Triangle{vertexA, vertexB, vertexA - disp});
+  gOutput.push_back(Triangle{vertexA - disp, vertexB - disp, vertexB});
+}
 std::cout << " plane: "
           << std::setw(11) << std::setprecision(4) << inPlane.mPoint(0)
           << std::setw(11) << std::setprecision(4) << inPlane.mPoint(1)
@@ -287,6 +306,15 @@ std::cout << " CosInc: "
           << std::setw(11) << std::setprecision(4) << mHeightOutside << "\n";
       tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
       tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
+Mesh<tReal> bullet;
+bullet.makeUnitSphere(3, 1);
+bullet *= factor / 4.0f;
+auto copy = bullet;
+copy += aRay.mStart + aRay.mDirection * parameterCloser;
+std::copy(copy.cbegin(), copy.cend(), std::back_inserter(gOutput));
+copy = bullet;
+copy += aRay.mStart + aRay.mDirection * parameterFurther;
+std::copy(copy.cbegin(), copy.cend(), std::back_inserter(gOutput));
       auto totalInterestingRange = parameterFurther - parameterCloser;
 std::cout << " closer: "
           << std::setw(16) << std::setprecision(8) << parameterCloser << " inPlane: "
@@ -337,6 +365,10 @@ std::cout << "bezier: "
   else {
     result.mWhat = BezierIntersection::What::cNone;
   }
+if(gShouldDump && gOutput.size() > 0u) {
+auto name = std::string("output/triangle_") + std::to_string(++gCounter) + ".stl";
+gOutput.writeMesh(name);
+}
   return result;
 }
 

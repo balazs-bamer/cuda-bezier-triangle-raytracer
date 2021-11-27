@@ -274,6 +274,14 @@ gShouldDump = ::abs(intersection.mIntersection.mDistance - 1.17f) < 0.02f;
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
   }
+  ellipsoid += displacement;                    // We start from outside.
+  ellipsoid.standardizeVertices();
+  ellipsoid.standardizeNormals();
+  std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
+  BezierMesh<Real> bezier(ellipsoid);
+  auto object = bezier.interpolate(5);
+  std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
+  points.push_back(points.back() + ray.mDirection * 11.0f);
 
   std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
 

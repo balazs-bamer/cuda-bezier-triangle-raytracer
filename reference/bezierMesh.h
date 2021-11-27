@@ -275,8 +275,8 @@ BezierIntersection<tReal> BezierMesh<tReal>::intersect(Ray const &aRay) const {
   result.mIntersection.mDistance = std::numeric_limits<float>::max();
   result.mWhat = BezierIntersection::What::cNone;
   for(auto const &bezier : mMesh) {
-/*if(gShouldDump) */{
-  std::cout << "# ";
+if(gShouldDump) {
+//  std::cout << "# ";
 }
     auto candidate = bezier.intersect(aRay, BezierTriangle::LimitPlaneIntersection::cThis);
     if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
