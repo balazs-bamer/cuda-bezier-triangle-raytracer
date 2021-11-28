@@ -270,11 +270,15 @@ template<typename tReal>
 BezierIntersection<tReal> BezierMesh<tReal>::intersect(Ray const &aRay) const {
   // Brute-force for now
   BezierIntersection result;
-  result.mIntersection.mDistance = std::numeric_limits<float>::max();          // TODO for 7x3 the last object's first (incoming) intersection is missed.
+  result.mIntersection.mDistance = std::numeric_limits<float>::max();
   result.mWhat = BezierIntersection::What::cNone;
   for(auto const &bezier : mMesh) {
     auto candidate = bezier.intersect(aRay, BezierTriangle::LimitPlaneIntersection::cThis);
-    if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
+    if(candidate.mWhat == BezierIntersection::What::cVeto) {
+      result.mWhat = BezierIntersection::What::cVeto;
+      break;
+    }
+    else if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide1 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide2) {
       candidate = mMesh[bezier.getNeighbours()[static_cast<uint32_t>(candidate.mWhat)]].intersect(aRay, BezierTriangle::LimitPlaneIntersection::cNone);

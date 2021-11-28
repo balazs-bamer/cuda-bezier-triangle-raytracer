@@ -10,7 +10,8 @@ struct BezierIntersection final {
     cFollowSide1 = 1u,
     cFollowSide2 = 2u,
     cNone        = 3u,
-    cIntersect   = 4u
+    cVeto        = 4u,  // This result vetos any other triangle's intersection.
+    cIntersect   = 5u
   };
 
   Intersection<tReal> mIntersection;
@@ -191,15 +192,7 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
 
   mUnderlyingPlane = Plane::createFrom3points(mControlPoints[csControlIndexOriginalVertex0], mControlPoints[csControlIndexOriginalVertex1], mControlPoints[csControlIndexAboveOriginalCentroid]);
 
-  auto const &column0 = mControlPoints[csControlIndexOriginalVertex0];
-  auto const &column1 = mControlPoints[csControlIndexOriginalVertex1];
-  auto const &column2 = mControlPoints[csControlIndexAboveOriginalCentroid];
-  Matrix vertices {
-    { column0(0), column1(0), column2(0) },
-    { column0(1), column1(1), column2(1) },
-    { column0(2), column1(2), column2(2) },
-  };
-  mBarycentricInverse = vertices.inverse();
+  mBarycentricInverse = getBarycentricInverse(mControlPoints[csControlIndexOriginalVertex0], mControlPoints[csControlIndexOriginalVertex1], mControlPoints[csControlIndexAboveOriginalCentroid]);
 
   mHeightInside = 0.0f;
   mHeightOutside = 0.0f;
@@ -321,7 +314,9 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   result.mIntersection.mDistance = further;
 
   if(signumCloser == signumFurther) {
-    result.mWhat = BezierIntersection::What::cNone;
+    result.mWhat = BezierIntersection::What::cVeto;   // TODO add more sophisticated solution.
+                                                      // Now this veto cancels the whole mesh intersection where the current simpler solution would be uncertain.
+                                                      // This happens only for large incidence angles, so neglecting these is moderately a limitation for real use cases.
   }
   else {
     Vector bias{0.0f, 0.0f, 0.0f};

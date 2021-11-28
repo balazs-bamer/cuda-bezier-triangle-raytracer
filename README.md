@@ -145,6 +145,8 @@ In theory, my algorithms can handle concave meshes, and the `Mesh` class even me
 
 I have tested and adjusted algorithm parameters so far only with ellipsoids. TODO later construct some more complicated shapes, including concave ones.
 
+The algorithm does not report mesh iontersection for large angles of incidence (above approximately 70 degrees).
+
 ## References
 
 See [Wikipedia](https://wikipedia.org) for well-known or simpler stuff.

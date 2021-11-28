@@ -9,6 +9,9 @@ template<typename tReal>
 constexpr tReal cgPi = 3.14159265358979323846;
 
 template<typename tReal>
+constexpr tReal cgGeneralEpsilon = 1.0e-5;
+
+template<typename tReal>
 using Vector         = Eigen::Matrix<tReal, 3, 1>;
 
 template<typename tReal>
@@ -64,7 +67,24 @@ Vertex<tReal> barycentric2cartesian(Vertex<tReal> const &aV0, Vertex<tReal> cons
 }
 
 template<typename tReal>
+Matrix<tReal> getBarycentricInverse(Vertex<tReal> const &aVertex0, Vertex<tReal> const &aVertex1, Vertex<tReal> const &aVertex2) {
+  Matrix<tReal> vertices {
+    { aVertex0(0), aVertex1(0), aVertex2(0) },
+    { aVertex0(1), aVertex1(1), aVertex2(1) },
+    { aVertex0(2), aVertex1(2), aVertex2(2) },
+  };
+  return vertices.inverse();
+}
+
+template<typename tReal>
 Vector<tReal> getAltitude(Vertex<tReal> const &aCommon1, Vertex<tReal> const &aCommon2, Vertex<tReal> const &aIndependent);
+
+// Takes barycentric ends of a vector with aStart inside the triangle, finds out which side it will intersect.
+// 0 between 300 and 030
+// 1 between 030 and 003
+// 2 between 003 and 300
+template<typename tReal>
+uint32_t toWhichSide(Vertex<tReal> const &aStart, Vertex<tReal> const &aEnd);
 
 template<typename tReal>
 struct Ray final {
@@ -189,6 +209,36 @@ Vector<tReal> getAltitude(Vertex<tReal> const &aCommon1, Vertex<tReal> const &aC
   auto independentVector = aIndependent - aCommon1;
   auto footFactor = commonVector.dot(independentVector) / commonVector.squaredNorm();
   return independentVector - commonVector * footFactor;
+}
+
+template<typename tReal>
+uint32_t toWhichSide(Vertex<tReal> const &aStart, Vertex<tReal> const &aEnd) {
+  uint32_t result = 3u;
+  tReal denom = aStart(0) - aEnd(0) + aStart(1) - aEnd(1);
+  if(::abs(denom) > cgGeneralEpsilon<tReal>) {
+    auto ratio = ((aStart(0) - 1.0f) * aEnd(1) - aStart(1) * (aEnd(0) - 1.0f)) / denom;
+    auto direction = (aStart(0) + aStart(1) - 1.0f) / denom;
+    result = (ratio > -cgGeneralEpsilon<tReal> && ratio < 1.0f + cgGeneralEpsilon<tReal> && direction > 0.0f) ? 0u : result;
+  }
+  else { // nothing to do
+  }
+  denom = aStart(1) - aEnd(1) + aStart(2) - aEnd(2);
+  if(::abs(denom) > cgGeneralEpsilon<tReal>) {
+    auto ratio = ((aStart(1) - 1.0f) * aEnd(2) - aStart(2) * (aEnd(1) - 1.0f)) / denom;
+    auto direction = (aStart(1) + aStart(2) - 1.0f) / denom;
+    result = (ratio > -cgGeneralEpsilon<tReal> && ratio < 1.0f + cgGeneralEpsilon<tReal> && direction > 0.0f) ? 1u : result;
+  }
+  else { // nothing to do
+  }
+  denom = aStart(2) - aEnd(2) + aStart(0) - aEnd(0);
+  if(::abs(denom) > cgGeneralEpsilon<tReal>) {
+    auto ratio = ((aStart(2) - 1.0f) * aEnd(0) - aStart(0) * (aEnd(2) - 1.0f)) / denom;
+    auto direction = (aStart(2) + aStart(0) - 1.0f) / denom;
+    result = (ratio > -cgGeneralEpsilon<tReal> && ratio < 1.0f + cgGeneralEpsilon<tReal> && direction > 0.0f) ? 2u : result;
+  }
+  else { // nothing to do
+  }
+  return result;
 }
 
 template<typename tReal>

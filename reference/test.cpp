@@ -265,6 +265,16 @@ std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so
     ray.mStart = intersection.mIntersection.mPoint;
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
   }
+  ellipsoid += displacement;                    // We start from outside.
+  ellipsoid.standardizeVertices();
+  ellipsoid.standardizeNormals();
+  std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
+  BezierMesh<Real> bezier(ellipsoid);
+  auto object = bezier.interpolate(5);
+  std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
+  points.push_back(points.back() + ray.mDirection * 11.0f);
+
+  std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
 
   std::string name{"intersectionObject_"};
   name += aName;
@@ -372,8 +382,10 @@ int main(int argc, char **argv) {
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
 
-  testBezierIntersection("7x3", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
-  testBezierIntersection("9x4", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
+  testBezierIntersection("7x3a", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
+  testBezierIntersection("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
+  testBezierIntersection("9x4a", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
+  testBezierIntersection("9x4b", 9, 4, ellipsoidAxes, {1.0f, -0.03f, -0.045f});
   visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
