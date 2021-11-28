@@ -320,6 +320,28 @@ TEST(planeDistance, Point) {
   }
 }
 
+TEST(toWhichSide, Points) {
+  Vertex<Real> triangle0{3.0f, 2.0f, 5.0f};
+  Vertex<Real> triangle1{1.0f, 4.0f, 5.0f};
+  Vertex<Real> triangle2{6.0f, 5.0f, 5.0f};
+  Vertex<Real> start = (triangle0 + triangle1 + triangle2) / 3.0f;
+  {
+    Vertex<Real> end = start + Vector<Real>{1.0f, 0.0f, 0.0f};
+    auto converter = getBarycentricInverse(triangle0, triangle1, triangle2);
+    EXPECT_EQ(toWhichSide<Real>(converter * start, converter * end), 2u);
+  }
+  {
+    Vertex<Real> end = start + Vector<Real>{0.0f, 1.0f, 0.0f};
+    auto converter = getBarycentricInverse(triangle0, triangle1, triangle2);
+    EXPECT_EQ(toWhichSide<Real>(converter * start, converter * end), 1u);
+  }
+  {
+    Vertex<Real> end = start + Vector<Real>{-1.0f, -1.0f, 0.0f};
+    auto converter = getBarycentricInverse(triangle0, triangle1, triangle2);
+    EXPECT_EQ(toWhichSide<Real>(converter * start, converter * end), 0u);
+  }
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
