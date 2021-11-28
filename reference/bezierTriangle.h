@@ -385,7 +385,9 @@ std::cout << "further: ";
   result.mIntersection.mDistance = further;
 
   if(signumCloser == signumFurther) {
-    result.mWhat = BezierIntersection::What::cNone;
+    result.mWhat = BezierIntersection::What::cVeto;   // TODO add more sophisticated solution.
+                                                      // Now this veto cancels the whole mesh intersection where the current simpler solution would be uncertain.
+                                                      // This happens only for large incidence angles, so neglecting these is moderately a limitation for real use cases.
 std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
   }
   else {

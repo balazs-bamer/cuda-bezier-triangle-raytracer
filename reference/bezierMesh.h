@@ -279,7 +279,11 @@ if(gShouldDump) {
 //  std::cout << "# ";
 }
     auto candidate = bezier.intersect(aRay, BezierTriangle::LimitPlaneIntersection::cThis);
-    if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
+    if(candidate.mWhat == BezierIntersection::What::cVeto) {
+      result.mWhat = BezierIntersection::What::cVeto;
+      break;
+    }
+    else if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide1 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide2) {
       candidate = mMesh[bezier.getNeighbours()[static_cast<uint32_t>(candidate.mWhat)]].intersect(aRay, BezierTriangle::LimitPlaneIntersection::cNone);
