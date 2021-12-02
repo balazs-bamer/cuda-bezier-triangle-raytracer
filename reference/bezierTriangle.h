@@ -298,6 +298,8 @@ std::cout << " CosInc: "
           << std::setw(11) << std::setprecision(4) << mHeightOutside << "\n";
       tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
       tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
+std::cout << "parameterCloser: " << (inPlane.mCosIncidence > 0.0f ? "distanceInside\n" : "distanceOutside\n");
+std::cout << "parameterFurther: " << (inPlane.mCosIncidence > 0.0f ? "distanceOutside\n" : "distanceInside\n");
 Mesh<tReal> bullet;
 bullet.makeUnitSphere(3, 1);
 bullet *= factor / 4.0f;
@@ -314,6 +316,8 @@ std::cout << " closer: "
           << std::setw(16) << std::setprecision(8) << parameterFurther << " total:"
           << std::setw(16) << std::setprecision(8) << totalInterestingRange << "\n";
       if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
+std::cout << " paraCloser: " << std::setw(16) << std::setprecision(8) << parameterCloser <<
+             " inPlane: " << std::setw(16) << std::setprecision(8) << inPlane.mDistance << '\n';
         result = intersect(aRay, parameterCloser, inPlane.mDistance);
       }
       else {
@@ -321,7 +325,9 @@ std::cout << " closer: "
 std::cout << "     search: " << (::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange) << "     imposs: " << csRootSearchImpossibleFactor << '\n';
       }
 std::cout << "========================\n";
-      if(result.mWhat == BezierIntersection::What::cNone && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
+      if((result.mWhat == BezierIntersection::What::cNone || result.mWhat == BezierIntersection::What::cVeto) && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
+std::cout << " inPlane: " << std::setw(16) << std::setprecision(8) << inPlane.mDistance <<
+             " paraFurther: " << std::setw(16) << std::setprecision(8) << parameterFurther << '\n';
         result = intersect(aRay, inPlane.mDistance, parameterFurther);
       }
       else { // nothing to do
@@ -357,7 +363,7 @@ std::cout << "bezier: "
   else {
     result.mWhat = BezierIntersection::What::cNone;
   }
-if(gShouldDump && gOutput.size() > 0u) {
+if(result.mWhat == BezierIntersection::What::cVeto && gOutput.size() > 0u) {
 auto name = std::string("output/triangle_") + std::to_string(++gCounter) + ".stl";
 gOutput.writeMesh(name);
 }

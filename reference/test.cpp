@@ -250,8 +250,8 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
-std::cout << "-------------------------------------------------------------------\n";
-std::cout << "after intersect should be inside  " << intersection.mIntersection.mDistance << "\n";
+std::cout << "now should be inside, ray length " << intersection.mIntersection.mDistance << "\n";
+std::cout << "-------------------------------------------------------------------\n\n";
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -265,9 +265,8 @@ std::cout << "after intersect should be inside  " << intersection.mIntersection.
     }
     else { // Nothing to do
     }
-std::cout << "-------------------------------------------------------------------\n";
-std::cout << "after intersect should be outside " << intersection.mIntersection.mDistance << "\n";
-gShouldDump = ::abs(intersection.mIntersection.mDistance - 1.17f) < 0.02f;
+std::cout << "now should be outside, ray length " << intersection.mIntersection.mDistance << "\n";
+std::cout << "-------------------------------------------------------------------\n\n";
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
     points.push_back(intersection.mIntersection.mPoint);
@@ -395,7 +394,7 @@ int main(int argc, char **argv) {
   testBezierIntersection("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
   testBezierIntersection("9x4a", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
   testBezierIntersection("9x4b", 9, 4, ellipsoidAxes, {1.0f, -0.03f, -0.045f});
-  visualizeFollowers("follow");
+ /* visualizeFollowers("follow");*/
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
   measureApproximation(0, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 0 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0022721614
