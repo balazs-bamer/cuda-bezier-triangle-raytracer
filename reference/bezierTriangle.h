@@ -251,7 +251,7 @@ Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const
 
 template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
-  auto inPlane = mUnderlyingPlane.intersect(aRay);
+  auto const inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
   if(inPlane.mValid && inPlane.mDistance > mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
@@ -259,11 +259,11 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
         barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
         barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
-      auto distanceInside = mHeightInside / inPlane.mCosIncidence;
-      auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
-      tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
-      tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
-      auto totalInterestingRange = parameterFurther - parameterCloser;
+      auto const distanceInside = mHeightInside / inPlane.mCosIncidence;
+      auto const distanceOutside = mHeightOutside / inPlane.mCosIncidence;
+      tReal const parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
+      tReal const parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
+      auto const totalInterestingRange = parameterFurther - parameterCloser;
       if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
         result = intersect(aRay, parameterCloser, inPlane.mDistance);
       }
@@ -305,12 +305,12 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
 
   Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
   Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-  auto signumCloser = getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
+  auto const signumCloser = getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
 
   pointOnRay = aRay.mStart + aRay.mDirection * further;
   result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
   result.mIntersection.mPoint = interpolate(result.mBarycentric);
-  auto signumFurther = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
+  auto const signumFurther = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
   result.mIntersection.mDistance = further;
 
   if(signumCloser == signumFurther) {
@@ -321,11 +321,11 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   else {
     Vector bias{0.0f, 0.0f, 0.0f};
     for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
-      auto middle = (closer + further) / 2.0f;
+      auto const middle = (closer + further) / 2.0f;
       result.mIntersection.mDistance = middle;
 
       pointOnRay = aRay.mStart + aRay.mDirection * middle;
-      auto projectedRay = mUnderlyingPlane.project(pointOnRay) + bias;
+      auto const projectedRay = mUnderlyingPlane.project(pointOnRay) + bias;
       result.mBarycentric = mBarycentricInverse * projectedRay;
       result.mIntersection.mPoint = interpolate(result.mBarycentric);
       bias = projectedRay - mUnderlyingPlane.project(result.mIntersection.mPoint);

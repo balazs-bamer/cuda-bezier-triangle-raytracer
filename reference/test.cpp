@@ -238,10 +238,6 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     }
     else { // Nothing to do
     }
-    BezierLens<Real> lens(1.1f, bezier);
-std::cout << "should be outside ";
-    auto [dontcare, inside] = lens.refract(ray);
-std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
 
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
@@ -255,9 +251,6 @@ std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so
     }
     else { // Nothing to do
     }
-std::cout << "should be inside  ";
-    std::tie(dontcare, inside) = lens.refract(ray);
-std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so far ") << intersection.mIntersection.mDistance<< '\n';
 
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
@@ -298,6 +291,92 @@ std::cout << (inside ? "from now on inside, so far  " : "from now on outside, so
   name += ".stl";
   beam.writeMesh(cgBaseDir + name);
 
+  std::cout << '\n';
+}
+
+void testBezierRefraction(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
+  std::cout << aName << '\n';
+
+  Mesh<Real> ellipsoid;
+  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+
+  Mesh<Real> bullet;
+  bullet.makeUnitSphere(5, 3);
+  bullet *= 0.05f;
+  Mesh<Real> intersections;
+  Mesh<Real> objects;
+  Mesh<Real> raws;
+
+  Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, aDirection);
+  Vector<Real> displacement{5.0f, 0.0f, 0.0f};
+
+  auto original = ray;
+  std::vector<Vertex<Real>> points;
+  for(;;) {
+    ellipsoid += displacement;                    // We start from outside.
+    ellipsoid.standardizeVertices();
+    ellipsoid.standardizeNormals();
+    std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
+    BezierMesh<Real> bezier(ellipsoid);
+    auto object = bezier.interpolate(5);
+    std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
+
+    BezierLens<Real> lens(1.1f, bezier);
+std::cout << "should be outside ";
+    RefractionResult status;
+    std::tie(ray, status) = lens.refract(ray);
+    if(status == RefractionResult::cNone) {
+      break;
+    }
+    else { // Nothing to do
+    }
+std::cout << (status == RefractionResult::cInside ? "from now on inside\n" : "from now on outside\n");
+
+    auto copy = bullet;
+    copy += ray.mStart;
+//    points.push_back(intersection.mIntersection.mPoint);
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+
+std::cout << "should be inside ";
+    std::tie(ray, status) = lens.refract(ray);
+    if(status == RefractionResult::cNone) {
+      break;
+    }
+    else { // Nothing to do
+    }
+std::cout << (status == RefractionResult::cInside ? "from now on outside\n" : "from now on outside\n");
+
+    copy = bullet;
+    copy += ray.mStart;
+//    points.push_back(intersection.mIntersection.mPoint);
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+  }
+//  points.push_back(points.back() + ray.mDirection * 11.0f);
+
+  std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
+
+  std::string name{"refractionObject_"};
+  name += aName;
+  name += ".stl";
+  objects.writeMesh(cgBaseDir + name);
+
+  name ="refractionRaw_";
+  name += aName;
+  name += ".stl";
+  raws.writeMesh(cgBaseDir + name);
+
+  name = "refracctionLocation_";
+  name += aName;
+  name += ".stl";
+  intersections.writeMesh(cgBaseDir + name);
+
+/*  auto beam = visualizeRay(original, (points.back() - original.mStart).norm(), 0.02f);
+
+  name = "refractionRay_";
+  name += aName;
+  name += ".stl";
+  beam.writeMesh(cgBaseDir + name);
+*/
   std::cout << '\n';
 }
 
@@ -382,11 +461,11 @@ int main(int argc, char **argv) {
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
 
-  testBezierIntersection("7x3a", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
-  testBezierIntersection("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
-  testBezierIntersection("9x4a", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
-  testBezierIntersection("9x4b", 9, 4, ellipsoidAxes, {1.0f, -0.03f, -0.045f});
-  visualizeFollowers("follow");
+  testBezierRefraction("7x3a", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
+  testBezierRefraction("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
+  testBezierRefraction("9x4a", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
+  testBezierRefraction("9x4b", 9, 4, ellipsoidAxes, {1.0f, -0.03f, -0.045f});
+//  visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
   measureApproximation(0, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 0 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0022721614
