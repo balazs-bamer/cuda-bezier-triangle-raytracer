@@ -270,7 +270,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
       else {
         result.mWhat = BezierIntersection::What::cNone;
       }
-      if(result.mWhat == BezierIntersection::What::cNone && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
+      if((result.mWhat == BezierIntersection::What::cNone || result.mWhat == BezierIntersection::What::cVeto) && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
         result = intersect(aRay, inPlane.mDistance, parameterFurther);
       }
       else { // nothing to do
