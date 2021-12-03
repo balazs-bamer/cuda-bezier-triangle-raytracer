@@ -16,14 +16,15 @@ enum class RefractionResult : uint8_t {
 template<typename tReal>
 class BezierLens final {
 private:
-  static constexpr tReal csMinCos2refraction = 0.01f; // Squared, approximately 84 degrees.
-  static constexpr tReal csQuadCoeffEpsilon  = 1e-7f;
+  static constexpr tReal csMaxSin2refraction = 0.99f;  // Squared, approximately 82 degrees.
+  static constexpr tReal csMinSin2refraction = 1e-12f; // Don't calculate refraction below this, let the ray pass as it came.
 
   tReal             mRefractiveIndex;
   BezierMesh<tReal> mMesh;
 
   using Vector              = ::Vector<tReal>;
   using Vertex              = ::Vertex<tReal>;
+  using Matrix              = ::Matrix<tReal>;
   using Plane               = ::Plane<tReal>;
   using Ray                 = ::Ray<tReal>;
   using BezierIntersection  = ::BezierIntersection<tReal>;
@@ -47,63 +48,42 @@ std::pair<Ray<tReal>, RefractionResult> BezierLens<tReal>::refract(Ray const &aR
   RefractionResult statusLater;
   auto const intersect = mMesh.intersect(aRay);
   if(intersect.mWhat == BezierIntersection::What::cIntersect) {
-std::cout << intersect.mIntersection.mCosIncidence << '\n';
+std::cout << "ray: " << aRay.mDirection(0) << ' ' << aRay.mDirection(1) << ' ' << aRay.mDirection(2) << '\n';
+std::cout << "cos: " << intersect.mIntersection.mCosIncidence << " acos: " << 180.0f/3.1415f * ::acos(intersect.mIntersection.mCosIncidence);
     statusLater = (intersect.mIntersection.mCosIncidence < 0.0f ? RefractionResult::cInside : RefractionResult::cOutside);
     result.mStart = intersect.mIntersection.mPoint;
-    auto const directionFactor = (statusLater == RefractionResult::cInside ? -1.0f : 1.0f);
     auto const effectiveRefractiveFactor = (statusLater == RefractionResult::cInside ? 1.0f / mRefractiveIndex : mRefractiveIndex);
-    auto const cos2refraction = 1.0f + effectiveRefractiveFactor * effectiveRefractiveFactor * (intersect.mIntersection.mCosIncidence * intersect.mIntersection.mCosIncidence - 1.0f);
-    if(cos2refraction > csMinCos2refraction) {
-      auto const cosIncidence = ::abs(intersect.mIntersection.mCosIncidence);
-      auto const cosRefraction = ::sqrt(cos2refraction);
-      auto const &incidence = aRay.mDirection;
-      auto const normal = intersect.mNormal * directionFactor;
-      //  a * incidence + b * normal      will be the result direction, we look for a and b
-      //  cosRefraction  =  normal . (a * incidence + b * normal)
-      //  cosRefraction  =  a * cosIncidence + b
-      //  | a * incidence + b * normal |  =  1
-      //  | a * (incidence - cosIncidence * normal) + cosRefraction * normal |  =  1
-      //  so this gives a quadratic equation for a when we take the x, y, z components.
-      auto quadCoeffA = 0.0f;
-      auto quadCoeffB = 0.0f;
-      auto quadCoeffC = 0.0f;
-      for(uint32_t i = 0u; i < 3u; ++i) {
-        auto const tmp = incidence(i) - cosIncidence * normal(i);
-        quadCoeffA += tmp * tmp;
-        quadCoeffB += tmp * normal(i);
-        quadCoeffC += normal(i) * normal(i);
-      }
-      quadCoeffB *= 2.0f * cosRefraction;
-      quadCoeffC *= cosRefraction * cosRefraction;
-      quadCoeffC -= 1.0f;
-      tReal a;
-      tReal b;
-      if(::abs(quadCoeffA) < csQuadCoeffEpsilon) {
-        a = -quadCoeffC / quadCoeffB;                // both quadCoeffA and quadCoeffB can't be 0
-        b = cosRefraction - a * cosIncidence;
+    auto const sin2refraction = effectiveRefractiveFactor * effectiveRefractiveFactor * (1.0f - intersect.mIntersection.mCosIncidence * intersect.mIntersection.mCosIncidence);
+std::cout << " eff: " << effectiveRefractiveFactor << " sin2: " << sin2refraction;
+    if(sin2refraction < csMaxSin2refraction) {
+      if(sin2refraction > csMinSin2refraction) {
+        auto const cosRfr = ::sqrt(1.0f - sin2refraction);
+        auto const i_cosRfr = 1.0f - cosRfr;
+        auto const sinRfr = ::sqrt(sin2refraction);
+std::cout << " sin: " << sinRfr << " cos: " << cosRfr << " asin: " << 180.0f/3.1415f * ::asin(sinRfr);
+        auto const directionFactor = (statusLater == RefractionResult::cInside ? -1.0f : 1.0f);
+std::cout << " df: " << directionFactor << '\n';
+        auto const normal = intersect.mNormal * directionFactor;
+std::cout << "normal: " << normal(0) << ' ' << normal(1) << ' ' << normal(2) << '\n';
+        Vector axis = aRay.mDirection.cross(normal).normalized(); // TODO consider order
+std::cout << "axis: " << axis(0) << ' ' << axis(1) << ' ' << axis(2) << '\n';
+        Matrix rotation({axis(0) * axis(0) * i_cosRfr + cosRfr,            axis(0) * axis(1) * i_cosRfr - axis(2) * sinRfr,  axis(0) * axis(2) * i_cosRfr + axis(1) * sinRfr,
+                         axis(1) * axis(0) * i_cosRfr + axis(2) * sinRfr,  axis(1) * axis(1) * i_cosRfr + cosRfr,            axis(1) * axis(2) * i_cosRfr - axis(0) * sinRfr,
+                         axis(2) * axis(0) * i_cosRfr - axis(1) * sinRfr,  axis(2) * axis(1) * i_cosRfr + axis(0) * sinRfr,  axis(2) * axis(2) * i_cosRfr + cosRfr});
+        result.mDirection = rotation * normal;
       }
       else {
-        auto const discriminantSqrt = ::sqrt(quadCoeffB * quadCoeffB - 4.0f * quadCoeffA * quadCoeffC); // Will definitely have a solution.
-        auto const quadCoeffAdouble = 2.0f * quadCoeffA;
-        a = (-quadCoeffB - discriminantSqrt) / quadCoeffAdouble;
-        b = cosRefraction - a * cosIncidence;
-        if(a < 0.0f || b < 0.0f) {
-          a = (-quadCoeffB + discriminantSqrt) / quadCoeffAdouble;
-          b = cosRefraction - a * cosIncidence;
-        }
-        else { // Nothing to do
-        }
+        result.mDirection = aRay.mDirection;        // Too little incidence, continue in the same direction.
       }
-if(a < 0.0f || b < 0.0f) { throw "TODO REMOVE invalid refraction direction coefficients"; }
-      result.mDirection = a * incidence + b * normal;
     }
     else {
-      statusLater = RefractionResult::cNone;  // Total reflection, or close to it. Ignored.
+      statusLater = RefractionResult::cNone;        // Total reflection, or close to it. Ignored.
     }
   }
   else {
     statusLater = RefractionResult::cNone;
   }
+std::cout << " sl: " << static_cast<int>(statusLater) << '\n';
   return std::make_pair(result, statusLater);
 }
 

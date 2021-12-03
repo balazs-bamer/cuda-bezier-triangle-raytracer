@@ -306,11 +306,12 @@ void testBezierRefraction(char const * const aName, int32_t const aSectors, int3
   Mesh<Real> intersections;
   Mesh<Real> objects;
   Mesh<Real> raws;
+  Mesh<Real> rays;
 
   Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, aDirection);
-  Vector<Real> displacement{5.0f, 0.0f, 0.0f};
+  Vector<Real> displacement{10.0f, 0.0f, 0.0f};
 
-  auto original = ray;
+  auto previous = ray;
   std::vector<Vertex<Real>> points;
   for(;;) {
     ellipsoid += displacement;                    // We start from outside.
@@ -334,8 +335,11 @@ std::cout << (status == RefractionResult::cInside ? "from now on inside\n" : "fr
 
     auto copy = bullet;
     copy += ray.mStart;
-//    points.push_back(intersection.mIntersection.mPoint);
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+
+    auto beam = visualizeRay(previous, (ray.mStart - previous.mStart).norm(), 0.02f);
+    std::copy(beam.cbegin(), beam.cend(), std::back_inserter(rays));
+    previous = ray;
 
 std::cout << "should be inside ";
     std::tie(ray, status) = lens.refract(ray);
@@ -348,12 +352,14 @@ std::cout << (status == RefractionResult::cInside ? "from now on outside\n" : "f
 
     copy = bullet;
     copy += ray.mStart;
-//    points.push_back(intersection.mIntersection.mPoint);
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
-  }
-//  points.push_back(points.back() + ray.mDirection * 11.0f);
 
-  std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
+    beam = visualizeRay(previous, (ray.mStart - previous.mStart).norm(), 0.02f);
+    std::copy(beam.cbegin(), beam.cend(), std::back_inserter(rays));
+    previous = ray;
+  }
+  auto beam = visualizeRay(previous, 11.1f, 0.02f);
+  std::copy(beam.cbegin(), beam.cend(), std::back_inserter(rays));
 
   std::string name{"refractionObject_"};
   name += aName;
@@ -370,13 +376,10 @@ std::cout << (status == RefractionResult::cInside ? "from now on outside\n" : "f
   name += ".stl";
   intersections.writeMesh(cgBaseDir + name);
 
-/*  auto beam = visualizeRay(original, (points.back() - original.mStart).norm(), 0.02f);
-
   name = "refractionRay_";
   name += aName;
   name += ".stl";
-  beam.writeMesh(cgBaseDir + name);
-*/
+  rays.writeMesh(cgBaseDir + name);
   std::cout << '\n';
 }
 
@@ -448,23 +451,23 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
 }
 
 int main(int argc, char **argv) {
+  Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
+
 /*  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
-  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);*/
+  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
 
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
   testBezier2plane("7x5", 7, 5, 3.0f, 4);
 
-  Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
-
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
-  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
+  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
-  testBezierRefraction("7x3a", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
-  testBezierRefraction("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
-  testBezierRefraction("9x4a", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
-  testBezierRefraction("9x4b", 9, 4, ellipsoidAxes, {1.0f, -0.03f, -0.045f});
+  testBezierRefraction("9x4a", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.0025f - 0.0025f), 0.05f, 0.05f});
+  testBezierRefraction("9x4b", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.0025f - 0.01f), 0.05f, 0.1f});
+  testBezierRefraction("9x4c", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.01f - 0.0025f), 0.1f, 0.05f});
+  testBezierRefraction("9x4d", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.01f - 0.01f), 0.1f, 0.1f});
 //  visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
