@@ -313,7 +313,7 @@ void testBezierRefraction(char const * const aName, int32_t const aSectors, int3
 
   auto previous = ray;
   std::vector<Vertex<Real>> points;
-  for(;;) {
+  for(int i = 0; i < 10; ++i) {
     ellipsoid += displacement;                    // We start from outside.
     ellipsoid.standardizeVertices();
     ellipsoid.standardizeNormals();
@@ -467,7 +467,7 @@ int main(int argc, char **argv) {
   testBezierRefraction("9x4a", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.0025f - 0.0025f), 0.05f, 0.05f});
   testBezierRefraction("9x4b", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.0025f - 0.01f), 0.05f, 0.1f});
   testBezierRefraction("9x4c", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.01f - 0.0025f), 0.1f, 0.05f});
-  testBezierRefraction("9x4d", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.01f - 0.01f), 0.1f, 0.1f});
+  testBezierRefraction("9x4d", 9, 4, ellipsoidAxes, {::sqrt(1.0f - 0.0225f - 0.0225f), 0.15f, 0.15f});
 //  visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894

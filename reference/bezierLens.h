@@ -60,9 +60,13 @@ std::cout << "cos: " << intersect.mIntersection.mCosIncidence << " acos: " << 18
 std::cout << " df: " << directionFactor << '\n';
         auto const normal = intersect.mNormal * directionFactor;
 std::cout << "normal: " << normal(0) << ' ' << normal(1) << ' ' << normal(2) << '\n';
-        auto c1 = normal.dot(aRay.mDirection);
-        auto c2 = ::sqrt(1.0f - sin2refraction);
-        result.mDirection = effectiveRefractiveFactor * aRay.mDirection + (effectiveRefractiveFactor * c1 - c2) * normal;
+        auto cos1 = ::abs(intersect.mIntersection.mCosIncidence);
+        auto cos2 = ::sqrt(1.0f - sin2refraction);
+        result.mDirection = (aRay.mDirection * effectiveRefractiveFactor + normal * (effectiveRefractiveFactor * cos1 - cos2)).normalized();
+std::cout << "direct: " << result.mDirection(0) << ' ' << result.mDirection(1) << ' ' << result.mDirection(2) << '\n';
+std::cout << "teta1: " << 180.0f/3.1415f * ::asin(::sqrt(1.0f - cos1 * cos1)) <<
+            " teta2: " << 180.0f/3.1415f * ::acos(cos2) <<
+            " teta2: " << 180.0f/3.1415f * ::acos(result.mDirection.dot(-normal)) << '\n';
       }
       else {
         result.mDirection = aRay.mDirection;        // Too little incidence, continue in the same direction.
