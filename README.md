@@ -133,11 +133,19 @@ New (dividing) vertices are calculated as a fixed linear combination of the side
 
 This is now only a simple brute-force search for the intersection giving the shortest ray.
 
+### reference/bezierLens.h
+
+TODO
+
+#### BezierLens::refract
+
+TODO [[4]](#4)
+
 #### Ellipse approximation test
 
 I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
 I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
-There are general error limits for surface approximation using Bézier triangles like in [[4]](#4). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
+There are general error limits for surface approximation using Bézier triangles like in [[5]](#5). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
 
 #### Shortcomings
 
@@ -167,6 +175,10 @@ Triangular Bernstein-Bézier patches
 Computer Aided Geometric Design 3, pp 83-127
 
 <a id="4">[4]</a>
+Scratchapixel
+https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
+
+<a id="5">[5]</a>
 Chang Geng-zhe, Feng Yu-yu (1983).
 Error bound for Bernstein-Bézier triangulation approximation
 Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340

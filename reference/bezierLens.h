@@ -54,23 +54,15 @@ std::cout << "cos: " << intersect.mIntersection.mCosIncidence << " acos: " << 18
     result.mStart = intersect.mIntersection.mPoint;
     auto const effectiveRefractiveFactor = (statusLater == RefractionResult::cInside ? 1.0f / mRefractiveIndex : mRefractiveIndex);
     auto const sin2refraction = effectiveRefractiveFactor * effectiveRefractiveFactor * (1.0f - intersect.mIntersection.mCosIncidence * intersect.mIntersection.mCosIncidence);
-std::cout << " eff: " << effectiveRefractiveFactor << " sin2: " << sin2refraction;
     if(sin2refraction < csMaxSin2refraction) {
       if(sin2refraction > csMinSin2refraction) {
-        auto const cosRfr = ::sqrt(1.0f - sin2refraction);
-        auto const i_cosRfr = 1.0f - cosRfr;
-        auto const sinRfr = ::sqrt(sin2refraction);
-std::cout << " sin: " << sinRfr << " cos: " << cosRfr << " asin: " << 180.0f/3.1415f * ::asin(sinRfr);
-        auto const directionFactor = (statusLater == RefractionResult::cInside ? -1.0f : 1.0f);
+        auto const directionFactor = (statusLater == RefractionResult::cInside ? 1.0f : -1.0f);
 std::cout << " df: " << directionFactor << '\n';
         auto const normal = intersect.mNormal * directionFactor;
 std::cout << "normal: " << normal(0) << ' ' << normal(1) << ' ' << normal(2) << '\n';
-        Vector axis = aRay.mDirection.cross(normal).normalized(); // TODO consider order
-std::cout << "axis: " << axis(0) << ' ' << axis(1) << ' ' << axis(2) << '\n';
-        Matrix rotation({axis(0) * axis(0) * i_cosRfr + cosRfr,            axis(0) * axis(1) * i_cosRfr - axis(2) * sinRfr,  axis(0) * axis(2) * i_cosRfr + axis(1) * sinRfr,
-                         axis(1) * axis(0) * i_cosRfr + axis(2) * sinRfr,  axis(1) * axis(1) * i_cosRfr + cosRfr,            axis(1) * axis(2) * i_cosRfr - axis(0) * sinRfr,
-                         axis(2) * axis(0) * i_cosRfr - axis(1) * sinRfr,  axis(2) * axis(1) * i_cosRfr + axis(0) * sinRfr,  axis(2) * axis(2) * i_cosRfr + cosRfr});
-        result.mDirection = rotation * normal;
+        auto c1 = normal.dot(aRay.mDirection);
+        auto c2 = ::sqrt(1.0f - sin2refraction);
+        result.mDirection = effectiveRefractiveFactor * aRay.mDirection + (effectiveRefractiveFactor * c1 - c2) * normal;
       }
       else {
         result.mDirection = aRay.mDirection;        // Too little incidence, continue in the same direction.
