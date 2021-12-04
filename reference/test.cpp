@@ -254,9 +254,12 @@ std::cout << "now should be inside, ray length " << intersection.mIntersection.m
 std::cout << "-------------------------------------------------------------------\n\n";
     auto copy = bullet;
     copy += intersection.mIntersection.mPoint;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+    copy = bullet;
+    copy += intersection.mIntersection.mPoint + intersection.mNormal * 1.0f;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
     points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
-    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
     intersection = bezier.intersect(ray);         // TODO why doesn't the ray come out of the last shape? It wants a neighbouring triangle, and in turn a neighbouring one.
     dump(intersection);                           // Double doesn't help.
@@ -269,9 +272,12 @@ std::cout << "now should be outside, ray length " << intersection.mIntersection.
 std::cout << "-------------------------------------------------------------------\n\n";
     copy = bullet;
     copy += intersection.mIntersection.mPoint;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
+    copy = bullet;
+    copy += intersection.mIntersection.mPoint + intersection.mNormal * 1.0f;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
     points.push_back(intersection.mIntersection.mPoint);
     ray.mStart = intersection.mIntersection.mPoint;
-    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
   }
   ellipsoid += displacement;                    // We start from outside.
   ellipsoid.standardizeVertices();
@@ -377,18 +383,18 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
 }
 
 int main(int argc, char **argv) {
+  Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
+
 /*  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
-  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);*/
+  testVectorMax("vectorIdentity", 4, 1, 1.0f, 11.0f);
 
   testBezier2plane("4x2", 4, 2, 3.0f, 4);
   testBezier2plane("7x5", 7, 5, 3.0f, 4);
 
-  Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
-
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
-  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);
+  testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
   testBezierIntersection("7x3a", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
   testBezierIntersection("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});

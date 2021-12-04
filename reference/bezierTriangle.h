@@ -211,8 +211,8 @@ void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle con
   } );
   mHeightInside *= csHeightSafetyFactor;
   mHeightOutside *= csHeightSafetyFactor;
-  mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f};            // No matter how long.
-  mBezierDerivativeDirectionVectorB = mBarycentricInverse *
+  mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f}; // Parallel to the side from 2 to 0, no matter how long.
+  mBezierDerivativeDirectionVectorB = mBarycentricInverse *      // Perpendicular to the previous one.
       (mControlPoints[csControlIndexAboveOriginalCentroid] - mControlPoints[csControlIndexOriginalVertex0]).cross(mUnderlyingPlane.mNormal);
 }
 
@@ -476,16 +476,16 @@ Vector<tReal> BezierTriangle<tReal>::getNormal(Vector const &aBarycentric) const
                       mControlPoints[csControlIndex012] * bary2_2 +
                       mControlPoints[csControlIndex210] * bary0_2 +
                       2.0f *
-                     (mControlPoints[csControlIndex102] * aBarycentric(0) * aBarycentric(2) +
+                     (mControlPoints[csControlIndex111] * aBarycentric(0) * aBarycentric(2) +
                       mControlPoints[csControlIndex120] * aBarycentric(0) * aBarycentric(1) +
-                      mControlPoints[csControlIndex111] * aBarycentric(2) * aBarycentric(0));
+                      mControlPoints[csControlIndex021] * aBarycentric(1) * aBarycentric(2));
 
   Vector component2 = mControlPoints[csControlIndex003] * bary2_2 +
                       mControlPoints[csControlIndex201] * bary0_2 +
                       mControlPoints[csControlIndex021] * bary1_2 +
                       2.0f *
                      (mControlPoints[csControlIndex102] * aBarycentric(0) * aBarycentric(2) +
-                      mControlPoints[csControlIndex012] * aBarycentric(1) * aBarycentric(1) +
+                      mControlPoints[csControlIndex012] * aBarycentric(1) * aBarycentric(2) +
                       mControlPoints[csControlIndex111] * aBarycentric(0) * aBarycentric(1));
 
   Vector componentA = mBezierDerivativeDirectionVectorA(0) * component0 +
