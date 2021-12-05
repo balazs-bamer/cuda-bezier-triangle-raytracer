@@ -5,7 +5,7 @@
 
 template<typename tReal>
 struct BezierIntersection final {
-  enum class What : uint8_t {
+  enum class What : uint32_t {
     cFollowSide0 = 0u,
     cFollowSide1 = 1u,
     cFollowSide2 = 2u,
@@ -23,7 +23,7 @@ struct BezierIntersection final {
 template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
 public:
-  enum class LimitPlaneIntersection : uint8_t {
+  enum class LimitPlaneIntersection : uint32_t {
     cThis = 0u,
     cNone = 1u
   };

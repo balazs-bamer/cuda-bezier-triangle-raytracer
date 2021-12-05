@@ -3,10 +3,7 @@
 
 #include "bezierMesh.h"
 
-#include <iostream> // TODO REMOVE
-#include <iomanip> // TODO REMOVE
-
-enum class RefractionResult : uint8_t {
+enum class RefractionResult : uint32_t {
   cNone    = 0u,
   cInside  = 1u,
   cOutside = 2u
@@ -48,8 +45,6 @@ std::pair<Ray<tReal>, RefractionResult> BezierLens<tReal>::refract(Ray const &aR
   RefractionResult statusLater;
   auto const intersect = mMesh.intersect(aRay);
   if(intersect.mWhat == BezierIntersection::What::cIntersect) {
-std::cout << "ray: " << aRay.mDirection(0) << ' ' << aRay.mDirection(1) << ' ' << aRay.mDirection(2) << '\n';
-std::cout << "cos: " << intersect.mIntersection.mCosIncidence << " acos: " << 180.0f/3.1415f * ::acos(intersect.mIntersection.mCosIncidence);
     statusLater = (intersect.mIntersection.mCosIncidence < 0.0f ? RefractionResult::cInside : RefractionResult::cOutside);
     result.mStart = intersect.mIntersection.mPoint;
     auto const effectiveRefractiveFactor = (statusLater == RefractionResult::cInside ? 1.0f / mRefractiveIndex : mRefractiveIndex);
@@ -57,16 +52,10 @@ std::cout << "cos: " << intersect.mIntersection.mCosIncidence << " acos: " << 18
     if(sin2refraction < csMaxSin2refraction) {
       if(sin2refraction > csMinSin2refraction) {
         auto const directionFactor = (statusLater == RefractionResult::cInside ? 1.0f : -1.0f);
-std::cout << " df: " << directionFactor << '\n';
         auto const normal = intersect.mNormal * directionFactor;
-std::cout << "normal: " << normal(0) << ' ' << normal(1) << ' ' << normal(2) << '\n';
         auto cos1 = ::abs(intersect.mIntersection.mCosIncidence);
         auto cos2 = ::sqrt(1.0f - sin2refraction);
         result.mDirection = (aRay.mDirection * effectiveRefractiveFactor + normal * (effectiveRefractiveFactor * cos1 - cos2)).normalized();
-std::cout << "direct: " << result.mDirection(0) << ' ' << result.mDirection(1) << ' ' << result.mDirection(2) << '\n';
-std::cout << "teta1: " << 180.0f/3.1415f * ::asin(::sqrt(1.0f - cos1 * cos1)) <<
-            " teta2: " << 180.0f/3.1415f * ::acos(cos2) <<
-            " teta2: " << 180.0f/3.1415f * ::acos(result.mDirection.dot(-normal)) << '\n';
       }
       else {
         result.mDirection = aRay.mDirection;        // Too little incidence, continue in the same direction.
@@ -79,7 +68,6 @@ std::cout << "teta1: " << 180.0f/3.1415f * ::asin(::sqrt(1.0f - cos1 * cos1)) <<
   else {
     statusLater = RefractionResult::cNone;
   }
-std::cout << " sl: " << static_cast<int>(statusLater) << '\n';
   return std::make_pair(result, statusLater);
 }
 
