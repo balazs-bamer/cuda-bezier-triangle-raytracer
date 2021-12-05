@@ -1,5 +1,7 @@
 # Cuda-based Bézier triangle mesh raytracer
 
+![alt text](./images/intro.jpg "Intro")
+
 The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate aspheric and anomorphic lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
 
 This work is divided into 3 parts:
@@ -112,7 +114,7 @@ This function is used in the previous one to calculate the surface normal in the
 
 ### reference/bezierMesh.h
 
-The `BézierMesh` class is similar to and based on the `Mesh` class, and is responsible of
+The `BezierMesh` class is similar to and based on the `Mesh` class, and is responsible of
 * Constructing the Bézier triangle mesh of `BézierTriangle` instances in Clough-Tocher subdivision [[1]](#1), see later. Input is plain triangle `Mesh`.
 * Obtaining a triangular mesh approximation (`interpolate`) with evenly subdividing each subtriangle side into `aDivisor` parts.
 * Split "thick" Bézier triangles into smaller, "thinner" ones.
@@ -135,11 +137,11 @@ This is now only a simple brute-force search for the intersection giving the sho
 
 ### reference/bezierLens.h
 
-TODO
+`BezierLens` now only contains the function below. The class is constructed with the refractive index and the `BezierMesh` giving its shape.
 
 #### BezierLens::refract
 
-TODO [[4]](#4)
+This is a simple implementation according to [[4]](#4). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically.
 
 #### Ellipse approximation test
 
@@ -153,7 +155,9 @@ In theory, my algorithms can handle concave meshes, and the `Mesh` class even me
 
 I have tested and adjusted algorithm parameters so far only with ellipsoids. TODO later construct some more complicated shapes, including concave ones.
 
-The algorithm does not report mesh iontersection for large angles of incidence (above approximately 70 degrees).
+The algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees).
+
+The algorithm does not handle compound lenses.
 
 ## References
 
