@@ -64,8 +64,9 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 12u;       // 14 for old epsilon factor 0.00001, 10 for 0.0001
+  static constexpr uint32_t csRootSearchIterations                      = 10u;       // 14 for old epsilon factor 0.00001, 10 for 0.0001
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
+  static constexpr tReal    csRootSearchBiasFactor                      = 0.95f;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -399,18 +400,23 @@ std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
   else {
     Vector bias{0.0f, 0.0f, 0.0f};
     for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
-std::cout << "  loop: "
-          << std::setw(11) << std::setprecision(4) << further
-          << std::setw(11) << std::setprecision(4) << closer << '\n';
-      auto middle = (closer + further) / 2.0f;
+      auto middle = (closer + further) / 2.0f;                   // TODO either take a proportional step or choose the best result from the iterations
       result.mIntersection.mDistance = middle;
 
       pointOnRay = aRay.mStart + aRay.mDirection * middle;
       auto projectedRay = mUnderlyingPlane.project(pointOnRay) + bias;
       result.mBarycentric = mBarycentricInverse * projectedRay;
       result.mIntersection.mPoint = interpolate(result.mBarycentric);
-      bias = projectedRay - mUnderlyingPlane.project(result.mIntersection.mPoint);
-      auto signumMiddle = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
+auto diff = (pointOnRay - result.mIntersection.mPoint).norm();
+std::cout << "  loop closer: "
+          << std::setw(16) << std::setprecision(8) << closer << " further: "
+          << std::setw(16) << std::setprecision(8) << further << " bias: "
+          << std::setw(16) << std::setprecision(8) << bias(0)
+          << std::setw(16) << std::setprecision(8) << bias(1)
+          << std::setw(16) << std::setprecision(8) << bias(2) << " diff: "
+          << std::setw(16) << std::setprecision(8) << diff << '\n';
+      bias = (projectedRay - mUnderlyingPlane.project(result.mIntersection.mPoint)) * csRootSearchBiasFactor; // This helps in rare cases of bias divergence to limit it
+      auto signumMiddle = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);                      // while reducing overall precision.
 
       if(signumCloser == signumMiddle) {
         closer = middle;
