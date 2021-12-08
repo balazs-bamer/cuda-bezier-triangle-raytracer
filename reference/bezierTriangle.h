@@ -64,9 +64,10 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 10u;       // 14 for old epsilon factor 0.00001, 10 for 0.0001
+  static constexpr uint32_t csRootSearchIterations                      = 6u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
   static constexpr tReal    csRootSearchBiasFactor                      = 0.95f;
+  static constexpr tReal    csRootSearchApproximationEpsilon            = 1e-8f;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -382,25 +383,34 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tRea
   Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
   Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
 std::cout << "closer:  ";
-  auto signumCloser = getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
+getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
+  auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
 
   pointOnRay = aRay.mStart + aRay.mDirection * further;
   result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
   result.mIntersection.mPoint = interpolate(result.mBarycentric);
 std::cout << "further: ";
-  auto signumFurther = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
+getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
+  auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
   result.mIntersection.mDistance = further;
 
-  if(signumCloser == signumFurther) {
+  if(diffCloser * diffFurther >= 0.0f) {
     result.mWhat = BezierIntersection::What::cVeto;   // TODO add more sophisticated solution.
                                                       // Now this veto cancels the whole mesh intersection where the current simpler solution would be uncertain.
                                                       // This happens only for large incidence angles, so neglecting these is moderately a limitation for real use cases.
-std::cout << " signumCloser == signumFurther " << signumCloser << '\n';
+std::cout << " signumCloser == signumFurther \n";
   }
   else {
     Vector bias{0.0f, 0.0f, 0.0f};
     for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
-      auto middle = (closer + further) / 2.0f;                   // TODO either take a proportional step or choose the best result from the iterations
+      tReal middle;
+      auto denom = diffCloser - diffFurther;
+      if(::abs(denom) > csRootSearchApproximationEpsilon) {
+        middle = (diffCloser * further - diffFurther * closer) / denom;
+      }
+      else {
+        middle = (closer + further) / 2.0f;
+      }
       result.mIntersection.mDistance = middle;
 
       pointOnRay = aRay.mStart + aRay.mDirection * middle;
@@ -416,13 +426,16 @@ std::cout << "  loop closer: "
           << std::setw(16) << std::setprecision(8) << bias(2) << " diff: "
           << std::setw(16) << std::setprecision(8) << diff << '\n';
       bias = (projectedRay - mUnderlyingPlane.project(result.mIntersection.mPoint)) * csRootSearchBiasFactor; // This helps in rare cases of bias divergence to limit it
-      auto signumMiddle = getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);                      // while reducing overall precision.
+getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);                      // while reducing overall precision.
+      auto diffMiddle = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
 
-      if(signumCloser == signumMiddle) {
+      if(diffCloser * diffMiddle >= 0) {
         closer = middle;
+        diffCloser = diffMiddle;
       }
       else {
         further = middle;
+        diffFurther = diffMiddle;
       }
     }
 
