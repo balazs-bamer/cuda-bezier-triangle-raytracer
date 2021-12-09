@@ -64,7 +64,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 4u;
+  static constexpr uint32_t csRootSearchIterations                      = 8u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
   static constexpr tReal    csRootSearchBiasFactor                      = 1.0f;
   static constexpr tReal    csRootSearchApproximationEpsilon            = 1e-8f;
@@ -417,7 +417,7 @@ std::cout << " signumCloser == signumFurther \n";
       auto projectedRay = mUnderlyingPlane.project(pointOnRay) + bias;
       result.mBarycentric = mBarycentricInverse * projectedRay;
       result.mIntersection.mPoint = interpolate(result.mBarycentric);
-auto diff = (pointOnRay - result.mIntersection.mPoint).norm();
+auto diff = aRay.getDistance(result.mIntersection.mPoint);
 std::cout << "  loop closer: "
           << std::setw(16) << std::setprecision(8) << closer << " further: "
           << std::setw(16) << std::setprecision(8) << further << " bias: "

@@ -95,6 +95,18 @@ struct Ray final {
   : mStart(aStart)
   , mDirection(aDirection.normalized()) {}
 
+  Vector<tReal> getPerpendicularTo(Vertex<tReal> const &aPoint) const {
+    return aPoint - mStart - (aPoint - mStart).dot(mDirection) * mDirection;
+  }
+
+  tReal getDistance(Vertex<tReal> const &aPoint) const {
+    return getPerpendicularTo(aPoint).norm();
+  }
+
+  tReal getDistance2(Vertex<tReal> const &aPoint) const {
+    return getPerpendicularTo(aPoint).squaredNorm();
+  }
+
   tReal getAverageErrorSquared(std::vector<Vertex<tReal>> const &aPoints) const;
 };
 
@@ -244,7 +256,7 @@ template<typename tReal>
 tReal Ray<tReal>::getAverageErrorSquared(std::vector<Vertex<tReal>> const &aPoints) const {
   tReal sum = 0.0f;
   for(auto const &point : aPoints) {
-    sum += (point - mStart - (point - mStart).dot(mDirection) * mDirection).squaredNorm();
+    sum += getDistance2(point);
   }
   return aPoints.size() == 0u ? 0u : sum / aPoints.size();
 }
