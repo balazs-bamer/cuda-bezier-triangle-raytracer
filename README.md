@@ -110,6 +110,8 @@ This process, including the direction and magnitude of the bias almost always co
 
 When ready, it is important to check if the intersection is within the domain of the current Bézier triangle. If not, the intersection would be more accurate when calculated on the appropriate neighbouring triangle. To enable this, in this case I return the side index to be considered for a similar calculation process for the neighbouring triangle. Since its planar intersection will definitely be outside the underlying triangle, I omit that check to let the function finish. TODO figures.
 
+Following from the algorithm, the intersection point will lie exactly on the Bézier surface. The relative accuracy of the intersection (so the distance of the intersection point from the ray, normalized by the shape size) is usually **0.00025**, but in the rare cases of bias divergence it can be as high as **0.03**.
+
 #### BezierTriangle::getNormal
 
 This function is used in the previous one to calculate the surface normal in the intersection point. I used the principle described in [[3]](#3) to calculate closed-formula barycentric derivatives and use them to calculate two perpendicular surface tangent directions in that point. Their cross product gives the desired normal.
@@ -143,7 +145,9 @@ This is now only a simple brute-force search for the intersection giving the sho
 
 #### BezierLens::refract
 
-This is a simple implementation according to [[4]](#4). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically.
+This is a simple implementation using relative indices of refraction according to [[4]](#4). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
+- the surface approximation using the Bézier triangle mesh
+- the intersection precision.
 
 #### Ellipse approximation test
 
@@ -159,7 +163,7 @@ I have tested and adjusted algorithm parameters so far only with ellipsoids. TOD
 
 The intersection algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees).
 
-The relative accuracy of the intersection (so the distance of the intersection point from the ray, normalized by the shape size) is usually 0.00025, but in the rare cases of bias divergence it can be as high as 0.03. Mathematical investigation would be important here.
+The relative accuracy of the intersection is not good enough. Mathematical investigation would be important here.
 
 The refraction algorithm does not handle compound lenses.
 
