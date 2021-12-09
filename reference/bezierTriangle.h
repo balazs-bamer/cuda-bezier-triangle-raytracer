@@ -64,9 +64,9 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 6u;
+  static constexpr uint32_t csRootSearchIterations                      = 4u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
-  static constexpr tReal    csRootSearchBiasFactor                      = 0.95f;
+  static constexpr tReal    csRootSearchBiasFactor                      = 1.0f;
   static constexpr tReal    csRootSearchApproximationEpsilon            = 1e-8f;
 
   using Vector             = ::Vector<tReal>;
@@ -365,7 +365,7 @@ std::cout << "bezier: "
   else {
     result.mWhat = BezierIntersection::What::cNone;
   }
-if(result.mWhat == BezierIntersection::What::cVeto && gOutput.size() > 0u) {
+if(/*result.mWhat == BezierIntersection::What::cVeto && */gOutput.size() > 0u) {
 auto name = std::string("output/triangle_") + std::to_string(++gCounter) + ".stl";
 gOutput.writeMesh(name);
 }
