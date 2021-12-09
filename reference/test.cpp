@@ -312,8 +312,8 @@ void testBezierRefraction(char const * const aName, int32_t const aSectors, int3
   rays.reserve(aCountV * aCountW);
   for(int32_t v = 0; v < aCountV; ++v) {
     for(int32_t w = 0; w < aCountW; ++w) {
-      auto sinV = ::sin(v * aDegreesV * cgPi<Real> / 180.0f);
-      auto sinW = ::sin(w * aDegreesW * cgPi<Real> / 180.0f);
+      auto sinV = ::sin((v * aDegreesV + 1.0f) * cgPi<Real> / 180.0f);
+      auto sinW = ::sin((w * aDegreesW + 1.0f) * cgPi<Real> / 180.0f);
       Ray<Real> ray({0.0f, 0.0f, 0.0f}, {::sqrt(1.0f - sinV * sinV - sinW * sinW), sinV, sinW});
       rays.push_back(ray);
     }
