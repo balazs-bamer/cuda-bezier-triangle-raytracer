@@ -64,7 +64,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 8u;
+  static constexpr uint32_t csRootSearchIterations                      = 10u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
   static constexpr tReal    csRootSearchBiasFactor                      = 1.0f;
   static constexpr tReal    csRootSearchApproximationEpsilon            = 1e-8f;
@@ -339,8 +339,7 @@ std::cout << "     search: " << (::abs(parameterFurther - inPlane.mDistance) / t
 std::cout << "distance "
     << std::setw(11) << std::setprecision(4) << result.mIntersection.mDistance << '\n';
         if(result.mIntersection.mDistance > 0.0f) {
-          result.mNormal = getNormal(result.mBarycentric);
-          result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal); // TODO find out where it should point
+          result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal);
         }
         else {
           result.mWhat = BezierIntersection::What::cNone;
@@ -416,16 +415,27 @@ std::cout << " signumCloser == signumFurther \n";
       pointOnRay = aRay.mStart + aRay.mDirection * middle;
       auto projectedRay = mUnderlyingPlane.project(pointOnRay) + bias;
       result.mBarycentric = mBarycentricInverse * projectedRay;
+      result.mNormal = getNormal(result.mBarycentric);
       result.mIntersection.mPoint = interpolate(result.mBarycentric);
-auto diff = aRay.getDistance(result.mIntersection.mPoint);
+auto x = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
+Vector adjustedIntersection = aRay.mStart + aRay.mDirection * x;
+Vector bias2 = adjustedIntersection - result.mIntersection.mPoint;
+auto diffRay = aRay.getDistance(result.mIntersection.mPoint);
+auto diffInt = (result.mIntersection.mPoint - adjustedIntersection).norm();
 std::cout << "  loop closer: "
-          << std::setw(16) << std::setprecision(8) << closer << " further: "
-          << std::setw(16) << std::setprecision(8) << further << " bias: "
-          << std::setw(16) << std::setprecision(8) << bias(0)
-          << std::setw(16) << std::setprecision(8) << bias(1)
-          << std::setw(16) << std::setprecision(8) << bias(2) << " diff: "
-          << std::setw(16) << std::setprecision(8) << diff << '\n';
-      bias = (projectedRay - mUnderlyingPlane.project(result.mIntersection.mPoint)) * csRootSearchBiasFactor; // This helps in rare cases of bias divergence to limit it
+          << std::setw(15) << std::setprecision(8) << closer << " further: "
+          << std::setw(15) << std::setprecision(8) << further << " x: "
+          << std::setw(15) << std::setprecision(8) << x /*<< " bias: "
+          << std::setw(15) << std::setprecision(8) << bias(0)
+          << std::setw(15) << std::setprecision(8) << bias(1)
+          << std::setw(15) << std::setprecision(8) << bias(2)*/ << " bias2: "
+          << std::setw(15) << std::setprecision(8) << bias2(0)
+          << std::setw(15) << std::setprecision(8) << bias2(1)
+          << std::setw(15) << std::setprecision(8) << bias2(2) << " diffRay: "
+          << std::setw(15) << std::setprecision(8) << diffRay << " diffInt: "
+          << std::setw(15) << std::setprecision(8) << diffInt << " diffDistRat: "
+          << std::setw(15) << std::setprecision(8) << mUnderlyingPlane.distance(adjustedIntersection)/mUnderlyingPlane.distance(result.mIntersection.mPoint) << '\n';
+      bias = (projectedRay - mUnderlyingPlane.project(adjustedIntersection * 1.0f + result.mIntersection.mPoint * 0.0f)) * csRootSearchBiasFactor; // This helps in rare cases of bias divergence to limit it
 getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);                      // while reducing overall precision.
       auto diffMiddle = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
 
@@ -470,10 +480,10 @@ std::cout << "what in\n";
 
 template<typename tReal>
 tReal BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
-std::cout << "POR: "
+/*std::cout << "POR: "
           << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnRay)) << " POS: "
           << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnSurface)) << " diff: "
-          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';
+          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';*/
   return ::copysign(1.0f, ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)));
 }
 
