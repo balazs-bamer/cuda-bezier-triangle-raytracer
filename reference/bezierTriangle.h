@@ -64,7 +64,7 @@ private:
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
   static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
-  static constexpr uint32_t csRootSearchIterations                      = 10u;
+  static constexpr uint32_t csRootSearchIterations                      = 4u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
 
   using Vector             = ::Vector<tReal>;
@@ -399,14 +399,16 @@ std::cout << " signumCloser == signumFurther \n";
   }
   else {
     tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
+    Vector projectionDirection = mUnderlyingPlane.mNormal;
     std::cout << '\n';
     for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
       result.mIntersection.mDistance = middle;
       pointOnRay = aRay.mStart + aRay.mDirection * middle;
-      auto projectedRay = mUnderlyingPlane.project(pointOnRay);
-      result.mBarycentric = mBarycentricInverse * projectedRay;
+      auto intersection = mUnderlyingPlane.intersect(pointOnRay, projectionDirection);
+      result.mBarycentric = mBarycentricInverse * intersection.mPoint;
       result.mNormal = getNormal(result.mBarycentric);
       result.mIntersection.mPoint = interpolate(result.mBarycentric);
+      projectionDirection = (result.mIntersection.mPoint - intersection.mPoint).normalized();
       middle = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
 auto diffRay = aRay.getDistance(result.mIntersection.mPoint);
 std::cout << "  loop closer: "

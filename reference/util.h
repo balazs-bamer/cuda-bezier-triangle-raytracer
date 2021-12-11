@@ -136,7 +136,8 @@ struct Plane final {
   static Plane         createFrom1vector2points(Vector<tReal> const &aDirection, Vertex<tReal> const &aPoint0, Vertex<tReal> const &aPoint1);
   static Plane         createFrom2vectors1point(Vertex<tReal> const &aDirection0, Vertex<tReal> const &aDirection1, Vertex<tReal> const &aPoint);
   static Vertex<tReal> intersect(Plane const &aPlane0, Plane const &aPlane1, Plane const &aPlane2);
-  Intersection<tReal>  intersect(Ray<tReal> const &aRay) const;
+  Intersection<tReal>  intersect(Vertex<tReal> const &aStart, Vector<tReal> const aDirection) const;
+  Intersection<tReal>  intersect(Ray<tReal> const &aRay) const { return intersect(aRay.mStart, aRay.mDirection); }
 
   // Point projection on this plane
   Vector<tReal>        project(Vector<tReal> const &aPoint) const { return aPoint - mNormal * (aPoint.dot(mNormal) - mConstant); }
@@ -313,13 +314,13 @@ Vertex<tReal> Plane<tReal>::intersect(Plane const &aPlane0, Plane const &aPlane1
 }
 
 template<typename tReal>
-Intersection<tReal> Plane<tReal>::intersect(Ray<tReal> const &aRay) const {
+Intersection<tReal>  Plane<tReal>::intersect(Vertex<tReal> const &aStart, Vector<tReal> const aDirection) const {
   Intersection<tReal> result;
-  result.mCosIncidence = aRay.mDirection.dot(mNormal);
+  result.mCosIncidence = aDirection.dot(mNormal);
   if(::abs(result.mCosIncidence) >= csRayPlaneIntersectionEpsilon) {
-    result.mDistance = (mConstant - mNormal.dot(aRay.mStart)) / result.mCosIncidence;
+    result.mDistance = (mConstant - mNormal.dot(aStart)) / result.mCosIncidence;
     result.mValid = true;
-    result.mPoint = aRay.mStart + result.mDistance * aRay.mDirection;
+    result.mPoint = aStart + result.mDistance * aDirection;
   }
   else {
     result.mValid = false;

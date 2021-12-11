@@ -397,10 +397,10 @@ int main(int argc, char **argv) {
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
   testBezierIntersection("7x3a", 7, 3, ellipsoidAxes, {1.0f, 0.05f, 0.02f});
-/*  testBezierIntersection("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
+  testBezierIntersection("7x3b", 7, 3, ellipsoidAxes, {1.0f, 0.05f, -0.022f});
   testBezierIntersection("9x4a", 9, 4, ellipsoidAxes, {1.0f, -0.03f, 0.035f});
   testBezierIntersection("9x4b", 9, 4, ellipsoidAxes, {1.0f, -0.03f, -0.045f});
-  visualizeFollowers("follow");*/
+/*  visualizeFollowers("follow");*/
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
   measureApproximation(0, 7, 3, ellipsoidAxes, 3);       // SplitSteps: 0 Sectors:  7 Belts:  3 Size: 1 4 2 Divisor: 3 error:   0.0022721614
