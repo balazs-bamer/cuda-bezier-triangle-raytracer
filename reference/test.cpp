@@ -220,7 +220,12 @@ void dump(BezierIntersection<Real> const aIntersection) {
 void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
   std::cout << aName << '\n';
   Mesh<Real> ellipsoid;
-  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+  auto func = [](Real const aX){
+    auto x2 = aX * aX;
+    auto x4 = x2 * x2;
+    return ::sqrt(1.0f - x4) - ::exp(-x2) * 2.0f + ::exp(-x4) * 2.0f;
+  };
+  ellipsoid.makeSolidOfRevolution(aSectors, aBelts, func, aSize);
 
   Mesh<Real> bullet;
   bullet.makeUnitSphere(5, 3);

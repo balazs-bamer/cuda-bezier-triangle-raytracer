@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -101,7 +102,9 @@ public:
 
   void writeMesh(std::string const &aFilename) const;
 
-  void makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Vector const &aSize);
+  /// aEnvelope is a C2 function in [-1, 1], with prefereably vertical tangents in -1 and 1.
+  void makeSolidOfRevolution(int32_t const aSectors, int32_t const aBelts, std::function<tReal(tReal)> aEnvelope, Vector const &aSize);
+  void makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Vector const &aSize) { makeSolidOfRevolution(aSectors, aBelts, [](tReal const aX){ return ::sqrt(1 - aX * aX); }, aSize); }
   void makeUnitSphere(int32_t const aSectors, int32_t const aBelts) { makeEllipsoid(aSectors, aBelts, Vector(1.0f, 1.0f, 1.0f)); }
 
 private:
@@ -593,7 +596,7 @@ void Mesh<tReal>::writeMesh(std::string const& aFilename) const {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename tReal>
-void Mesh<tReal>::makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Vector const &aSize) {
+void Mesh<tReal>::makeSolidOfRevolution(int32_t const aSectors, int32_t const aBelts, std::function<tReal(tReal)> aEnvelope, Vector const &aSize) {
   mMesh.clear();
   mMesh.reserve(static_cast<uint32_t>(2 * aSectors * aBelts));
   mFace2neighbours.clear();
@@ -605,8 +608,8 @@ void Mesh<tReal>::makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Ve
   tReal beltAngleMiddle = beltAngle;
   tReal beltAngleDown = 2.0f * beltAngle;
   tReal beltRadiusUp = 0.0f;
-  tReal beltRadiusMiddle = std::sin(beltAngleMiddle);
-  tReal beltRadiusDown = std::sin(beltAngleDown);
+  tReal beltRadiusMiddle = aSize(0) * aEnvelope(std::cos(beltAngleMiddle));
+  tReal beltRadiusDown = aSize(0) * aEnvelope(std::cos(beltAngleDown));
   tReal beltZup = aSize(2);
   tReal beltZmiddle = aSize(2) * std::cos(beltAngleMiddle);
   tReal beltZdown = aSize(2) * std::cos(beltAngleDown);
@@ -615,9 +618,9 @@ void Mesh<tReal>::makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Ve
     tReal sectorAngleMiddle1 = bias + 0.0f;
     tReal sectorAngleMiddle2 = bias + sectorAngleFull;
     for(int32_t sector = 0; sector < aSectors; ++sector) {
-      Vertex corner1(aSize(0) * beltRadiusUp * std::sin(sectorAngleUpDown), aSize(1) * beltRadiusUp * std::cos(sectorAngleUpDown), beltZup);
-      Vertex corner2(aSize(0) * beltRadiusMiddle * std::sin(sectorAngleMiddle1), aSize(1) * beltRadiusMiddle * std::cos(sectorAngleMiddle1), beltZmiddle);
-      Vertex corner3(aSize(0) * beltRadiusMiddle * std::sin(sectorAngleMiddle2), aSize(1) * beltRadiusMiddle * std::cos(sectorAngleMiddle2), beltZmiddle);
+      Vertex corner1(beltRadiusUp * std::sin(sectorAngleUpDown), aSize(1) * beltRadiusUp * std::cos(sectorAngleUpDown), beltZup);
+      Vertex corner2(beltRadiusMiddle * std::sin(sectorAngleMiddle1), aSize(1) * beltRadiusMiddle * std::cos(sectorAngleMiddle1), beltZmiddle);
+      Vertex corner3(beltRadiusMiddle * std::sin(sectorAngleMiddle2), aSize(1) * beltRadiusMiddle * std::cos(sectorAngleMiddle2), beltZmiddle);
       mMesh.push_back({corner1, corner2, corner3});
       corner1 = {aSize(0) * beltRadiusDown * std::sin(sectorAngleUpDown), aSize(1) * beltRadiusDown * std::cos(sectorAngleUpDown), beltZdown};
       mMesh.push_back({corner2, corner3, corner1});
@@ -630,7 +633,7 @@ void Mesh<tReal>::makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Ve
     beltAngleDown += beltAngle;
     beltRadiusUp = beltRadiusMiddle;
     beltRadiusMiddle = beltRadiusDown;
-    beltRadiusDown = std::sin(beltAngleDown);
+    beltRadiusDown = aSize(0) * aEnvelope(std::cos(beltAngleDown));
     beltZup = beltZmiddle;
     beltZmiddle = beltZdown;
     beltZdown = aSize(2) * std::cos(beltAngleDown);
