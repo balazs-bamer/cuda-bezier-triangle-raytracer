@@ -209,7 +209,11 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   std::cout << aName << '\n';
 
   Mesh<Real> ellipsoid;
-  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+  auto func = [](Real const aX){
+    auto x2 = aX * aX;
+    return ::sqrt(1.0f - x2) + 0.7f * (::exp(-4.0f) - ::exp(-4.0f * x2));
+  };
+  ellipsoid.makeSolidOfRevolution(aSectors, aBelts, func, aSize);
 
   Mesh<Real> bullet;
   bullet.makeUnitSphere(5, 3);
@@ -265,9 +269,6 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   BezierMesh<Real> bezier(ellipsoid);
   auto object = bezier.interpolate(5);
   std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
-  points.push_back(points.back() + ray.mDirection * 11.0f);
-
-  std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
 
   std::string name{"intersectionObject_"};
   name += aName;
@@ -284,13 +285,16 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   name += ".stl";
   intersections.writeMesh(cgBaseDir + name);
 
-  auto beam = visualizeRay(original, (points.back() - original.mStart).norm(), 0.02f);
+  if(!points.empty()) {
+    points.push_back(points.back() + ray.mDirection * 11.0f);
+    std::cout << "error: " << original.getAverageErrorSquared(points) << '\n';
+    auto beam = visualizeRay(original, (points.back() - original.mStart).norm(), 0.02f);
 
-  name = "intersectionRay_";
-  name += aName;
-  name += ".stl";
-  beam.writeMesh(cgBaseDir + name);
-
+    name = "intersectionRay_";
+    name += aName;
+    name += ".stl";
+    beam.writeMesh(cgBaseDir + name);
+  }
   std::cout << '\n';
 }
 
@@ -298,7 +302,11 @@ void testBezierRefraction(char const * const aName, int32_t const aSectors, int3
   std::cout << aName << '\n';
 
   Mesh<Real> ellipsoid;
-  ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
+  auto func = [](Real const aX){
+    auto x2 = aX * aX;
+    return ::sqrt(1.0f - x2) + 0.7f * (::exp(-4.0f) - ::exp(-4.0f * x2));
+  };
+  ellipsoid.makeSolidOfRevolution(aSectors, aBelts, func, aSize);
 
   Mesh<Real> bullet;
   bullet.makeUnitSphere(5, 3);
@@ -475,7 +483,7 @@ int main(int argc, char **argv) {
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
-  testBezierRefraction("15x5", 15, 5, ellipsoidAxes, 3.0f, 3.0f, 4, 4);
+  testBezierRefraction("21x15", 21, 15, ellipsoidAxes, 3.0f, 3.0f, 4, 4);
 //  visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894

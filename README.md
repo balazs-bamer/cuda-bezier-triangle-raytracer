@@ -97,20 +97,20 @@ First I check the intersection with the underlying planar triangle, and if it in
 
 I determine whether the inside or the outside case is closer to the ray start point, and calculate first the intersection with the closer one. If there is none, I take the further one. For either case, I pass two of the above distance extremes which are parameters of a modified binary search.
 
-For any case, the intersection calculation is performed in a fixed number of iterations, currently 4. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change magnitude" along the ray in the given interval. If so, the following binary search yields the result:
-1. Set bias = (0, 0, 0) 3D Cartesian vector.
-2. Project the candidate (middle) point of the ray to the underlying plane. This is done by linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the extremes. TODO figure. Translate it with the bias (see later why).
-3. Calculate its barycentric coordinates.
-4. Use these to calculate the corresponding surface point.
-5. Project it back to the underlying plane. This is needed, because the projection is in general different from that we started from.
-6. Set bias = last ray point projection - surface point projection.
-7. Goto 2 when there is iteration left.
+For any case, the intersection calculation is performed in a fixed number of iterations, currently 4. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change magnitude" along the ray in the given interval. If so, the following iteration yields the result:
+1. Set starting point the linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the extremes. This is a point on the ray. TODO figure.
+2. Set the initial projection direction to the underlying triangle normal.
+3. Project the candidate point on ray to the underlying plane in the projection direction. TODO figure.
+4. Calculate its barycentric coordinates.
+5. Use these to calculate the corresponding surface point and surface normal.
+6. Take the plane in the surface point perpendicular to the surface normal and intersect it with the ray to get the next ray point to start from.
+7. Goto 3 when there is iteration left.
 
-This process, including the direction and magnitude of the bias almost always converges. In fact, applying the bias makes this pretty fast. However, in rare cases the bias varies chaotically during the iterations. The result will be more or less still accurate, but this case would need investigation.
+This process practically always converges, although I don't have a proof.
 
 When ready, it is important to check if the intersection is within the domain of the current Bézier triangle. If not, the intersection would be more accurate when calculated on the appropriate neighbouring triangle. To enable this, in this case I return the side index to be considered for a similar calculation process for the neighbouring triangle. Since its planar intersection will definitely be outside the underlying triangle, I omit that check to let the function finish. TODO figures.
 
-Following from the algorithm, the intersection point will lie exactly on the Bézier surface. The relative accuracy of the intersection (so the distance of the intersection point from the ray, normalized by the shape size) is usually **0.00025**, but in the rare cases of bias divergence it can be as high as **0.03**.
+Following from the algorithm, the intersection point will lie exactly on the Bézier surface. The relative accuracy of the intersection (so the distance of the intersection point from the ray, normalized by the shape size) is usually **3e-6**, but in the rare cases of bias divergence it can be as high as **2e-4**.
 
 #### BezierTriangle::getNormal
 
@@ -157,13 +157,11 @@ There are general error limits for surface approximation using Bézier triangles
 
 #### Shortcomings
 
-In theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice apart of ellipsoids, I have tried the algorithm only with a fairly complicated machine part STL. It caused numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges. Such shapes are not quite practical for photographic image rendering.
+In theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice I've tried some concave bodies, and the ones with small face angles (< 90-120 degrees, depending on the situation) cause numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges.
 
-I have tested and adjusted algorithm parameters so far only with ellipsoids. TODO later construct some more complicated shapes, including concave ones.
+The intersection algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees). This could be fixed with some shallow recursion, but I leave it yet.
 
-The intersection algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees).
-
-The relative accuracy of the intersection is not good enough. Mathematical investigation would be important here.
+The convergence in intersection algorithm lacks mathematical proof.
 
 The refraction algorithm does not handle compound lenses.
 
