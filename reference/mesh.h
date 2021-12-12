@@ -102,7 +102,7 @@ public:
 
   void writeMesh(std::string const &aFilename) const;
 
-  /// aEnvelope is a C2 function in [-1, 1], with prefereably vertical tangents in -1 and 1.
+  /// aEnvelope is a C2 function in [-1, 1], with prefereably vertical tangents in -1 and 1 and values of 0 in -1 and 1.
   void makeSolidOfRevolution(int32_t const aSectors, int32_t const aBelts, std::function<tReal(tReal)> aEnvelope, Vector const &aSize);
   void makeEllipsoid(int32_t const aSectors, int32_t const aBelts, Vector const &aSize) { makeSolidOfRevolution(aSectors, aBelts, [](tReal const aX){ return ::sqrt(1 - aX * aX); }, aSize); }
   void makeUnitSphere(int32_t const aSectors, int32_t const aBelts) { makeEllipsoid(aSectors, aBelts, Vector(1.0f, 1.0f, 1.0f)); }
