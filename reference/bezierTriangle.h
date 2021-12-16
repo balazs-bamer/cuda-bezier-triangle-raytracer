@@ -9,7 +9,7 @@
 
 template<typename tReal>
 struct BezierIntersection final {
-  enum class What : uint8_t {
+  enum class What : uint32_t {
     cFollowSide0 = 0u,
     cFollowSide1 = 1u,
     cFollowSide2 = 2u,
@@ -28,7 +28,7 @@ template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
   friend void visualizeFollowers(char const * const aName);    // TODO remove
 public:
-  enum class LimitPlaneIntersection : uint8_t {
+  enum class LimitPlaneIntersection : uint32_t {
     cThis = 0u,
     cNone = 1u
   };
@@ -121,7 +121,13 @@ public:
   BezierIntersection intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const;
 
 private:
-  void getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const;
+void getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
+  std::cout << "POR: "
+          << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnRay)) << " POS: "
+          << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnSurface)) << " diff: "
+          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';
+}
+
   Vector getNormal(Vector const &aBarycentric) const;
 };
 
@@ -347,6 +353,8 @@ std::cout << "  loop closer: "
           << std::setw(15) << std::setprecision(8) << result.mIntersection.mDistance << " minDist: "
           << std::setw(15) << std::setprecision(8) << (further - closer) * csMinimalRayDistance << "\n";
       }
+std::cout << "distance "
+    << std::setw(11) << std::setprecision(4) << result.mIntersection.mDistance << '\n';
       if(aRay.getDistance(result.mIntersection.mPoint) > csMaxIntersectionDistanceFromRay || result.mIntersection.mDistance < (further - closer) * csMinimalRayDistance) {
         result.mWhat = BezierIntersection::What::cNone;
 std::cout << "too off\n";
@@ -376,19 +384,8 @@ std::cout << "what in\n";
         }
         else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
           result.mWhat = BezierIntersection::What::cIntersect;
-        }
-      }
-      if(result.mWhat == BezierIntersection::What::cIntersect) {
-std::cout << "distance "
-    << std::setw(11) << std::setprecision(4) << result.mIntersection.mDistance << '\n';
-        if(result.mIntersection.mDistance > 0.0f) {
           result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal);
         }
-        else {
-          result.mWhat = BezierIntersection::What::cNone;
-        }
-      }
-      else { // Nothing to do
       }
 std::cout << "bezier: "
     << std::setw(11) << std::setprecision(4) << result.mIntersection.mPoint(0)
@@ -412,14 +409,6 @@ auto name = std::string("output/triangle_") + std::to_string(++gCounter) + ".stl
 gOutput.writeMesh(name);
 }
   return result;
-}
-
-template<typename tReal>
-void BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
-std::cout << "POR: "
-          << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnRay)) << " POS: "
-          << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnSurface)) << " diff: "
-          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';
 }
 
 template<typename tReal>

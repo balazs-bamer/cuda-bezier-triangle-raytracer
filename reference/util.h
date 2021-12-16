@@ -91,6 +91,7 @@ struct Ray final {
   Vertex<tReal> mStart;
   Vector<tReal> mDirection; // normalized
 
+  Ray() = default;
   Ray(Vertex<tReal> const &aStart, Vector<tReal> const &aDirection)
   : mStart(aStart)
   , mDirection(aDirection.normalized()) {}
@@ -114,7 +115,7 @@ template<typename tReal>
 struct Intersection final {
   bool          mValid;         // Will be true even if distance < 0, because it can be important.
   Vertex<tReal> mPoint;
-  tReal         mCosIncidence;
+  tReal         mCosIncidence;  // Negative if the ray comes from outside, so the surface normal and the ray point in opposite direction.
   tReal         mDistance;      // Distance of ray source point and intersection point.
 };
 
