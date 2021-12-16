@@ -63,9 +63,10 @@ private:
   static constexpr tReal    csProportionControlOnOriginalMedian         = 0.2f;
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
-  static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
   static constexpr uint32_t csRootSearchIterations                      = 4u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
+  static constexpr tReal    csMaxIntersectionDistanceFromRay            = 0.01f;
+  static constexpr tReal    csMinimalRayDistance                        = 1.0f;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -120,8 +121,7 @@ public:
   BezierIntersection intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const;
 
 private:
-  BezierIntersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
-  tReal getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const;
+  void getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const;
   Vector getNormal(Vector const &aBarycentric) const;
 };
 
@@ -258,12 +258,14 @@ extern bool gShouldDump;
 int gCounter = 0;
 Mesh<float> gOutput;
 
+extern std::deque<BezierTriangle<float>> gFollowers; // TODO remove
+
 template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
 gOutput.clear();
   auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
-  if(inPlane.mValid && inPlane.mDistance > mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
+  if(inPlane.mValid && inPlane.mDistance > -mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
     if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
@@ -296,42 +298,85 @@ std::cout << " CosInc: "
           << std::setw(11) << std::setprecision(4) << inPlane.mCosIncidence << " inside: "
           << std::setw(11) << std::setprecision(4) << mHeightInside << " outside: "
           << std::setw(11) << std::setprecision(4) << mHeightOutside << "\n";
-      tReal parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
-      tReal parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
-std::cout << "parameterCloser: " << (inPlane.mCosIncidence > 0.0f ? "distanceInside\n" : "distanceOutside\n");
-std::cout << "parameterFurther: " << (inPlane.mCosIncidence > 0.0f ? "distanceOutside\n" : "distanceInside\n");
+      tReal closer = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
+      tReal further = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
+std::cout << "parameterCloser: " << (inPlane.mCosIncidence > 0.0f ? "distanceInside " : "distanceOutside ") << std::setprecision(8) << closer << '\n';
+std::cout << "parameterFurther: " << (inPlane.mCosIncidence > 0.0f ? "distanceOutside " : "distanceInside ") << std::setprecision(8) << further << '\n';
 Mesh<tReal> bullet;
 bullet.makeUnitSphere(3, 1);
 bullet *= factor / 4.0f;
 auto copy = bullet;
-copy += aRay.mStart + aRay.mDirection * parameterCloser;
+copy += aRay.mStart + aRay.mDirection * closer;
 std::copy(copy.cbegin(), copy.cend(), std::back_inserter(gOutput));
 copy = bullet;
-copy += aRay.mStart + aRay.mDirection * parameterFurther;
+copy += aRay.mStart + aRay.mDirection * further;
 std::copy(copy.cbegin(), copy.cend(), std::back_inserter(gOutput));
-      auto totalInterestingRange = parameterFurther - parameterCloser;
-std::cout << " closer: "
-          << std::setw(16) << std::setprecision(8) << parameterCloser << " inPlane: "
-          << std::setw(16) << std::setprecision(8) << inPlane.mDistance << " further: "
-          << std::setw(16) << std::setprecision(8) << parameterFurther << " total:"
-          << std::setw(16) << std::setprecision(8) << totalInterestingRange << "\n";
-      if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
-std::cout << " paraCloser: " << std::setw(16) << std::setprecision(8) << parameterCloser <<
-             " inPlane: " << std::setw(16) << std::setprecision(8) << inPlane.mDistance << '\n';
-        result = intersect(aRay, parameterCloser, inPlane.mDistance);
+
+      Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
+      Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+std::cout << "closer:  ";
+getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
+      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
+
+      pointOnRay = aRay.mStart + aRay.mDirection * further;
+      result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      result.mIntersection.mPoint = interpolate(result.mBarycentric);
+std::cout << "further: ";
+getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
+      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
+      result.mIntersection.mDistance = further;
+
+      tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
+      Vector projectionDirection = mUnderlyingPlane.mNormal;
+std::cout << '\n';
+      for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
+        result.mIntersection.mDistance = middle;
+        pointOnRay = aRay.mStart + aRay.mDirection * middle;
+        auto intersection = mUnderlyingPlane.intersect(pointOnRay, projectionDirection);
+        result.mBarycentric = mBarycentricInverse * intersection.mPoint;
+        result.mNormal = getNormal(result.mBarycentric);
+        result.mIntersection.mPoint = interpolate(result.mBarycentric);
+        projectionDirection = (result.mIntersection.mPoint - intersection.mPoint).normalized();
+        middle = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
+auto diffRay = aRay.getDistance(result.mIntersection.mPoint);
+std::cout << "  loop closer: "
+          << std::setw(15) << std::setprecision(8) << closer << " further: "
+          << std::setw(15) << std::setprecision(8) << further << " middle: "
+          << std::setw(15) << std::setprecision(8) << middle << " diffRay: "
+          << std::setw(15) << std::setprecision(8) << diffRay << " dist: "
+          << std::setw(15) << std::setprecision(8) << result.mIntersection.mDistance << " minDist: "
+          << std::setw(15) << std::setprecision(8) << (further - closer) * csMinimalRayDistance << "\n";
+      }
+      if(aRay.getDistance(result.mIntersection.mPoint) > csMaxIntersectionDistanceFromRay || result.mIntersection.mDistance < (further - closer) * csMinimalRayDistance) {
+        result.mWhat = BezierIntersection::What::cNone;
+std::cout << "too off\n";
       }
       else {
-        result.mWhat = BezierIntersection::What::cNone;
-std::cout << "     search: " << (::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange) << "     imposs: " << csRootSearchImpossibleFactor << '\n';
-      }
-std::cout << "========================\n";
-      if((result.mWhat == BezierIntersection::What::cNone || result.mWhat == BezierIntersection::What::cVeto) && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
-std::cout << " inPlane: " << std::setw(16) << std::setprecision(8) << inPlane.mDistance <<
-             " paraFurther: " << std::setw(16) << std::setprecision(8) << parameterFurther << '\n';
-        result = intersect(aRay, inPlane.mDistance, parameterFurther);
-      }
-      else { // nothing to do
-std::cout << "     search: " << (::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange) << "     imposs: " << csRootSearchImpossibleFactor << '\n';
+std::cout << " neigh: "
+      << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint)
+      << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint)
+      << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) << '\n';
+        uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
+        outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
+        outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
+        if(outside == 1u) {
+gFollowers.push_back(*this);
+std::cout << "what in\n";
+          result.mWhat = BezierIntersection::What::cFollowSide0;
+        }
+        else if(outside == 2u) {
+gFollowers.push_back(*this);
+std::cout << "what in\n";
+          result.mWhat = BezierIntersection::What::cFollowSide1;
+        }
+        else if(outside == 4u) {
+gFollowers.push_back(*this);
+std::cout << "what in\n";
+          result.mWhat = BezierIntersection::What::cFollowSide2;
+        }
+        else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
+          result.mWhat = BezierIntersection::What::cIntersect;
+        }
       }
       if(result.mWhat == BezierIntersection::What::cIntersect) {
 std::cout << "distance "
@@ -369,91 +414,12 @@ gOutput.writeMesh(name);
   return result;
 }
 
-extern std::deque<BezierTriangle<float>> gFollowers; // TODO remove
-
 template<typename tReal>
-BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const {
-  BezierIntersection result;
-  auto closer = aParameterCloser;
-  auto further = aParameterFurther;
-
-  Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
-  Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-std::cout << "closer:  ";
-getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
-  auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
-
-  pointOnRay = aRay.mStart + aRay.mDirection * further;
-  result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-  result.mIntersection.mPoint = interpolate(result.mBarycentric);
-std::cout << "further: ";
-getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
-  auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
-  result.mIntersection.mDistance = further;
-
-  if(diffCloser * diffFurther >= 0.0f) {
-    result.mWhat = BezierIntersection::What::cVeto;   // TODO add more sophisticated solution.
-                                                      // Now this veto cancels the whole mesh intersection where the current simpler solution would be uncertain.
-                                                      // This happens only for large incidence angles, so neglecting these is moderately a limitation for real use cases.
-std::cout << " signumCloser == signumFurther \n";
-  }
-  else {
-    tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
-    Vector projectionDirection = mUnderlyingPlane.mNormal;
-    std::cout << '\n';
-    for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
-      result.mIntersection.mDistance = middle;
-      pointOnRay = aRay.mStart + aRay.mDirection * middle;
-      auto intersection = mUnderlyingPlane.intersect(pointOnRay, projectionDirection);
-      result.mBarycentric = mBarycentricInverse * intersection.mPoint;
-      result.mNormal = getNormal(result.mBarycentric);
-      result.mIntersection.mPoint = interpolate(result.mBarycentric);
-      projectionDirection = (result.mIntersection.mPoint - intersection.mPoint).normalized();
-      middle = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
-auto diffRay = aRay.getDistance(result.mIntersection.mPoint);
-std::cout << "  loop closer: "
-          << std::setw(15) << std::setprecision(8) << closer << " further: "
-          << std::setw(15) << std::setprecision(8) << further << " middle: "
-          << std::setw(15) << std::setprecision(8) << middle << " diffRay: "
-          << std::setw(15) << std::setprecision(8) << diffRay << "\n";
-    }
-
-std::cout << " neigh: "
-    << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint)
-    << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint)
-    << std::setw(11) << std::setprecision(4) << mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) << '\n';
-    uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
-    outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
-    outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
-    if(outside == 1u) {
-gFollowers.push_back(*this);
-std::cout << "what in\n";
-      result.mWhat = BezierIntersection::What::cFollowSide0;
-    }
-    else if(outside == 2u) {
-gFollowers.push_back(*this);
-std::cout << "what in\n";
-      result.mWhat = BezierIntersection::What::cFollowSide1;
-    }
-    else if(outside == 4u) {
-gFollowers.push_back(*this);
-std::cout << "what in\n";
-      result.mWhat = BezierIntersection::What::cFollowSide2;
-    }
-    else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
-      result.mWhat = BezierIntersection::What::cIntersect;
-    }
-  }
-  return result;
-}
-
-template<typename tReal>
-tReal BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
-/*std::cout << "POR: "
+void BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
+std::cout << "POR: "
           << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnRay)) << " POS: "
           << std::setw(16) << std::setprecision(8) << (mUnderlyingPlane.distance(aPointOnSurface)) << " diff: "
-          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';*/
-  return ::copysign(1.0f, ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)));
+          << ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)) << '\n';
 }
 
 template<typename tReal>
