@@ -58,9 +58,10 @@ private:
   static constexpr tReal    csProportionControlOnOriginalMedian         = 0.2f;
   static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
   static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
-  static constexpr tReal    csRootSearchImpossibleFactor                = 0.03f;
   static constexpr uint32_t csRootSearchIterations                      = 4u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
+  static constexpr tReal    csMaxIntersectionDistanceFromRay            = 0.01f;
+  static constexpr tReal    csMinimalRayDistance                        = 1.0f;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -115,8 +116,6 @@ public:
   BezierIntersection intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const;
 
 private:
-  BezierIntersection intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const;
-  tReal getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const;
   Vector getNormal(Vector const &aBarycentric) const;
 };
 
@@ -251,39 +250,61 @@ Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const
 
 template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
-  auto const inPlane = mUnderlyingPlane.intersect(aRay);
+  auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
-  if(inPlane.mValid && inPlane.mDistance > mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
+  if(inPlane.mValid && inPlane.mDistance > -mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
     if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
         barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
         barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
-      auto const distanceInside = mHeightInside / inPlane.mCosIncidence;
-      auto const distanceOutside = mHeightOutside / inPlane.mCosIncidence;
-      tReal const parameterCloser = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
-      tReal const parameterFurther = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
-      auto const totalInterestingRange = parameterFurther - parameterCloser;
-      if(::abs(inPlane.mDistance - parameterCloser) / totalInterestingRange > csRootSearchImpossibleFactor) {    // Worth to search the closer half first
-        result = intersect(aRay, parameterCloser, inPlane.mDistance);
+      auto distanceInside = mHeightInside / inPlane.mCosIncidence;
+      auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
+      tReal closer = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
+      tReal further = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
+
+      Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
+      Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
+
+      pointOnRay = aRay.mStart + aRay.mDirection * further;
+      result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      result.mIntersection.mPoint = interpolate(result.mBarycentric);
+      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
+      result.mIntersection.mDistance = further;
+
+      tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
+      Vector projectionDirection = mUnderlyingPlane.mNormal;
+      for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
+        result.mIntersection.mDistance = middle;
+        pointOnRay = aRay.mStart + aRay.mDirection * middle;
+        auto intersection = mUnderlyingPlane.intersect(pointOnRay, projectionDirection);
+        result.mBarycentric = mBarycentricInverse * intersection.mPoint;
+        result.mNormal = getNormal(result.mBarycentric);
+        result.mIntersection.mPoint = interpolate(result.mBarycentric);
+        projectionDirection = (result.mIntersection.mPoint - intersection.mPoint).normalized();
+        middle = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
       }
-      else {
+      if(aRay.getDistance(result.mIntersection.mPoint) > csMaxIntersectionDistanceFromRay || result.mIntersection.mDistance < (further - closer) * csMinimalRayDistance) {
         result.mWhat = BezierIntersection::What::cNone;
       }
-      if((result.mWhat == BezierIntersection::What::cNone || result.mWhat == BezierIntersection::What::cVeto) && ::abs(parameterFurther - inPlane.mDistance) / totalInterestingRange > csRootSearchImpossibleFactor) {
-        result = intersect(aRay, inPlane.mDistance, parameterFurther);
-      }
-      else { // nothing to do
-      }
-      if(result.mWhat == BezierIntersection::What::cIntersect) {
-        if(result.mIntersection.mDistance > 0.0f) {
+      else {
+        uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
+        outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
+        outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
+        if(outside == 1u) {
+          result.mWhat = BezierIntersection::What::cFollowSide0;
+        }
+        else if(outside == 2u) {
+          result.mWhat = BezierIntersection::What::cFollowSide1;
+        }
+        else if(outside == 4u) {
+          result.mWhat = BezierIntersection::What::cFollowSide2;
+        }
+        else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
+          result.mWhat = BezierIntersection::What::cIntersect;
           result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal);
         }
-        else {
-          result.mWhat = BezierIntersection::What::cNone;
-        }
-      }
-      else { // Nothing to do
       }
     }
     else {
@@ -294,65 +315,6 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
     result.mWhat = BezierIntersection::What::cNone;
   }
   return result;
-}
-
-template<typename tReal>
-BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, tReal const aParameterCloser, tReal const aParameterFurther) const {
-  BezierIntersection result;
-  auto closer = aParameterCloser;
-  auto further = aParameterFurther;
-
-  Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
-  Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-  auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
-
-  pointOnRay = aRay.mStart + aRay.mDirection * further;
-  result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-  result.mIntersection.mPoint = interpolate(result.mBarycentric);
-  auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
-  result.mIntersection.mDistance = further;
-
-  if(diffCloser * diffFurther >= 0.0f) {
-    result.mWhat = BezierIntersection::What::cVeto;   // TODO add more sophisticated solution.
-                                                      // Now this veto cancels the whole mesh intersection where the current simpler solution would be uncertain.
-                                                      // This happens only for large incidence angles, so neglecting these is moderately a limitation for real use cases.
-  }
-  else {
-    tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
-    Vector projectionDirection = mUnderlyingPlane.mNormal;
-    for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
-      result.mIntersection.mDistance = middle;
-      pointOnRay = aRay.mStart + aRay.mDirection * middle;
-      auto intersection = mUnderlyingPlane.intersect(pointOnRay, projectionDirection);
-      result.mBarycentric = mBarycentricInverse * intersection.mPoint;
-      result.mNormal = getNormal(result.mBarycentric);
-      result.mIntersection.mPoint = interpolate(result.mBarycentric);
-      projectionDirection = (result.mIntersection.mPoint - intersection.mPoint).normalized();
-      middle = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
-    }
-
-    uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
-    outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
-    outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
-    if(outside == 1u) {
-      result.mWhat = BezierIntersection::What::cFollowSide0;
-    }
-    else if(outside == 2u) {
-      result.mWhat = BezierIntersection::What::cFollowSide1;
-    }
-    else if(outside == 4u) {
-      result.mWhat = BezierIntersection::What::cFollowSide2;
-    }
-    else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
-      result.mWhat = BezierIntersection::What::cIntersect;
-    }
-  }
-  return result;
-}
-
-template<typename tReal>
-tReal BezierTriangle<tReal>::getSignumBarySurface(Vector const &aPointOnRay, Vector const &aPointOnSurface) const {
-  return ::copysign(1.0f, ::abs(mUnderlyingPlane.distance(aPointOnRay)) - ::abs(mUnderlyingPlane.distance(aPointOnSurface)));
 }
 
 template<typename tReal>
