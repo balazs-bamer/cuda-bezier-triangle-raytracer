@@ -65,6 +65,7 @@ private:
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
   static constexpr tReal    csMaxIntersectionDistanceFromRay            = 0.01f;
   static constexpr tReal    csMinimalRayDistance                        = 1.0f;
+  static constexpr tReal    csIntersectionEstimationEpsilon             = 0.000001f;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -328,7 +329,14 @@ getSignumBarySurface(pointOnRay, interpolate(barycentric));
 std::cout << "further: ";
 getSignumBarySurface(pointOnRay, interpolate(barycentric));
 
-      tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
+      tReal middle;
+      auto denom = diffCloser - diffFurther;
+      if(::abs(denom) < csIntersectionEstimationEpsilon) {
+        middle = (closer + further) / 2.0f;
+      }
+      else {
+        middle = (diffCloser * further - diffFurther * closer) / denom;
+      }
       Vector projectionDirection = mUnderlyingPlane.mNormal;
 std::cout << '\n';
       for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
