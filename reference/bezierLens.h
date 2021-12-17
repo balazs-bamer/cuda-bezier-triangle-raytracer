@@ -31,7 +31,7 @@ public:
   BezierLens(tReal const aRi, BezierMesh<tReal> && aMesh)      : mRefractiveIndex(aRi), mMesh(std::move(aMesh)) {}
 
   // bool indicates wether the ray is inside the lens AFTER refraction
-  std::pair<Ray, RefractionResult> refract(Ray const &aRay) const;
+  std::pair<Ray, RefractionResult> refract(Ray const &aRay, RefractionResult const aExpected) const;
 };
 
 /////////////////////////////////
@@ -40,7 +40,7 @@ public:
 
 // The ray either is refracted, or gets lost (if misses the lens or suffers total reflection).
 template<typename tReal>
-std::pair<Ray<tReal>, RefractionResult> BezierLens<tReal>::refract(Ray const &aRay) const {
+std::pair<Ray<tReal>, RefractionResult> BezierLens<tReal>::refract(Ray const &aRay, RefractionResult const aExpected) const {
   Ray result;
   RefractionResult statusLater;
   auto const intersect = mMesh.intersect(aRay);
@@ -68,6 +68,7 @@ std::pair<Ray<tReal>, RefractionResult> BezierLens<tReal>::refract(Ray const &aR
   else {
     statusLater = RefractionResult::cNone;
   }
+  statusLater = (statusLater == aExpected ? statusLater : RefractionResult::cNone);
   return std::make_pair(result, statusLater);
 }
 

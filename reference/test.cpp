@@ -318,19 +318,23 @@ void testBezierRefraction(char const * const aName, int32_t const aSectors, int3
 
   std::vector<Ray<Real>> rays;
   rays.reserve(aCountV * aCountW);
+  std::vector<bool> valids;
+  valids.reserve(aCountV * aCountW);
   for(int32_t v = 0; v < aCountV; ++v) {
     for(int32_t w = 0; w < aCountW; ++w) {
       auto sinV = ::sin((v * aDegreesV + 1.0f) * cgPi<Real> / 180.0f);
       auto sinW = ::sin((w * aDegreesW + 1.0f) * cgPi<Real> / 180.0f);
       Ray<Real> ray({0.0f, 0.0f, 0.0f}, {::sqrt(1.0f - sinV * sinV - sinW * sinW), sinV, sinW});
       rays.push_back(ray);
+      valids.push_back(true);
     }
   }
   Vector<Real> displacement{10.0f, 0.0f, 0.0f};
 
   auto previouses = rays;
   std::vector<Vertex<Real>> points;
-  for(int i = 0; i < 10; ++i) {
+  uint32_t count = rays.size();
+  for(int i = 0; i < 10 && count > 0u; ++i) {
     ellipsoid += displacement;                    // We start from outside.
     ellipsoid.standardizeVertices();
     ellipsoid.standardizeNormals();
@@ -339,40 +343,31 @@ void testBezierRefraction(char const * const aName, int32_t const aSectors, int3
     auto object = bezier.interpolate(5);
     std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
 
-    BezierLens<Real> lens(1.5f, bezier);
-    for(uint32_t r = 0u; r < rays.size(); ++r) {
-      RefractionResult status;
-      std::tie(rays[r], status) = lens.refract(rays[r]);
+    BezierLens<Real> lens(1.3f, bezier);
+    for(uint32_t j = 0u; j < 2u; ++j) {
+      for(uint32_t r = 0u; r < rays.size(); ++r) {
+        if(valids[r]) {
+          RefractionResult status;
+          std::tie(rays[r], status) = lens.refract(rays[r], j == 0u ? RefractionResult::cInside : RefractionResult::cOutside);
+          if(status != RefractionResult::cNone) {
+            auto copy = bullet;
+            copy += rays[r].mStart;
+            std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
-      if(status != RefractionResult::cNone) {
-        auto copy = bullet;
-        copy += rays[r].mStart;
-        std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
-
-        auto beam = visualizeRay(previouses[r], (rays[r].mStart - previouses[r].mStart).norm(), 0.02f);
-        std::copy(beam.cbegin(), beam.cend(), std::back_inserter(beams));
-        previouses[r] = rays[r];
+            auto beam = visualizeRay(previouses[r], (rays[r].mStart - previouses[r].mStart).norm(), 0.02f);
+            std::copy(beam.cbegin(), beam.cend(), std::back_inserter(beams));
+            previouses[r] = rays[r];
+std::cout << r << (status == RefractionResult::cInside ? " inside\n" : " outside\n");
+          }
+          else {
+            valids[r] = false;
+            --count;
+std::cout << r << " terminated\n";
+          }
+        }
+        else {} // Nothing to do
       }
-      else {
-        rays[r] = previouses[r];
-      }
-    }
-    for(uint32_t r = 0u; r < rays.size(); ++r) {
-      RefractionResult status;
-      std::tie(rays[r], status) = lens.refract(rays[r]);
-
-      if(status != RefractionResult::cNone) {
-        auto copy = bullet;
-        copy += rays[r].mStart;
-        std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
-
-        auto beam = visualizeRay(previouses[r], (rays[r].mStart - previouses[r].mStart).norm(), 0.02f);
-        std::copy(beam.cbegin(), beam.cend(), std::back_inserter(beams));
-        previouses[r] = rays[r];
-      }
-      else {
-        rays[r] = previouses[r];
-      }
+std::cout << (j ? "================\n" : "------------------\n");
     }
   }
   for(uint32_t r = 0u; r < rays.size(); ++r) {

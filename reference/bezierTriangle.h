@@ -10,8 +10,7 @@ struct BezierIntersection final {
     cFollowSide1 = 1u,
     cFollowSide2 = 2u,
     cNone        = 3u,
-    cVeto        = 4u,  // This result vetos any other triangle's intersection.
-    cIntersect   = 5u
+    cIntersect   = 4u
   };
 
   Intersection<tReal> mIntersection;
@@ -27,7 +26,6 @@ public:
     cThis = 0u,
     cNone = 1u
   };
-  static constexpr std::array<tReal, 3u>   csSampleRatiosOriginalSide = { 0.25f, 0.5f, 0.75f };
 
   static constexpr uint32_t csControlPointsSize                       = 10u;
 private:
@@ -264,14 +262,12 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
       tReal further = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
 
       Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
-      Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
+      Vertex barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
 
       pointOnRay = aRay.mStart + aRay.mDirection * further;
-      result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-      result.mIntersection.mPoint = interpolate(result.mBarycentric);
-      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
-      result.mIntersection.mDistance = further;
+      barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
 
       tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
       Vector projectionDirection = mUnderlyingPlane.mNormal;
