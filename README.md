@@ -91,14 +91,11 @@ The class contains some precomputed values useful for intersection calculations,
 Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
 
 First I check the intersection with the underlying planar triangle, and if it intersects, calculate the lengths along the ray measured from its starting points
-* to the planar intersection
 * to the maximum possible surface point outside
 * to the minimum possible surface point inside - these two come from the maximum distances inside and outside and the incidence to the underlying plane.
 
-I determine whether the inside or the outside case is closer to the ray start point, and calculate first the intersection with the closer one. If there is none, I take the further one. For either case, I pass two of the above distance extremes which are parameters of a modified binary search.
-
-For any case, the intersection calculation is performed in a fixed number of iterations, currently 4. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change magnitude" along the ray in the given interval. If so, the following iteration yields the result:
-1. Set starting point the linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the extremes. This is a point on the ray. TODO figure.
+The intersection calculation is performed in a fixed number of iterations, currently 4. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change sign" along the ray in the given interval. If so, the following iteration yields the result:
+1. Set starting point the linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the extremes. This is a point on the ray. If the point would fall too far away or division by zero would occur, I take the interval midpoint. TODO figure.
 2. Set the initial projection direction to the underlying triangle normal.
 3. Project the candidate point on ray to the underlying plane in the projection direction. TODO figure.
 4. Calculate its barycentric coordinates.
@@ -106,7 +103,7 @@ For any case, the intersection calculation is performed in a fixed number of ite
 6. Take the plane in the surface point perpendicular to the surface normal and intersect it with the ray to get the next ray point to start from.
 7. Goto 3 when there is iteration left.
 
-This process practically always converges, although I don't have a proof.
+This process practically always converges, if the above sign change occurs, although I don't have a proof. If the sign does not changes, the resulting surface point will lie off the ray, which is a sign of no intersection.
 
 When ready, it is important to check if the intersection is within the domain of the current Bézier triangle. If not, the intersection would be more accurate when calculated on the appropriate neighbouring triangle. To enable this, in this case I return the side index to be considered for a similar calculation process for the neighbouring triangle. Since its planar intersection will definitely be outside the underlying triangle, I omit that check to let the function finish. TODO figures.
 
@@ -145,7 +142,7 @@ This is now only a simple brute-force search for the intersection giving the sho
 
 #### BezierLens::refract
 
-This is a simple implementation using relative indices of refraction according to [[4]](#4). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
+This is a simple implementation using relative indices of refraction according to [[4]](#4). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. To avoid uncertain intersections with large angles of incidence, the method accepts the expected "place" of ray (inside or outside). Should the intersection result be different, the method interpets it as no intersection. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
 - the surface approximation using the Bézier triangle mesh
 - the intersection precision.
 
