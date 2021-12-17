@@ -60,6 +60,7 @@ private:
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
   static constexpr tReal    csMaxIntersectionDistanceFromRay            = 0.01f;
   static constexpr tReal    csMinimalRayDistance                        = 1.0f;
+  static constexpr tReal    csIntersectionEstimationEpsilon             = 0.000001f;
 
   using Vector             = ::Vector<tReal>;
   using Vertex             = ::Vertex<tReal>;
@@ -250,7 +251,7 @@ template<typename tReal>
 BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
   auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
-  if(inPlane.mValid && inPlane.mDistance > -mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
+  if(inPlane.mValid && ::abs(inPlane.mDistance) > -mHeightInside && ::abs(inPlane.mDistance) > mHeightOutside) {  // Make sure we don't intersect the same triangle again
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
     if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
@@ -269,8 +270,16 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
       barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
       auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
 
-      tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
+      tReal middle;
+      auto denom = diffCloser - diffFurther;
+      if(::abs(denom) < csIntersectionEstimationEpsilon) {
+        middle = (closer + further) / 2.0f;
+      }
+      else {
+        middle = (diffCloser * further - diffFurther * closer) / denom;
+      }
       Vector projectionDirection = mUnderlyingPlane.mNormal;
+
       for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
         result.mIntersection.mDistance = middle;
         pointOnRay = aRay.mStart + aRay.mDirection * middle;
