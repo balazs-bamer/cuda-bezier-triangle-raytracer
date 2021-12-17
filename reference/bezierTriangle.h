@@ -269,7 +269,7 @@ BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, Limi
 gOutput.clear();
   auto inPlane = mUnderlyingPlane.intersect(aRay);
   BezierIntersection result;
-  if(inPlane.mValid && inPlane.mDistance > -mHeightInside && inPlane.mDistance > mHeightOutside) {  // Make sure we don't intersect the same triangle again
+  if(inPlane.mValid && ::abs(inPlane.mDistance) > -mHeightInside && ::abs(inPlane.mDistance) > mHeightOutside) {  // Make sure we don't intersect the same triangle again
     Vector barycentric = mBarycentricInverse * inPlane.mPoint;
     if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
        (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
@@ -398,6 +398,7 @@ std::cout << "bezier: "
     }
   }
   else {
+if(inPlane.mValid) std::cout << "##################################### inplane: " << inPlane.mDistance << " heightIn: " << mHeightInside << " heightOut: " << mHeightOutside << '\n';
     result.mWhat = BezierIntersection::What::cNone;
   }
 if(/*result.mWhat == BezierIntersection::What::cVeto && */gOutput.size() > 0u) {
