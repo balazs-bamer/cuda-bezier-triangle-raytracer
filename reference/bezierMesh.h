@@ -9,9 +9,10 @@
 template<typename tReal>
 class BezierMesh final {
 private:
-  static constexpr tReal csBezierHeightPerPerimeterLimit = 0.03f;
-  static constexpr tReal csSplitBezierInterpolateFactor  = 0.7f;   // For triangle splitting, new vertex is computed as
-                                                                   // barycentricSplit * (1.0 - csSBIF) + interpolate(barycentricSplit) * csSBIF
+  static constexpr std::array<tReal, 3u> csSampleRatiosOriginalSide = { 0.25f, 0.5f, 0.75f };
+  static constexpr tReal                 csBezierHeightPerPerimeterLimit = 0.03f;
+  static constexpr tReal                 csSplitBezierInterpolateFactor  = 0.7f;   // For triangle splitting, new vertex is computed as
+                                                                                   // barycentricSplit * (1.0 - csSBIF) + interpolate(barycentricSplit) * csSBIF
 
   std::vector<BezierTriangle<tReal>>    mMesh;
   typename Mesh<tReal>::Face2neighbours mOriginalNeighbours;
@@ -149,7 +150,7 @@ Mesh<tReal> BezierMesh<tReal>::splitThickBezierTriangles() const {
     auto plane = Plane::createFromTriangle(original);
     tReal max = ::abs(plane.distance(mMesh[indexOriginal * 3u].interpolateAboveOriginalCentroid()));
     for(uint32_t i = 0; i < 3u; ++i) {
-      for(auto const ratio : BezierTriangle::csSampleRatiosOriginalSide) {
+      for(auto const ratio : csSampleRatiosOriginalSide) {
         max = std::max(max, ::abs(plane.distance(mMesh[indexSplit + i].interpolate(ratio, 1.0f - ratio, 0.0f))));
       }
     }
@@ -279,11 +280,7 @@ if(gShouldDump) {
 //  std::cout << "# ";
 }
     auto candidate = bezier.intersect(aRay, BezierTriangle::LimitPlaneIntersection::cThis);
-    if(candidate.mWhat == BezierIntersection::What::cVeto) {
-      result.mWhat = BezierIntersection::What::cVeto;
-      break;
-    }
-    else if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
+    if(candidate.mWhat == BezierIntersection::What::cFollowSide0 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide1 ||
        candidate.mWhat == BezierIntersection::What::cFollowSide2) {
       candidate = mMesh[bezier.getNeighbours()[static_cast<uint32_t>(candidate.mWhat)]].intersect(aRay, BezierTriangle::LimitPlaneIntersection::cNone);

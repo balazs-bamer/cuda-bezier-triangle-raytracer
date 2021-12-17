@@ -14,8 +14,7 @@ struct BezierIntersection final {
     cFollowSide1 = 1u,
     cFollowSide2 = 2u,
     cNone        = 3u,
-    cVeto        = 4u,  // This result vetos any other triangle's intersection.
-    cIntersect   = 5u
+    cIntersect   = 4u
   };
 
   Intersection<tReal> mIntersection;
@@ -32,7 +31,6 @@ public:
     cThis = 0u,
     cNone = 1u
   };
-  static constexpr std::array<tReal, 3u>   csSampleRatiosOriginalSide = { 0.25f, 0.5f, 0.75f };
 
   static constexpr uint32_t csControlPointsSize                       = 10u;
 private:
@@ -319,18 +317,16 @@ copy += aRay.mStart + aRay.mDirection * further;
 std::copy(copy.cbegin(), copy.cend(), std::back_inserter(gOutput));
 
       Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
-      Vertex barycentricCloser = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      Vertex barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
 std::cout << "closer:  ";
-getSignumBarySurface(pointOnRay, interpolate(barycentricCloser));
-      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentricCloser)));
+getSignumBarySurface(pointOnRay, interpolate(barycentric));
+      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
 
       pointOnRay = aRay.mStart + aRay.mDirection * further;
-      result.mBarycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-      result.mIntersection.mPoint = interpolate(result.mBarycentric);
+      barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
+      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
 std::cout << "further: ";
-getSignumBarySurface(pointOnRay, result.mIntersection.mPoint);
-      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(result.mIntersection.mPoint));
-      result.mIntersection.mDistance = further;
+getSignumBarySurface(pointOnRay, interpolate(barycentric));
 
       tReal middle = (diffCloser * further - diffFurther * closer) / (diffCloser - diffFurther);
       Vector projectionDirection = mUnderlyingPlane.mNormal;
