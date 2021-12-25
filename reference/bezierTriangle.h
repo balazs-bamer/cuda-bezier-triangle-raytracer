@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-template<typename tReal>
+
 struct BezierIntersection final {
   enum class What : uint32_t {
     cFollowSide0 = 0u,
@@ -13,13 +13,12 @@ struct BezierIntersection final {
     cIntersect   = 4u
   };
 
-  Intersection<tReal> mIntersection;
-  Vertex<tReal>       mBarycentric;
-  Vector<tReal>       mNormal;
-  What                mWhat;
+  Intersection mIntersection;
+  Vertex       mBarycentric;
+  Vector       mNormal;
+  What         mWhat;
 };
 
-template<typename tReal>
 class BezierTriangle final {    // Cubic Bezier triangle
 public:
   enum class LimitPlaneIntersection : uint32_t {
@@ -51,25 +50,16 @@ private:
   static constexpr uint32_t csControlIndex201 = csControlIndexOnSideFromOriginalCentroid1;
   static constexpr uint32_t csControlIndex111 = csControlIndexMiddle;
 
-  static constexpr tReal    csProportionControlOnOriginalSide           = 0.291f;
-  static constexpr tReal    csProportionControlOnOriginalVertexCentroid = 0.304f;
-  static constexpr tReal    csProportionControlOnOriginalMedian         = 0.2f;
-  static constexpr tReal    csHeightSafetyFactor                        = 1.33333333f;
-  static constexpr tReal    csOneThird                                  = 1.0 / 3.0;
+  static constexpr float    csProportionControlOnOriginalSide           = 0.291f;
+  static constexpr float    csProportionControlOnOriginalVertexCentroid = 0.304f;
+  static constexpr float    csProportionControlOnOriginalMedian         = 0.2f;
+  static constexpr float    csHeightSafetyFactor                        = 1.33333333f;
+  static constexpr float    csOneThird                                  = 1.0 / 3.0;
   static constexpr uint32_t csRootSearchIterations                      = 4u;
   static constexpr int32_t  csHeightSampleDivisor                       = 5;
-  static constexpr tReal    csMaxIntersectionDistanceFromRay            = 0.01f;
-  static constexpr tReal    csMinimalRayDistance                        = 1.0f;
-  static constexpr tReal    csIntersectionEstimationEpsilon             = 0.000001f;
-
-  using Vector             = ::Vector<tReal>;
-  using Vertex             = ::Vertex<tReal>;
-  using Matrix             = ::Matrix<tReal>;
-  using Triangle           = ::Triangle<tReal>;
-  using Ray                = ::Ray<tReal>;
-  using Intersection       = ::Intersection<tReal>;
-  using Plane              = ::Plane<tReal>;
-  using BezierIntersection = ::BezierIntersection<tReal>;
+  static constexpr float    csMaxIntersectionDistanceFromRay            = 0.01f;
+  static constexpr float    csMinimalRayDistance                        = 1.0f;
+  static constexpr float    csIntersectionEstimationEpsilon             = 0.000001f;
 
   Plane                    mUnderlyingPlane;         // Plane span by mControlPoints[0-2], normal is normalized and points outwards.
   std::array<Plane, 3u>    mNeighbourDividerPlanes;  // For indices 1 and 2, these are about the plane going through each edge in direction the average of the adjacent side normals.
@@ -84,8 +74,8 @@ private:
   // Perhaps not needed, because the iterative method to find ray and Bezier surface intersection takes long. std::array<Vertex, 12u> mDerivativeControlPoints; // T most probably more than 2*6 for each partial derivative.
   Matrix                   mBarycentricInverse;      // T = (v1 v2 v3), b = barycentric coefficient column, v = point on plane, v=Tb, b = mBI * v
                                                      // multiplication by the inverse proven to be much faster than solving the linear equation under Eigen.
-  tReal                    mHeightInside;            // Sampled biggest distance of the Bezier triangle measured from the underlying triangle, < 0
-  tReal                    mHeightOutside;           // this is > 0
+  float                    mHeightInside;            // Sampled biggest distance of the Bezier triangle measured from the underlying triangle, < 0
+  float                    mHeightOutside;           // this is > 0
   Vector                   mBezierDerivativeDirectionVectorA; // We calculate directional derivatives in two perpendicular directions
   Vector                   mBezierDerivativeDirectionVectorB; // and their cross product will yield the Bezier surface normal
 
@@ -103,12 +93,12 @@ public:
   Vertex getControlPoint(uint32_t const aI) const { return mControlPoints[aI]; }
   std::array<uint32_t, 3u> getNeighbours() const { return mNeighbours; }           // TODO remove
 
-  Vertex interpolateLinear(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
-  Vertex interpolateLinear(tReal const aBary0, tReal const aBary1) const { return interpolateLinear(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
+  Vertex interpolateLinear(float const aBary0, float const aBary1, float const aBary2) const;
+  Vertex interpolateLinear(float const aBary0, float const aBary1) const { return interpolateLinear(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
   Vertex interpolateLinear(Vertex const &aBary) const { return interpolateLinear(aBary(0u), aBary(1u), aBary(2u)); }
 
-  Vertex interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const;
-  Vertex interpolate(tReal const aBary0, tReal const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
+  Vertex interpolate(float const aBary0, float const aBary1, float const aBary2) const;
+  Vertex interpolate(float const aBary0, float const aBary1) const { return interpolate(aBary0, aBary1, 1.0f - aBary0 - aBary1); }
   Vertex interpolate(Vertex const &aBary) const { return interpolate(aBary(0u), aBary(1u), aBary(2u)); }
   Vertex interpolateAboveOriginalCentroid() const { return mControlPoints[csControlIndexAboveOriginalCentroid]; }
 
@@ -118,246 +108,4 @@ private:
   Vector getNormal(Vector const &aBarycentric) const;
 };
 
-/////////////////////////////////
-//       IMPLEMENTATION        //
-/////////////////////////////////
-
-template<typename tReal>
-BezierTriangle<tReal>::BezierTriangle(Vertex const &aOriginalCommonVertex0, Vertex const &aOriginalCommonVertex1, Vertex const &aOriginalCentroid,
-                                      Vector const &aAverageNormal0, Vector const &aAverageNormal1, Plane const &aPlaneBetweenOriginalNeighbours,
-                                      std::array<uint32_t, 3u> const &aNeighbourIndices)
-  : mNeighbours(aNeighbourIndices) {
-  mControlPoints[csControlIndexOriginalVertex0] = aOriginalCommonVertex0;
-  mControlPoints[csControlIndexOriginalVertex1] = aOriginalCommonVertex1;
-
-  Plane const commonPlaneVertex0{aAverageNormal0, aOriginalCommonVertex0.dot(aAverageNormal0) };
-  Plane const commonPlaneVertex1{aAverageNormal1, aOriginalCommonVertex1.dot(aAverageNormal1) };
-  Plane const perpendicularToOriginalSideInProportion0 = Plane::createFrom1proportion2points(csProportionControlOnOriginalSide, aOriginalCommonVertex0, aOriginalCommonVertex1);
-  Plane const perpendicularToOriginalSideInProportion1 = Plane::createFrom1proportion2points(csProportionControlOnOriginalSide, aOriginalCommonVertex1, aOriginalCommonVertex0);
-
-  // For each control point obtained by planes intersection, the first plane is the critical one ensuring Bezier surface C1 continuity among triangles.
-  mControlPoints[csControlIndexOnOriginalSide0] = Plane::intersect(commonPlaneVertex0, aPlaneBetweenOriginalNeighbours, perpendicularToOriginalSideInProportion0);
-  mControlPoints[csControlIndexOnOriginalSide1] = Plane::intersect(commonPlaneVertex1, aPlaneBetweenOriginalNeighbours, perpendicularToOriginalSideInProportion1);
-
-  Vector const originalNormal = ::getNormal(aOriginalCommonVertex0, aOriginalCommonVertex1, aOriginalCentroid);
-  Plane const parallelToOriginalNormalBetweenSplitTriangles0 = Plane::createFrom1vector2points(originalNormal, aOriginalCommonVertex0, aOriginalCentroid);
-  Plane const parallelToOriginalNormalBetweenSplitTriangles1 = Plane::createFrom1vector2points(originalNormal, aOriginalCommonVertex1, aOriginalCentroid);
-  Plane const perpendicularToSplitBetweenTrianglesInProportion0 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCommonVertex0, aOriginalCentroid);
-  Plane const perpendicularToSplitBetweenTrianglesInProportion1 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCommonVertex1, aOriginalCentroid);
-
-  mControlPoints[csControlIndexOnSideFromOriginalCentroid1] = Plane::intersect(commonPlaneVertex0,
-                                                                               parallelToOriginalNormalBetweenSplitTriangles0,
-                                                                               perpendicularToSplitBetweenTrianglesInProportion0);
-  mControlPoints[csControlIndexOnSideToOriginalCentroid0] = Plane::intersect(commonPlaneVertex1,
-                                                                             parallelToOriginalNormalBetweenSplitTriangles1,
-                                                                             perpendicularToSplitBetweenTrianglesInProportion1);
-
-  Plane const perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide = Plane::createFrom1vector2points(aPlaneBetweenOriginalNeighbours.mNormal, mControlPoints[csControlIndexOnOriginalSide0], mControlPoints[csControlIndexOnOriginalSide1]);
-  Plane const halfPlaneOfControlPointsInOriginalSide = Plane::createFrom1proportion2points(0.5f, mControlPoints[csControlIndexOnOriginalSide0], mControlPoints[csControlIndexOnOriginalSide1]);
-  Plane const perpendicularToOriginalMedianInProportion = Plane::createFrom1proportion2points(csProportionControlOnOriginalMedian, (aOriginalCommonVertex0 + aOriginalCommonVertex1) / 2.0f, aOriginalCentroid);
-
-  mControlPoints[csControlIndexMiddle] = Plane::intersect(perpendicularToPlaneBetweenOriginalNeighboursViaControlPointsInOriginalSide,
-                                                          halfPlaneOfControlPointsInOriginalSide,
-                                                          perpendicularToOriginalMedianInProportion);
-
-  mNeighbourDividerPlanes[0u] = aPlaneBetweenOriginalNeighbours;
-  mNeighbourDividerPlanes[0u].makeDistancePositive(mControlPoints[csControlIndexMiddle]);
-}
-
-template<typename tReal>
-void BezierTriangle<tReal>::setMissingFields1(Vertex const &aOriginalCentroid, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious) {
-  Vector const originalNormal = ::getNormal(mControlPoints[csControlIndexOriginalVertex0], mControlPoints[csControlIndexOriginalVertex1], aOriginalCentroid);
-  Plane const twoMiddlesAndSplitCloseToOriginalCommonVertex0 = Plane::createFrom3points(mControlPoints[csControlIndexOnSideFromOriginalCentroid1], mControlPoints[csControlIndexMiddle], aTrianglePrevious.mControlPoints[csControlIndexMiddle]);
-  Plane const twoMiddlesAndSplitCloseToOriginalCommonVertex1 = Plane::createFrom3points(mControlPoints[csControlIndexOnSideToOriginalCentroid0], aTriangleNext.mControlPoints[csControlIndexMiddle], mControlPoints[csControlIndexMiddle]);
-  Plane const parallelToOriginalNormalBetweenSplitTriangles0 = Plane::createFrom1vector2points(originalNormal, mControlPoints[csControlIndexOriginalVertex0], aOriginalCentroid);
-  Plane const parallelToOriginalNormalBetweenSplitTriangles1 = Plane::createFrom1vector2points(originalNormal, mControlPoints[csControlIndexOriginalVertex1], aOriginalCentroid);
-  Plane const perpendicularToSplitBetweenTrianglesInProportion0 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCentroid, mControlPoints[csControlIndexOriginalVertex0]);
-  Plane const perpendicularToSplitBetweenTrianglesInProportion1 = Plane::createFrom1proportion2points(csProportionControlOnOriginalVertexCentroid, aOriginalCentroid, mControlPoints[csControlIndexOriginalVertex1]);
-
-  mControlPoints[csControlIndexOnSideFromOriginalCentroid0] = Plane::intersect(twoMiddlesAndSplitCloseToOriginalCommonVertex0,
-                                                                               parallelToOriginalNormalBetweenSplitTriangles0,
-                                                                               perpendicularToSplitBetweenTrianglesInProportion0);
-  mControlPoints[csControlIndexOnSideToOriginalCentroid1] = Plane::intersect(twoMiddlesAndSplitCloseToOriginalCommonVertex1,
-                                                                             parallelToOriginalNormalBetweenSplitTriangles1,
-                                                                             perpendicularToSplitBetweenTrianglesInProportion1);
-}
-
-template<typename tReal>
-void BezierTriangle<tReal>::setMissingFields2(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &) {
-  mControlPoints[csControlIndexAboveOriginalCentroid] = (mControlPoints[csControlIndexOnSideFromOriginalCentroid0] +
-                                                         mControlPoints[csControlIndexOnSideToOriginalCentroid1] +
-                                                         aTriangleNext.mControlPoints[csControlIndexOnSideToOriginalCentroid1]) / 3.0f;
-
-  mUnderlyingPlane = Plane::createFrom3points(mControlPoints[csControlIndexOriginalVertex0], mControlPoints[csControlIndexOriginalVertex1], mControlPoints[csControlIndexAboveOriginalCentroid]);
-
-  mBarycentricInverse = getBarycentricInverse(mControlPoints[csControlIndexOriginalVertex0], mControlPoints[csControlIndexOriginalVertex1], mControlPoints[csControlIndexAboveOriginalCentroid]);
-
-  mHeightInside = 0.0f;
-  mHeightOutside = 0.0f;
-  Triangle barycentric{Vertex{{1.0f, 0.0f, 0.0f}}, Vertex{{0.0f, 1.0f, 0.0f}}, Vertex{{0.0f, 0.0f, 1.0f}}};
-  divide(barycentric, csHeightSampleDivisor, [this](Triangle && aNewBary) {
-    for(uint32_t i = 0u; i < 3u; ++i) {
-      auto distance = mUnderlyingPlane.distance(interpolate(aNewBary[i]));  // Will cont most points 2 or 3 times, but don't care now.
-      mHeightInside = std::min(mHeightInside, distance);
-      mHeightOutside = std::max(mHeightOutside, distance);
-    }
-  } );
-  mHeightInside *= csHeightSafetyFactor;
-  mHeightOutside *= csHeightSafetyFactor;
-  mBezierDerivativeDirectionVectorA = Vertex{1.0f, 0.0f, -1.0f}; // Parallel to the side from 2 to 0, no matter how long.
-  mBezierDerivativeDirectionVectorB = mBarycentricInverse *      // Perpendicular to the previous one.
-      (mControlPoints[csControlIndexAboveOriginalCentroid] - mControlPoints[csControlIndexOriginalVertex0]).cross(mUnderlyingPlane.mNormal);
-}
-
-template<typename tReal>
-void BezierTriangle<tReal>::setMissingFields3(Vertex const &, BezierTriangle const &aTriangleNext, BezierTriangle const &aTrianglePrevious) {
-  mNeighbourDividerPlanes[1u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTriangleNext.mUnderlyingPlane.mNormal,
-                                                                mControlPoints[csControlIndexOriginalVertex1],
-                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
-  mNeighbourDividerPlanes[2u] = Plane::createFrom1vector2points(mUnderlyingPlane.mNormal + aTrianglePrevious.mUnderlyingPlane.mNormal,
-                                                                mControlPoints[csControlIndexOriginalVertex0],
-                                                                mControlPoints[csControlIndexAboveOriginalCentroid]);
-  mNeighbourDividerPlanes[1u].makeDistancePositive(mControlPoints[csControlIndexMiddle]);
-  mNeighbourDividerPlanes[2u].makeDistancePositive(mControlPoints[csControlIndexMiddle]);
-}
-
-template<typename tReal>
-Vertex<tReal> BezierTriangle<tReal>::interpolateLinear(tReal const aBary0, tReal const aBary1, tReal const aBary2) const {
-  return mControlPoints[csControlIndexOriginalVertex0]       * aBary0 +
-         mControlPoints[csControlIndexOriginalVertex1]       * aBary1 +
-         mControlPoints[csControlIndexAboveOriginalCentroid] * aBary2;
-}
-
-template<typename tReal>
-Vertex<tReal> BezierTriangle<tReal>::interpolate(tReal const aBary0, tReal const aBary1, tReal const aBary2) const {
-  auto const bary0_2 = aBary0 * aBary0;
-  auto const bary1_2 = aBary1 * aBary1;
-  auto const bary2_2 = aBary2 * aBary2;
-
-  return mControlPoints[csControlIndexOriginalVertex0]             * aBary0 * bary0_2 +
-         mControlPoints[csControlIndexOriginalVertex1]             * aBary1 * bary1_2 +
-         mControlPoints[csControlIndexAboveOriginalCentroid]       * aBary2 * bary2_2 +
-         3.0f *
-        (mControlPoints[csControlIndexOnOriginalSide0]             * aBary1 * bary0_2 +
-         mControlPoints[csControlIndexOnOriginalSide1]             * aBary0 * bary1_2 +
-         mControlPoints[csControlIndexOnSideToOriginalCentroid0]   * aBary2 * bary1_2 +
-         mControlPoints[csControlIndexOnSideToOriginalCentroid1]   * aBary1 * bary2_2 +
-         mControlPoints[csControlIndexOnSideFromOriginalCentroid0] * aBary0 * bary2_2 +
-         mControlPoints[csControlIndexOnSideFromOriginalCentroid1] * aBary2 * bary0_2) +
-         mControlPoints[csControlIndexMiddle]                      * aBary0 * aBary1 * aBary2 * 6.0f;
-}
-
-template<typename tReal>
-BezierIntersection<tReal> BezierTriangle<tReal>::intersect(Ray const &aRay, LimitPlaneIntersection const aShouldLimitPlaneIntersection) const {
-  auto inPlane = mUnderlyingPlane.intersect(aRay);
-  BezierIntersection result;
-  if(inPlane.mValid && ::abs(inPlane.mDistance) > -mHeightInside && ::abs(inPlane.mDistance) > mHeightOutside) {  // Make sure we don't intersect the same triangle again
-    Vector barycentric = mBarycentricInverse * inPlane.mPoint;
-    if(aShouldLimitPlaneIntersection == LimitPlaneIntersection::cNone ||
-       (barycentric(0) >= 0.0f && barycentric(0) <= 1.0f &&
-        barycentric(1) >= 0.0f && barycentric(1) <= 1.0f &&
-        barycentric(2) >= 0.0f && barycentric(2) <= 1.0f)) {
-      auto distanceInside = mHeightInside / inPlane.mCosIncidence;
-      auto distanceOutside = mHeightOutside / inPlane.mCosIncidence;
-      tReal closer = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceInside : distanceOutside);
-      tReal further = inPlane.mDistance + (inPlane.mCosIncidence > 0.0f ? distanceOutside : distanceInside);
-
-      Vertex pointOnRay = aRay.mStart + aRay.mDirection * closer;
-      Vertex barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-      auto diffCloser = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
-
-      pointOnRay = aRay.mStart + aRay.mDirection * further;
-      barycentric = mBarycentricInverse * mUnderlyingPlane.project(pointOnRay);
-      auto diffFurther = ::abs(mUnderlyingPlane.distance(pointOnRay)) - ::abs(mUnderlyingPlane.distance(interpolate(barycentric)));
-
-      tReal middle;
-      auto denom = diffCloser - diffFurther;
-      if(::abs(denom) < csIntersectionEstimationEpsilon) {
-        middle = (closer + further) / 2.0f;
-      }
-      else {
-        middle = (diffCloser * further - diffFurther * closer) / denom;
-      }
-      Vector projectionDirection = mUnderlyingPlane.mNormal;
-
-      for(uint32_t i = 0u; i < csRootSearchIterations; ++i) {
-        result.mIntersection.mDistance = middle;
-        pointOnRay = aRay.mStart + aRay.mDirection * middle;
-        auto intersection = mUnderlyingPlane.intersect(pointOnRay, projectionDirection);
-        result.mBarycentric = mBarycentricInverse * intersection.mPoint;
-        result.mNormal = getNormal(result.mBarycentric);
-        result.mIntersection.mPoint = interpolate(result.mBarycentric);
-        projectionDirection = (result.mIntersection.mPoint - intersection.mPoint).normalized();
-        middle = ((result.mIntersection.mPoint - aRay.mStart).dot(result.mNormal) / aRay.mDirection.dot(result.mNormal));
-      }
-      if(aRay.getDistance(result.mIntersection.mPoint) > csMaxIntersectionDistanceFromRay || result.mIntersection.mDistance < (further - closer) * csMinimalRayDistance) {
-        result.mWhat = BezierIntersection::What::cNone;
-      }
-      else {
-        uint32_t outside = (mNeighbourDividerPlanes[0].distance(result.mIntersection.mPoint) < 0.0f ? 1u : 0u);
-        outside |= (mNeighbourDividerPlanes[1].distance(result.mIntersection.mPoint) < 0.0f ? 2u : 0u);
-        outside |= (mNeighbourDividerPlanes[2].distance(result.mIntersection.mPoint) < 0.0f ? 4u : 0u);
-        if(outside == 1u) {
-          result.mWhat = BezierIntersection::What::cFollowSide0;
-        }
-        else if(outside == 2u) {
-          result.mWhat = BezierIntersection::What::cFollowSide1;
-        }
-        else if(outside == 4u) {
-          result.mWhat = BezierIntersection::What::cFollowSide2;
-        }
-        else { // Most probably not possible for 2 sides at the same time. If yes, that rare case is not interesting
-          result.mWhat = BezierIntersection::What::cIntersect;
-          result.mIntersection.mCosIncidence = aRay.mDirection.dot(result.mNormal);
-        }
-      }
-    }
-    else {
-      result.mWhat = BezierIntersection::What::cNone;
-    }
-  }
-  else {
-    result.mWhat = BezierIntersection::What::cNone;
-  }
-  return result;
-}
-
-template<typename tReal>
-Vector<tReal> BezierTriangle<tReal>::getNormal(Vector const &aBarycentric) const {
-  tReal bary0_2 = aBarycentric(0) * aBarycentric(0);
-  tReal bary1_2 = aBarycentric(1) * aBarycentric(1);
-  tReal bary2_2 = aBarycentric(2) * aBarycentric(2);
-
-  Vector component0 = mControlPoints[csControlIndex300] * bary0_2 +
-                      mControlPoints[csControlIndex102] * bary2_2 +
-                      mControlPoints[csControlIndex120] * bary1_2 +
-                      2.0f *
-                     (mControlPoints[csControlIndex201] * aBarycentric(0) * aBarycentric(2) +
-                      mControlPoints[csControlIndex210] * aBarycentric(0) * aBarycentric(1) +
-                      mControlPoints[csControlIndex111] * aBarycentric(2) * aBarycentric(1));
-
-  Vector component1 = mControlPoints[csControlIndex030] * bary1_2 +
-                      mControlPoints[csControlIndex012] * bary2_2 +
-                      mControlPoints[csControlIndex210] * bary0_2 +
-                      2.0f *
-                     (mControlPoints[csControlIndex111] * aBarycentric(0) * aBarycentric(2) +
-                      mControlPoints[csControlIndex120] * aBarycentric(0) * aBarycentric(1) +
-                      mControlPoints[csControlIndex021] * aBarycentric(1) * aBarycentric(2));
-
-  Vector component2 = mControlPoints[csControlIndex003] * bary2_2 +
-                      mControlPoints[csControlIndex201] * bary0_2 +
-                      mControlPoints[csControlIndex021] * bary1_2 +
-                      2.0f *
-                     (mControlPoints[csControlIndex102] * aBarycentric(0) * aBarycentric(2) +
-                      mControlPoints[csControlIndex012] * aBarycentric(1) * aBarycentric(2) +
-                      mControlPoints[csControlIndex111] * aBarycentric(0) * aBarycentric(1));
-
-  Vector componentA = mBezierDerivativeDirectionVectorA(0) * component0 +
-                      mBezierDerivativeDirectionVectorA(1) * component1 +
-                      mBezierDerivativeDirectionVectorA(2) * component2;
-  Vector componentB = mBezierDerivativeDirectionVectorB(0) * component0 +
-                      mBezierDerivativeDirectionVectorB(1) * component1 +
-                      mBezierDerivativeDirectionVectorB(2) * component2;
-  return componentA.cross(componentB).normalized();
-}
 #endif

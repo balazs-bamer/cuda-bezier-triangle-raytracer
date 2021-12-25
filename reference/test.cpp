@@ -6,33 +6,32 @@
 #include<iomanip>
 #include<iostream>
 
-using Real = float;
 
 std::string const cgBaseDir("output/");
 
-auto visualizeNormals(Mesh<Real> const &aMesh) {
-  Mesh<Real> result;
-  Mesh<Real> sphere;
+auto visualizeNormals(Mesh const &aMesh) {
+  Mesh result;
+  Mesh sphere;
   sphere.makeUnitSphere(3, 1);
   for(auto &face : aMesh) {
     auto normal = getNormal(face).normalized();
     auto base = (face[0] + face[1] + face[2]) / 3.0f;
     auto average = ((face[1] - face[0]).norm() + (face[2] - face[1]).norm() + (face[0] - face[2]).norm()) / 3.0f;
     auto copy = sphere;
-    auto shrink = Transform<Real>::Identity() * (average / 15.0f);
+    auto shrink = Transform::Identity() * (average / 15.0f);
     copy.transform(shrink, base + normal * (average / 7.0f));
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
   }
   return result;
 }
 
-auto visualizeVertexNormals(Mesh<Real> const &aMesh) { // Only for spheres
-  Mesh<Real> result;
-  Mesh<Real> sphere;
+auto visualizeVertexNormals(Mesh const &aMesh) { // Only for spheres
+  Mesh result;
+  Mesh sphere;
   sphere.makeUnitSphere(3, 1);
   auto &first = aMesh[0u];
   auto distance = ((first[1u] - first[0u]).norm() + (first[2u] - first[1u]).norm() + (first[0u] - first[2u]).norm()) / 3.0f;
-  auto shrink = Transform<Real>::Identity() * (distance / 5.0f);
+  auto shrink = Transform::Identity() * (distance / 5.0f);
   sphere *= shrink;
   for(auto i : aMesh.getVertex2averageNormals()) {
     auto displacement = i.first + i.second * distance;
@@ -43,21 +42,21 @@ auto visualizeVertexNormals(Mesh<Real> const &aMesh) { // Only for spheres
   return result;
 }
 
-auto visualizeRay(Ray<Real> const aRay, Real const aLength, Real const aRadius) {
-  Mesh<Real> result;
-  Vector<Real> const perpendicular0 = getAperpendicular(aRay.mDirection);
-  Vector<Real> const perpendicular1 = aRay.mDirection.cross(perpendicular0);
-  Vector<Real> const rib0 = aRadius * perpendicular0;  // p0 * cos0 + p1 * sin0
-  Vector<Real> const rib1 = aRadius * (perpendicular0 * ::cos(2.0f / 3.0f * cgPi<Real>) + perpendicular1 * ::sin(2.0f / 3.0f * cgPi<Real>));
-  Vector<Real> const rib2 = aRadius * (perpendicular0 * ::cos(4.0f / 3.0f * cgPi<Real>) + perpendicular1 * ::sin(4.0f / 3.0f * cgPi<Real>));
-  Vector<Real> const end = aRay.mStart + aRay.mDirection * aLength;
+auto visualizeRay(Ray const aRay, float const aLength, float const aRadius) {
+  Mesh result;
+  Vector const perpendicular0 = getAperpendicular(aRay.mDirection);
+  Vector const perpendicular1 = aRay.mDirection.cross(perpendicular0);
+  Vector const rib0 = aRadius * perpendicular0;  // p0 * cos0 + p1 * sin0
+  Vector const rib1 = aRadius * (perpendicular0 * ::cos(2.0f / 3.0f * cgPi) + perpendicular1 * ::sin(2.0f / 3.0f * cgPi));
+  Vector const rib2 = aRadius * (perpendicular0 * ::cos(4.0f / 3.0f * cgPi) + perpendicular1 * ::sin(4.0f / 3.0f * cgPi));
+  Vector const end = aRay.mStart + aRay.mDirection * aLength;
   result.push_back({aRay.mStart + rib0, aRay.mStart + rib1, aRay.mStart + rib2});
   result.push_back({end + rib0, end + rib1, end + rib2});
   int32_t n = static_cast<int32_t>(::ceil(::abs(aLength) * 0.1f / aRadius));
-  Real delta = aLength / n;
+  float delta = aLength / n;
   for(int i = 0; i < n; ++i) {
-    Vector<Real> section0 = aRay.mStart + aRay.mDirection * delta * i;
-    Vector<Real> section1 = aRay.mStart + aRay.mDirection * delta * (i + 1);
+    Vector section0 = aRay.mStart + aRay.mDirection * delta * i;
+    Vector section1 = aRay.mStart + aRay.mDirection * delta * (i + 1);
     result.push_back({section0 + rib0, section1 + rib0, section0 + rib1});
     result.push_back({section0 + rib1, section1 + rib0, section1 + rib1});
     result.push_back({section0 + rib1, section1 + rib1, section0 + rib2});
@@ -73,18 +72,18 @@ void testDequeDivisor(char const * const aName, int32_t const aSectors, int32_t 
   name += aName;
   name += ".stl";
 
-  Mesh<Real> sphere;
+  Mesh sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
+  Transform inflate = Transform::Identity() * aRadius;
   sphere *= inflate;
   sphere.writeMesh(cgBaseDir + name);
 
-  Mesh<Real> back;
+  Mesh back;
   back.readMesh(cgBaseDir + name);
   back *= inflate;
 
   back.splitTriangles(aDivisor);
-  Vector<Real> disp = Vector<Real>::Zero();
+  Vector disp = Vector::Zero();
   disp[0] = aRadius;
   back += disp;
   auto nameBack = "back_" + name;
@@ -104,13 +103,13 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
   name += aName;
   name += ".stl";
 
-  Mesh<Real> sphere;
+  Mesh sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
+  Transform inflate = Transform::Identity() * aRadius;
   sphere *= inflate;
   sphere.writeMesh(cgBaseDir + name);
 
-  Mesh<Real> back;
+  Mesh back;
   back.readMesh(cgBaseDir + name);
   back *= inflate;
 
@@ -128,9 +127,9 @@ void testVectorMax(char const * const aName, int32_t const aSectors, int32_t con
 }
 
 void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t const aBelts, float const aRadius, int32_t const aDivisor) {
-  Mesh<Real> sphere;
+  Mesh sphere;
   sphere.makeUnitSphere(aSectors, aBelts);
-  Transform<Real> inflate = Transform<Real>::Identity() * aRadius;
+  Transform inflate = Transform::Identity() * aRadius;
   sphere *= inflate;
   sphere.standardizeVertices();
   sphere.standardizeNormals();
@@ -140,7 +139,7 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   name += ".stl";
   sphere.writeMesh(cgBaseDir + name);
 
-  BezierMesh<Real> bezier(sphere);
+  BezierMesh bezier(sphere);
   auto planified = bezier.interpolate(aDivisor);
 
   name = "bary2plane_";
@@ -148,10 +147,10 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   name += ".stl";
   planified.writeMesh(cgBaseDir + name);
 
-  Mesh<Real> result;
+  Mesh result;
   auto controlPoints = bezier.dumpControlPoints();
   sphere.makeUnitSphere(3, 1);
-  inflate = Transform<Real>::Identity() * cgPi<Real> * aRadius / (aBelts + 1) / 20;
+  inflate = Transform::Identity() * cgPi * aRadius / (aBelts + 1) / 20;
   sphere *= inflate;
   uint32_t i = 0u;
   for(auto const &controlPoint : controlPoints) {
@@ -170,8 +169,8 @@ void testBezier2plane(char const * const aName, int32_t const aSectors, int32_t 
   result.writeMesh(cgBaseDir + name);
 }
 
-void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
-  Mesh<Real> ellipsoid;
+void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector const &aSize, int32_t const aDivisor) {
+  Mesh ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
   ellipsoid.standardizeVertices();
   ellipsoid.standardizeNormals();
@@ -186,8 +185,8 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   name += ".stl";
   visualizeVertexNormals(ellipsoid).writeMesh(cgBaseDir + name);
 
-  BezierMesh<Real> bezier0(ellipsoid);
-  Mesh<Real> split1 = bezier0.splitThickBezierTriangles();
+  BezierMesh bezier0(ellipsoid);
+  Mesh split1 = bezier0.splitThickBezierTriangles();
   split1.standardizeVertices();
   split1.standardizeNormals();
 
@@ -196,8 +195,8 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   name += ".stl";
   split1.writeMesh(cgBaseDir + name);
 
-  BezierMesh<Real> bezier1(split1);
-  Mesh<Real> split2 = bezier1.splitThickBezierTriangles();
+  BezierMesh bezier1(split1);
+  Mesh split2 = bezier1.splitThickBezierTriangles();
 
   name = "barySplit2_";
   name += aName;
@@ -205,39 +204,39 @@ void testBezierSplitTall(char const * const aName, int32_t const aSectors, int32
   split2.writeMesh(cgBaseDir + name);
 }
 
-void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Vector<Real> const &aDirection) {
+void testBezierIntersection(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector const &aSize, Vector const &aDirection) {
   std::cout << aName << '\n';
 
-  Mesh<Real> ellipsoid;
-  auto func = [](Real const aX){
+  Mesh ellipsoid;
+  auto func = [](float const aX){
     auto x2 = aX * aX;
     return ::sqrt(1.0f - x2) + 0.7f * (::exp(-4.0f) - ::exp(-4.0f * x2));
   };
   ellipsoid.makeSolidOfRevolution(aSectors, aBelts, func, aSize);
 
-  Mesh<Real> bullet;
+  Mesh bullet;
   bullet.makeUnitSphere(5, 3);
   bullet *= 0.05f;
-  Mesh<Real> intersections;
-  Mesh<Real> objects;
-  Mesh<Real> raws;
+  Mesh intersections;
+  Mesh objects;
+  Mesh raws;
 
-  Ray<Real> ray(Vertex<Real>{0.0f, 0.0f, 0.0f}, aDirection);
-  Vector<Real> displacement{5.0f, 0.0f, 0.0f};
+  Ray ray(Vertex{0.0f, 0.0f, 0.0f}, aDirection);
+  Vector displacement{5.0f, 0.0f, 0.0f};
 
   auto original = ray;
-  std::vector<Vertex<Real>> points;
+  std::vector<Vertex> points;
   for(;;) {
     ellipsoid += displacement;                    // We start from outside.
     ellipsoid.standardizeVertices();
     ellipsoid.standardizeNormals();
     std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
-    BezierMesh<Real> bezier(ellipsoid);
+    BezierMesh bezier(ellipsoid);
     auto object = bezier.interpolate(5);
     std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
 
     auto intersection = bezier.intersect(ray);
-    if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
+    if(intersection.mWhat != BezierIntersection::What::cIntersect) {
       break;
     }
     else { // Nothing to do
@@ -250,7 +249,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
     std::copy(copy.cbegin(), copy.cend(), std::back_inserter(intersections));
 
     intersection = bezier.intersect(ray);
-    if(intersection.mWhat != BezierIntersection<Real>::What::cIntersect) {
+    if(intersection.mWhat != BezierIntersection::What::cIntersect) {
       break;
     }
     else { // Nothing to do
@@ -266,7 +265,7 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   ellipsoid.standardizeVertices();
   ellipsoid.standardizeNormals();
   std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
-  BezierMesh<Real> bezier(ellipsoid);
+  BezierMesh bezier(ellipsoid);
   auto object = bezier.interpolate(5);
   std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
 
@@ -298,52 +297,52 @@ void testBezierIntersection(char const * const aName, int32_t const aSectors, in
   std::cout << '\n';
 }
 
-void testBezierRefraction(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, Real const aDegreesV, Real const aDegreesW, int32_t const aCountV, int32_t const aCountW) {
+void testBezierRefraction(char const * const aName, int32_t const aSectors, int32_t const aBelts, Vector const &aSize, float const aDegreesV, float const aDegreesW, int32_t const aCountV, int32_t const aCountW) {
   std::cout << aName << '\n';
 
-  Mesh<Real> ellipsoid;
-  auto func = [](Real const aX){
+  Mesh ellipsoid;
+  auto func = [](float const aX){
     auto x2 = aX * aX;
     return ::sqrt(1.0f - x2) + 0.7f * (::exp(-4.0f) - ::exp(-4.0f * x2));
   };
   ellipsoid.makeSolidOfRevolution(aSectors, aBelts, func, aSize);
 
-  Mesh<Real> bullet;
+  Mesh bullet;
   bullet.makeUnitSphere(5, 3);
   bullet *= 0.05f;
-  Mesh<Real> intersections;
-  Mesh<Real> objects;
-  Mesh<Real> raws;
-  Mesh<Real> beams;
+  Mesh intersections;
+  Mesh objects;
+  Mesh raws;
+  Mesh beams;
 
-  std::vector<Ray<Real>> rays;
+  std::vector<Ray> rays;
   rays.reserve(aCountV * aCountW);
   std::vector<bool> valids;
   valids.reserve(aCountV * aCountW);
   for(int32_t v = 0; v < aCountV; ++v) {
     for(int32_t w = 0; w < aCountW; ++w) {
-      auto sinV = ::sin((v * aDegreesV + 1.0f) * cgPi<Real> / 180.0f);
-      auto sinW = ::sin((w * aDegreesW + 1.0f) * cgPi<Real> / 180.0f);
-      Ray<Real> ray({0.0f, 0.0f, 0.0f}, {::sqrt(1.0f - sinV * sinV - sinW * sinW), sinV, sinW});
+      auto sinV = ::sin((v * aDegreesV + 1.0f) * cgPi / 180.0f);
+      auto sinW = ::sin((w * aDegreesW + 1.0f) * cgPi / 180.0f);
+      Ray ray({0.0f, 0.0f, 0.0f}, {::sqrt(1.0f - sinV * sinV - sinW * sinW), sinV, sinW});
       rays.push_back(ray);
       valids.push_back(true);
     }
   }
-  Vector<Real> displacement{10.0f, 0.0f, 0.0f};
+  Vector displacement{10.0f, 0.0f, 0.0f};
 
   auto previouses = rays;
-  std::vector<Vertex<Real>> points;
+  std::vector<Vertex> points;
   uint32_t count = rays.size();
   for(int i = 0; i < 10 && count > 0u; ++i) {
     ellipsoid += displacement;                    // We start from outside.
     ellipsoid.standardizeVertices();
     ellipsoid.standardizeNormals();
     std::copy(ellipsoid.cbegin(), ellipsoid.cend(), std::back_inserter(raws));
-    BezierMesh<Real> bezier(ellipsoid);
+    BezierMesh bezier(ellipsoid);
     auto object = bezier.interpolate(5);
     std::copy(object.cbegin(), object.cend(), std::back_inserter(objects));
 
-    BezierLens<Real> lens(1.3f, bezier);
+    BezierLens lens(1.3f, bezier);
     for(uint32_t j = 0u; j < 2u; ++j) {
       for(uint32_t r = 0u; r < rays.size(); ++r) {
         if(valids[r]) {
@@ -397,29 +396,29 @@ std::cout << (j ? "================\n" : "------------------\n");
   std::cout << '\n';
 }
 
-void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector<Real> const &aSize, int32_t const aDivisor) {
-  Mesh<Real> ellipsoid;
+void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, int32_t const aBelts, Vector const &aSize, int32_t const aDivisor) {
+  Mesh ellipsoid;
   ellipsoid.makeEllipsoid(aSectors, aBelts, aSize);
   ellipsoid.standardizeVertices();
   ellipsoid.standardizeNormals();
 
   for(int32_t i = 0u; i < aSplitSteps; ++i) {
-    BezierMesh<Real> bezier(ellipsoid);
+    BezierMesh bezier(ellipsoid);
     ellipsoid = bezier.splitThickBezierTriangles();
     ellipsoid.standardizeVertices();
     ellipsoid.standardizeNormals();
   }
 
-  BezierMesh<Real> bezier(ellipsoid);
+  BezierMesh bezier(ellipsoid);
   auto planified = bezier.interpolate(aDivisor);
   planified.standardizeVertices();
   auto vertices = planified.getVertices();  // Due to Clough-Tocher division of small meshes, this will introduce big errors
                                             // Results are only meaningful for sufficiently fine initial meshes, which are easy
                                             // to follow with cubic Bezier triangles.
-  Real sum = 0.0f;
+  float sum = 0.0f;
   for(auto const &vertex : vertices) {
     Spherical spherical(vertex(0) / aSize(0), vertex(1) / aSize(1), vertex(2) / aSize(2));
-    Vertex<Real> ethalon { aSize(0) * sin(spherical.mInclination) * cos(spherical.mAzimuth),
+    Vertex ethalon { aSize(0) * sin(spherical.mInclination) * cos(spherical.mAzimuth),
                            aSize(1) * sin(spherical.mInclination) * sin(spherical.mAzimuth),
                            aSize(2) * cos(spherical.mInclination) };
     sum += (vertex - ethalon).squaredNorm() / ethalon.squaredNorm();
@@ -430,7 +429,7 @@ void measureApproximation(uint32_t const aSplitSteps, int32_t const aSectors, in
                " error: " << std::setw(14) << std::setprecision(8) << error << '\n';
 }
 
-std::deque<BezierTriangle<float>> gFollowers;
+std::deque<BezierTriangle> gFollowers;
 
 void visualizeFollowers(char const * const aName) {
 /*  for(uint32_t i = 0u; i < 1; ++i) {
@@ -442,7 +441,7 @@ void visualizeFollowers(char const * const aName) {
 }
 
 void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this does not work perfectly for complex and extreme surfaces like robot.stl
-  Mesh<Real> mesh;
+  Mesh mesh;
   mesh.readMesh(cgBaseDir + aName);
 
   mesh.standardizeVertices();
@@ -456,7 +455,7 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
   name += aName;
   visualizeNormals(mesh).writeMesh(cgBaseDir + name);
 
-  BezierMesh<Real> bezier(mesh);
+  BezierMesh bezier(mesh);
   auto planified = bezier.interpolate(aDivisor);
 
   name = "bary2plane_";
@@ -465,7 +464,7 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
 }
 
 int main(int argc, char **argv) {
-  Vector<Real> ellipsoidAxes(1.0f, 4.0f, 2.0f);
+  Vector ellipsoidAxes(1.0f, 4.0f, 2.0f);
 
 /*  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 

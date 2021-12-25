@@ -2,7 +2,7 @@
 
 ![alt text](./images/intro.jpg "Intro")
 
-The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate aspheric and anomorphic lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
+The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate free-form lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
 
 This work is divided into 3 parts:
 1. C++ utilities and preprocessor. These parts check the input and produce the Bézier mesh appropriate to implement raytracing.
@@ -18,8 +18,6 @@ I use At most C++17 features all thorough the code to let it interoperate with C
 
 ## C++ utilities and preprocessor
 
-All classes and types and templated to be able to try them with float and double types. The aim is float, because it is much more efficient on GPU and more data fits in the cache. Double may be interesting for debugging if numerical problems would occur. For simplicity I omit the template parameters here.
-
 For space and performance reasons, I use 3D Cartesian coordinates. Since most container sizes are known or calculable, I use `std::vector`s for simple storage. This will let me directly pass the data to GPU code.
 
 ### reference/util.h
@@ -28,7 +26,7 @@ This file contain common type declarations for all other sources, some geometry 
 
 ### reference/mesh.h
 
-This is the home of the `Mesh` class template. I know there are several good STL and mesh processing libraries, but I've created this class for three reasons:
+This is the home of the `Mesh` class. I know there are several good STL and mesh processing libraries, but I've created this class for three reasons:
 1. I wanted full control over mesh processing.
 2. I wanted to preserve original vertices. If the mesh creation algorithm is sophisticated enough, it knows better where and how to place vertices. Any postprocessing can only make it worse.
 3. It contains important preprocessing steps for later stages, which belong to triangle mesh processing, not Bézier triangle meshes.

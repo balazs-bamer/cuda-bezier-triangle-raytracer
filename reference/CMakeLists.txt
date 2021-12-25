@@ -12,9 +12,8 @@ INCLUDE_DIRECTORIES ( "/usr/include/eigen3"
                       "../repos/stl_reader"
                       "../repos/eigen-initializer_list/src" )
 
-add_executable(googleTest googleTest.cpp)
+add_executable(googleTest googleTest.cpp util.cpp)
 target_link_libraries(googleTest GTest::GTest GTest::Main)
 add_test(google-test googleTest)
 
-add_executable(manual-test test.cpp)
-add_executable(rayTracer main.cpp rayTracer.cpp )
+add_executable(manual-test test.cpp util.cpp mesh.cpp bezierTriangle.cpp bezierMesh.cpp bezierLens.cpp)
