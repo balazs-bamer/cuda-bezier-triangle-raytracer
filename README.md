@@ -1,5 +1,7 @@
 # Cuda-based Bézier triangle mesh raytracer
 
+This branch still contains templates to allow experimenting with various precisions.
+
 The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate aspheric and anomorphic lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
 
 This work is divided into 3 parts:
