@@ -14,7 +14,7 @@ auto visualizeNormals(Mesh const &aMesh) {
   Mesh sphere;
   sphere.makeUnitSphere(3, 1);
   for(auto &face : aMesh) {
-    auto normal = getNormal(face).normalized();
+    auto normal = util::getNormal(face).normalized();
     auto base = (face[0] + face[1] + face[2]) / 3.0f;
     auto average = ((face[1] - face[0]).norm() + (face[2] - face[1]).norm() + (face[0] - face[2]).norm()) / 3.0f;
     auto copy = sphere;
@@ -44,7 +44,7 @@ auto visualizeVertexNormals(Mesh const &aMesh) { // Only for spheres
 
 auto visualizeRay(Ray const aRay, float const aLength, float const aRadius) {
   Mesh result;
-  Vector const perpendicular0 = getAperpendicular(aRay.mDirection);
+  Vector const perpendicular0 = util::getAperpendicular(aRay.mDirection);
   Vector const perpendicular1 = aRay.mDirection.cross(perpendicular0);
   Vector const rib0 = aRadius * perpendicular0;  // p0 * cos0 + p1 * sin0
   Vector const rib1 = aRadius * (perpendicular0 * ::cos(2.0f / 3.0f * cgPi) + perpendicular1 * ::sin(2.0f / 3.0f * cgPi));

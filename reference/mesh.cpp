@@ -226,7 +226,7 @@ uint32_t Mesh::getInitialFaceIndex(std::unordered_set<uint32_t> const &aFacesAtS
   uint32_t initialFaceIndex;                                          // First determine the initial face for which we want (f[1]-f[0])x(f[2]-f[0]) point outwards.
   for(auto const indexFace : aFacesAtSmallestX) {
     auto const &face = mMesh[indexFace];
-    auto normal = getNormal(face).normalized();
+    auto normal = util::getNormal(face).normalized();
     auto absoluteDotProduct = std::abs(aDesiredVector.dot(normal));
     if(absoluteDotProduct > maxAbsoluteDotProduct) {
       maxAbsoluteDotProduct = absoluteDotProduct;
@@ -239,7 +239,7 @@ uint32_t Mesh::getInitialFaceIndex(std::unordered_set<uint32_t> const &aFacesAtS
 }
 
 void Mesh::normalize(Triangle &aFace, Vertex const &aDesiredVector) {
-  auto normal = getNormal(aFace);
+  auto normal = util::getNormal(aFace);
   if(aDesiredVector.dot(normal) < 0.0f) {
     std::swap(aFace[0u], aFace[1u]);
   }
@@ -255,21 +255,21 @@ void Mesh::normalize(Triangle const &aFaceKnown, Triangle &aFaceUnknown) {  // C
   uint32_t commonIndex1unknown = (independentIndexUnknown + 1u) % 3u;
   uint32_t commonIndex2unknown = (independentIndexUnknown + 2u) % 3u;
 
-  auto altitudeKnown = getAltitude(aFaceKnown[commonIndex1known], aFaceKnown[commonIndex2known], aFaceKnown[independentIndexKnown]);
-  Vertex altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], aFaceUnknown[independentIndexUnknown]);
+  auto altitudeKnown = util::getAltitude(aFaceKnown[commonIndex1known], aFaceKnown[commonIndex2known], aFaceKnown[independentIndexKnown]);
+  Vertex altitudeUnknown = util::getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], aFaceUnknown[independentIndexUnknown]);
   auto dotFaceAltitudes = altitudeKnown.dot(altitudeUnknown);
 
-  auto normalKnown = getNormal(aFaceKnown);
-  auto normalUnknown = getNormal(aFaceUnknown);
+  auto normalKnown = util::getNormal(aFaceKnown);
+  auto normalUnknown = util::getNormal(aFaceUnknown);
   auto knownDotUnknown = normalKnown.dot(normalUnknown);
   if(std::abs(knownDotUnknown / (normalKnown.norm() * normalUnknown.norm())) < csStandardizeNormalsEpsilon) {
     auto newIndependentUnknown = aFaceUnknown[independentIndexUnknown] + csStandardizeNormalsIndependentMoveFactor * (aFaceKnown[independentIndexKnown] - (aFaceKnown[commonIndex1known] + aFaceKnown[commonIndex2known]) / 2.0f);
     auto newFaceUnknown = aFaceUnknown;
     newFaceUnknown[independentIndexUnknown] = newIndependentUnknown;
 
-    altitudeUnknown = getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], newIndependentUnknown);
+    altitudeUnknown = util::getAltitude(aFaceUnknown[commonIndex1unknown], aFaceUnknown[commonIndex2unknown], newIndependentUnknown);
     dotFaceAltitudes = altitudeKnown.dot(altitudeUnknown);
-    normalUnknown = getNormal(newFaceUnknown);
+    normalUnknown = util::getNormal(newFaceUnknown);
     knownDotUnknown = normalKnown.dot(normalUnknown);
   }
   else { // Nothing to do
@@ -299,7 +299,7 @@ void Mesh::calculateNormalAverages4vertices() {
       Vector sideA = triangle[(whichVertex + 1u) % 3u] - triangle[whichVertex];         // We use angle here
       Vector sideB = triangle[(whichVertex + 2u) % 3u] - triangle[whichVertex];         // Because small triangles are equally important
       float cosAngle = sideA.dot(sideB) / (sideA.norm() * sideB.norm());                // as large ones since they probably help the surface bend.
-      sum += getNormal(mMesh[inRange->second]).normalized() * acos(cosAngle);
+      sum += util::getNormal(mMesh[inRange->second]).normalized() * acos(cosAngle);
     }
     sum.normalize();
     mVertex2averageNormals.emplace(std::make_pair(vertex, sum));
@@ -369,7 +369,7 @@ void Mesh::transform(Transform const &aTransform, Vertex const aDisplacement) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Mesh::divideTriangle(TheMesh &result, Triangle const &aTriangle, int32_t const aDivisor) {
-  divide(aTriangle, aDivisor, [&result](Triangle && aNew){ result.push_back(aNew); } );
+  util::divide(aTriangle, aDivisor, [&result](Triangle && aNew){ result.push_back(aNew); } );
 }
 
 void Mesh::splitTriangles(float const aMaxTriangleSide) {

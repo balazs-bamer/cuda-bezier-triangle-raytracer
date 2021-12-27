@@ -16,6 +16,7 @@
 **/.cmake/
 **/CMakeLists.txt.user
 **/CTestTestfile.cmake
+**/*.so
 reference/rayTracer
 reference/stl/
 reference/test

@@ -10,14 +10,14 @@ BezierMesh::BezierMesh(Mesh const &aMesh) : mOriginalNeighbours(aMesh.getFace2ne
     auto const &neigh = mOriginalNeighbours[indexFace];
     auto const &originalTriangle = aMesh[indexFace];
     auto const originalCentroid = (originalTriangle[0u] + originalTriangle[1u] + originalTriangle[2u]) / 3.0f;
-    auto normal = getNormal(originalTriangle).normalized();
+    auto normal = util::getNormal(originalTriangle).normalized();
     for(uint32_t indexVertex = 0u; indexVertex < 3u; ++indexVertex) { // Appending a regular triangle means doing Clough-Tocher split on it and appending each small one.
       auto const &originalCommonVertex0 = originalTriangle[indexVertex];
       auto const &originalCommonVertex1 = originalTriangle[(indexVertex + 1u) % 3u];
       auto const &averageNormal0 = vertex2averageNormals.at(originalCommonVertex0);
       auto const &averageNormal1 = vertex2averageNormals.at(originalCommonVertex1);
                                                                                  // Neighbour of edge (index, index + 1)
-      Plane planeBetweenOriginalNeighbours = Plane::createFrom1vector2points(normal + getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]).normalized(),
+      Plane planeBetweenOriginalNeighbours = Plane::createFrom1vector2points(normal + util::getNormal(aMesh[neigh.mFellowTriangles[indexVertex]]).normalized(),
                                                                              originalCommonVertex0, originalCommonVertex1);
       auto currentBase = indexFace * 3u;
       std::array<uint32_t, 3u> newNeighbourIndices({ 3u * neigh.mFellowTriangles[indexVertex] + neigh.mFellowCommonSideStarts[indexVertex],
@@ -55,7 +55,7 @@ void BezierMesh::setMissingFields(Mesh const &aMesh, MissingFieldsMethod aMissin
 Mesh BezierMesh::interpolate(int32_t const aDivisor) const {
   Mesh result;
   Triangle barycentric{Vertex{{1.0f, 0.0f, 0.0f}}, Vertex{{0.0f, 1.0f, 0.0f}}, Vertex{{0.0f, 0.0f, 1.0f}}};
-  divide(barycentric, aDivisor, [&result, this](Triangle && aNewBary){
+  util::divide(barycentric, aDivisor, [&result, this](Triangle && aNewBary){
     for(auto const &bezier : mMesh) {
       result.push_back({ bezier.interpolate(aNewBary[0u]),
                          bezier.interpolate(aNewBary[1u]),
@@ -94,7 +94,7 @@ Mesh BezierMesh::splitThickBezierTriangles() const {
         max = std::max(max, ::abs(plane.distance(mMesh[indexSplit + i].interpolate(ratio, 1.0f - ratio, 0.0f))));
       }
     }
-    if(max / getPerimeter(original) > csBezierHeightPerPerimeterLimit) {
+    if(max / util::getPerimeter(original) > csBezierHeightPerPerimeterLimit) {
       splitSides[indexOriginal] = csSplitAll;
       auto const &neigh = mOriginalNeighbours[indexOriginal];
       for(uint32_t side = 0u; side < 3u; ++side) {

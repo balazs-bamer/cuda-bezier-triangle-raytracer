@@ -32,22 +32,22 @@ TEST(vector, getAperpendicular) {
   static constexpr float csEpsilon = 1e-10;
   {
     Vector vector{1.0f, 0.0f, 0.0f};
-    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+    EXPECT_LT(::abs(util::getAperpendicular(vector).dot(vector)), csEpsilon);
   }
   {
     Vector vector{1.0f, 1.0f, 0.0f};
     vector.normalize();
-    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+    EXPECT_LT(::abs(util::getAperpendicular(vector).dot(vector)), csEpsilon);
   }
   {
     Vector vector{1.0f, 0.0f, 1.0f};
     vector.normalize();
-    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+    EXPECT_LT(::abs(util::getAperpendicular(vector).dot(vector)), csEpsilon);
   }
   {
     Vector vector{1.0f, -1.0f, -1.0f};
     vector.normalize();
-    EXPECT_LT(::abs(getAperpendicular(vector).dot(vector)), csEpsilon);
+    EXPECT_LT(::abs(util::getAperpendicular(vector).dot(vector)), csEpsilon);
   }
 }
 
@@ -322,18 +322,18 @@ TEST(toWhichSide, Points) {
   Vertex start = (triangle0 + triangle1 + triangle2) / 3.0f;
   {
     Vertex end = start + Vector{1.0f, 0.0f, 0.0f};
-    auto converter = getBarycentricInverse(triangle0, triangle1, triangle2);
-    EXPECT_EQ(toWhichSide(converter * start, converter * end), 2u);
+    auto converter = util::getBarycentricInverse(triangle0, triangle1, triangle2);
+    EXPECT_EQ(util::toWhichSide(converter * start, converter * end), 2u);
   }
   {
     Vertex end = start + Vector{0.0f, 1.0f, 0.0f};
-    auto converter = getBarycentricInverse(triangle0, triangle1, triangle2);
-    EXPECT_EQ(toWhichSide(converter * start, converter * end), 1u);
+    auto converter = util::getBarycentricInverse(triangle0, triangle1, triangle2);
+    EXPECT_EQ(util::toWhichSide(converter * start, converter * end), 1u);
   }
   {
     Vertex end = start + Vector{-1.0f, -1.0f, 0.0f};
-    auto converter = getBarycentricInverse(triangle0, triangle1, triangle2);
-    EXPECT_EQ(toWhichSide(converter * start, converter * end), 0u);
+    auto converter = util::getBarycentricInverse(triangle0, triangle1, triangle2);
+    EXPECT_EQ(util::toWhichSide(converter * start, converter * end), 0u);
   }
 }
 
