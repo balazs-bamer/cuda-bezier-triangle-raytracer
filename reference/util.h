@@ -9,7 +9,7 @@
 #define UTIL_CUDA_PREFIX_DEVICE
 #endif
 
-#ifndef UTIL_CUDA_PREFIX_HOST  // When defined, should be __device__
+#ifndef UTIL_CUDA_PREFIX_HOST  // When defined, should be __host__
 #define UTIL_CUDA_PREFIX_HOST
 #endif
 
