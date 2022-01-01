@@ -4,13 +4,13 @@
 
 The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate free-form lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
 
-This work is divided into 3 parts:
-1. C++ utilities and preprocessor. These parts check the input and produce the Bézier mesh appropriate to implement raytracing.
-2. Reference single ray tracing implementation in C++. I use it actually to develop all geometry and raytracing algorithms, which will later be modified for GPU usage.
-3. Initial implementation in NVIDIA Thrust, a quick proof-of-concept implementation based on the reference to produce images.
-4. An iteratively developed CUDA version for best performance.
+This work is divided into 4 parts:
+1. [C++ utilities and preprocessor](#1001). These parts check the input and produce the Bézier mesh appropriate to implement raytracing.
+2. [Reference single ray tracing implementation in C++](#1002). I use it actually to develop all geometry and raytracing algorithms, which will later be modified for GPU usage.
+3. [Initial implementation in NVIDIA Thrust](#1003), a quick proof-of-concept implementation based on the reference to produce images.
+4. An iteratively developed [CUDA version](#1004) for best performance.
 
-I use Eigen3 for vector calculations, because it is well supported under CUDA, and Google Test for unit testing. I also use Sebastian Reiter's STL reader utility to parse STL files.
+[Shortcomings](#1005) are here. I use Eigen3 for vector calculations, because it is well supported under CUDA, and Google Test for unit testing. I also use Sebastian Reiter's STL reader utility to parse STL files.
 
 [Here](https://db.bme.hu/~bamer/tdk/TDK.html) is my ancient naive implementation of spherical lens system simulator from 1994-1998 (in Hungarian). That work originates from the high school with most parts ready then. I've abandoned the work because a 80386 without an FPU was far too slow for any meaningful rendering. During the university I could complete it and use a Sun workstation for rendering the images.
 
@@ -18,7 +18,7 @@ I use At most C++17 features all thorough the code to let it interoperate with C
 
 ## C++ utilities and preprocessor
 
-For space and performance reasons, I use 3D Cartesian coordinates. Since most container sizes are known or calculable, I use `std::vector`s for simple storage. This will let me directly pass the data to GPU code.
+<a id="1001">For</a> space and performance reasons, I use 3D Cartesian coordinates. Since most container sizes are known or calculable, I use `std::vector`s for simple storage. This will let me directly pass the data to GPU code.
 
 ### reference/util.h
 
@@ -136,29 +136,74 @@ New (dividing) vertices are calculated as a fixed linear combination of the side
 
 This is now only a simple brute-force search for the intersection giving the shortest ray.
 
+#### Ellipse approximation test
+
+I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
+I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
+There are general error limits for surface approximation using Bézier triangles like in [[5]](#5). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
+
+## Reference C++ raytracer
+
+<a id="1002">This</a> is just visualization for visual inspection in Blender.
+
 ### reference/bezierLens.h
 
 `BezierLens` now only contains the function below. The class is constructed with the refractive index and the `BezierMesh` giving its shape.
 
 #### BezierLens::refract
 
-This is a simple implementation using relative indices of refraction according to [[5]](#5). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. To avoid uncertain intersections with large angles of incidence, the method accepts the expected "place" of ray (inside or outside). Should the intersection result be different, the method interpets it as no intersection. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
+This is a simple implementation using relative indices of refraction according to [[6]](#6). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. To avoid uncertain intersections with large angles of incidence, the method accepts the expected "place" of ray (inside or outside). Should the intersection result be different, the method interpets it as no intersection. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
 - the surface approximation using the Bézier triangle mesh
 - the intersection precision.
 
-#### Ellipse approximation test
+## Initial Thrust implementation
 
-I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
-I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
-There are general error limits for surface approximation using Bézier triangles like in [[6]](#6). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
+<a id="1003">This</a> is illumination simulator, where a rectangular emitter (like a naked power LED) behind a free-form lens illuminates a rectangular surface, on which the light distribution is calculated.
 
-#### Shortcomings
+### Theory
 
-In theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice I've tried some concave bodies, and the ones with small face angles (< 90-120 degrees, depending on the situation) cause numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges.
+A batch of Thrust kernels takes a set of rays and a Bézier mesh, and calculates intersection on every ray vs every Bézier triangle, and on intersection, also refraction. Note, there are "few" triangles, in the magnitude of hundreds or thousand, so the brute-force solution won't mean performance loss. This happens on entering and exiting the lens. After it the intersection with the illuminated surface will be calculated for all refracted rays. From the emitter rays are casted in every direction of the hemisphere.
+
+Uniform illumination from an emitter point is achieved by first choosing the "incidence" angle `a` from the uniform distribution (0, pi/2). Now, the radius of a "belt" with this `a` incidence is `sin(a)`. Now if we take a random number with uniform distribution (0, 1) and it is larger than the belt radius, we discard the whole process and start over. This way shorter "belts" will have the same point density as longer ones. On a belt, the direction of the actual point is chosen from the uniform distribution (0, 2pi). For every point, a total of `r` rays will be cast this way.
+
+CUDA kernels work best if possibly all the threads have the same way of execution. This is more likely to happen if the rays in a kernel have similar geometries and hit similar part of the lens. To achieve this, the emitter is divided into `k` by `l` ractangular parts, and the hemisphere also in `b` belts, each one into equal patches depending on its radius. For `0 <= i < b` -th belt (counted from the emitter surface) the number of patches is
+
+<img src="https://render.githubusercontent.com/render/math?math=s_i=\Bigg\lceil 4b \sin\Big(\frac{2i %2B 1}{4b}\pi\Big) \Bigg\rceil">
+
+while the total number of patches `d` is
+
+<img src="https://render.githubusercontent.com/render/math?math=d=\sum_{0}^{b-1} s_i">
+
+The batch of kernels are invocated in the following algorithm:
+
+- Loop for `k` and `l`, so for every divided square
+  - Produce `p` points in the square either in uniform or random way.
+  - Create `d` vectors of length `p*r` each, containing a ray, a point and a point index (or more precisely, 3 vectors to allow more coalesced memory access).
+  - For each point
+    - Cast `r` rays
+      - If the ray hits the bounding sphere of the lens, sort each ray into the corresponding vector together with the actual point index and location.
+  - Now every vector contains at most `p * r / d` items on average.
+  - Prepare `p` pieces of output processing structures
+  - For each vector
+    - If it is not empty
+      - Create cross product with all of its items and all of the Bézier triangles. This is necessary, because Thrust can only handle cross products in an indirect way.
+      - Invoke the batch of kernels
+      - Sort the result into the output processing structures
+  - Process output structures TODO how?
+
+Now only the raytracing itself is handled by Thrust. Perhaps more tasks would be benefitial. The rough ray-lens intersection is determined by checking the lens' bounding sphere. This can be done much faster than a check against the axis-aligned bounding box or anything more complicated. For sake of simplicity, I use Ritter's algorithm [[7]](#7) here, which produces approximately 5% bigger sphere than the optimal one.
+
+## Initial Thrust implementation
+
+<a id="1004">Nothing</a> here yet.
+
+## Shortcomings
+
+<a id="1005">In</a> theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice I've tried some concave bodies, and the ones with small face angles (< 90-120 degrees, depending on the situation) cause numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges.
 
 The intersection algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees). This could be fixed with some shallow recursion, but I leave it yet.
 
-Analysis of  intersection algorithm lacks exact mathematical proof.
+Analysis of intersection algorithm lacks exact mathematical proof.
 
 The refraction algorithm does not handle compound lenses.
 
@@ -177,7 +222,7 @@ Triangular Bezier clipping
 Proceedings the Eighth Pacific Conference on Computer Graphics and Applications (October 2000)
 
 <a id="3">[3]</a>
-Ryaben'kii, Victor S.; Tsynkov, Semyon V. (2006)
+Ryaben'kii, Victor S.; Tsynkov, Semyon V. (2006).
 A Theoretical Introduction to Numerical Analysis
 CRC Press, p. 243, ISBN 9781584886075.
 
@@ -187,10 +232,15 @@ Triangular Bernstein-Bézier patches
 Computer Aided Geometric Design 3, pp 83-127
 
 <a id="5">[5]</a>
-Scratchapixel
-https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
-
-<a id="6">[6]</a>
 Chang Geng-zhe, Feng Yu-yu (1983).
 Error bound for Bernstein-Bézier triangulation approximation
 Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340
+
+<a id="6">[6]</a>
+Scratchapixel
+https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
+
+<a id="7">[7]</a>
+Jack Ritter (1990).
+An efficient bounding sphere
+Versatec, Inc. Santa Clara, California
