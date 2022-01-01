@@ -86,22 +86,24 @@ The class contains some precomputed values useful for intersection calculations,
 
 #### BezierTriangle::intersection
 
-Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
+Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm based on Newton's method with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
 
-First I check the intersection with the underlying planar triangle, and if it intersects, calculate the lengths along the ray measured from its starting points
-* to the maximum possible surface point outside
-* to the minimum possible surface point inside - these two come from the maximum distances inside and outside and the incidence to the underlying plane.
+First I check the intersection with the underlying planar triangle, and if it intersects, calculate the lengths along the ray measured from its starting point
+* until the ray reaches the signed distance from the underlying plane equal to the maximal surface point above that plane
+* until the ray reaches the signed distance from the underlying plane equal to the maximal surface point below that plane
 
-The intersection calculation is performed in a fixed number of iterations, currently 4. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change sign" along the ray in the given interval. If so, the following iteration yields the result:
+The intersection calculation is performed in a fixed number of iterations, currently 4.
+
 1. Set starting point the linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the above extremes. This is a point on the ray. If the point would fall too far away or division by zero would occur, I take the extremes interval midpoint. TODO figure.
 2. Set the initial projection direction to the underlying triangle normal.
 3. Project the candidate point on ray to the underlying plane in the projection direction. TODO figure.
 4. Calculate its barycentric coordinates.
-5. Use these to calculate the corresponding surface point and surface normal. New projection direction is surface point - projected proint.
-6. Take the plane in the surface point perpendicular to the surface normal and intersect it with the ray to get the next ray point to start from.
-7. Goto 3 when there is iteration left.
+5. Use these to calculate the corresponding surface point and surface normal.
+6. Set the new projection direction to the surface point - projected point vector. This greatly reduces the approximation error.
+7. Take the plane in the surface point perpendicular to the surface normal and intersect it with the ray to get the next ray point to start from.
+8. Goto 3 when there is iteration left.
 
-This process practically always converges, if the above sign change occurs, although I don't have a proof. If the sign does not changes, the resulting surface point will lie off the ray, which is a sign of no intersection.
+This process is practically a modification of Newton's root finding method, with an indirect way of evaluating f(x) and f'(x) - exact calculation does not work without barycentric coordinates. The process practically always converges, when the ray has not too big angle of incidence, with an indirect way of evaluating f(x) and f'(x) - exact calculation does not work without barycentric coordinates. The process practically always converges, when the ray has not too big angle of incidence. TODO exact proof for this based on [[3]](#3)
 
 When ready, it is important to check if the intersection is within the domain of the current Bézier triangle. If not, the intersection would be more accurate when calculated on the appropriate neighbouring triangle. To enable this, in this case I return the side index to be considered for a similar calculation process for the neighbouring triangle. Since its planar intersection will definitely be outside the underlying triangle, I omit that check to let the function finish. TODO figures.
 
@@ -109,7 +111,7 @@ Following from the algorithm, the intersection point will lie exactly on the Bé
 
 #### BezierTriangle::getNormal
 
-This function is used in the previous one to calculate the surface normal in the intersection point. I used the principle described in [[3]](#3) to calculate closed-formula barycentric derivatives and use them to calculate two perpendicular surface tangent directions in that point. Their cross product gives the desired normal.
+This function is used in the previous one to calculate the surface normal in the intersection point. I used the principle described in [[4]](#4) to calculate closed-formula barycentric derivatives and use them to calculate two perpendicular surface tangent directions in that point. Their cross product gives the desired normal.
 
 ### reference/bezierMesh.h
 
@@ -140,7 +142,7 @@ This is now only a simple brute-force search for the intersection giving the sho
 
 #### BezierLens::refract
 
-This is a simple implementation using relative indices of refraction according to [[4]](#4). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. To avoid uncertain intersections with large angles of incidence, the method accepts the expected "place" of ray (inside or outside). Should the intersection result be different, the method interpets it as no intersection. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
+This is a simple implementation using relative indices of refraction according to [[5]](#5). Refraction only occurs if the ray intersects the contained shape, and handles inside-outside and outside-inside transitions automatically. To avoid uncertain intersections with large angles of incidence, the method accepts the expected "place" of ray (inside or outside). Should the intersection result be different, the method interpets it as no intersection. As Bézier surfaces allow quite precise normal calculation, the refraction precision depends on
 - the surface approximation using the Bézier triangle mesh
 - the intersection precision.
 
@@ -148,7 +150,7 @@ This is a simple implementation using relative indices of refraction according t
 
 I've chosen an ellipsoid with principal semi-axes 1.0, 2.0 and 4.0 was used for these tests. I've chosen this shape because it somewhat resembles a lens, has curvatures with reasonably high variety in radii. I've measured the error of the interpolated mesh (`aDivisor` == 3) vertices relative to the ellipsoid surface point in the very same direction (where the line containing the center and the vertex intersects the ellipsoid). Average quadratic relative errors were between **1.9e-5** and **2.2e-3** for the same tuned parameters.
 I find these results good enough to start with. Should the error be too big for some application, a more specialized parameter tuning is possible or I might use more sophiticated preprocessing algorithms.
-There are general error limits for surface approximation using Bézier triangles like in [[5]](#5). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
+There are general error limits for surface approximation using Bézier triangles like in [[6]](#6). Here for any triangle where the parametric function describing the surface to approximate is known and its second partial derivatives exist, an upper limit for the error can be expressed.
 
 #### Shortcomings
 
@@ -156,7 +158,7 @@ In theory, my algorithms can handle concave meshes, and the `Mesh` class even me
 
 The intersection algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees). This could be fixed with some shallow recursion, but I leave it yet.
 
-The convergence in intersection algorithm lacks mathematical proof.
+Analysis of  intersection algorithm lacks exact mathematical proof.
 
 The refraction algorithm does not handle compound lenses.
 
@@ -175,15 +177,20 @@ Triangular Bezier clipping
 Proceedings the Eighth Pacific Conference on Computer Graphics and Applications (October 2000)
 
 <a id="3">[3]</a>
+Ryaben'kii, Victor S.; Tsynkov, Semyon V. (2006)
+A Theoretical Introduction to Numerical Analysis
+CRC Press, p. 243, ISBN 9781584886075.
+
+<a id="4">[4]</a>
 Gerald Farin (1986).
 Triangular Bernstein-Bézier patches
 Computer Aided Geometric Design 3, pp 83-127
 
-<a id="4">[4]</a>
+<a id="5">[5]</a>
 Scratchapixel
 https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
 
-<a id="5">[5]</a>
+<a id="6">[6]</a>
 Chang Geng-zhe, Feng Yu-yu (1983).
 Error bound for Bernstein-Bézier triangulation approximation
 Journal of Computational Mathematics Vol. 1, No. 4 (October 1983), pp. 335-340
