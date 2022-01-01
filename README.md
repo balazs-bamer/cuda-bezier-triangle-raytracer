@@ -93,11 +93,11 @@ First I check the intersection with the underlying planar triangle, and if it in
 * to the minimum possible surface point inside - these two come from the maximum distances inside and outside and the incidence to the underlying plane.
 
 The intersection calculation is performed in a fixed number of iterations, currently 4. The interseciton calculation will only take place when the ray and Bézier surface distance from the underlying plane "change sign" along the ray in the given interval. If so, the following iteration yields the result:
-1. Set starting point the linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the extremes. This is a point on the ray. If the point would fall too far away or division by zero would occur, I take the interval midpoint. TODO figure.
+1. Set starting point the linear estimation of the ray and surface intersection based on their distance difference from the underlying plane at the above extremes. This is a point on the ray. If the point would fall too far away or division by zero would occur, I take the extremes interval midpoint. TODO figure.
 2. Set the initial projection direction to the underlying triangle normal.
 3. Project the candidate point on ray to the underlying plane in the projection direction. TODO figure.
 4. Calculate its barycentric coordinates.
-5. Use these to calculate the corresponding surface point and surface normal.
+5. Use these to calculate the corresponding surface point and surface normal. New projection direction is surface point - projected proint.
 6. Take the plane in the surface point perpendicular to the surface normal and intersect it with the ray to get the next ray point to start from.
 7. Goto 3 when there is iteration left.
 
