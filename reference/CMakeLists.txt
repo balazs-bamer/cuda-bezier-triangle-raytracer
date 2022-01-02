@@ -8,7 +8,7 @@ find_package(GTest REQUIRED)
 add_compile_options(-O2 -std=c++17)
 
 add_definitions(-DEIGEN_MATRIX_PLUGIN="Matrix_initializer_list.h" -DEIGEN_ARRAY_PLUGIN="Array_initializer_list.h")
-SET(PreprocessBezierSrc mesh.cpp bezierTriangle.cpp bezierMesh.cpp bezierLens.cpp)
+SET(PreprocessBezierSrc mesh.cpp bezierTriangle.cpp bezierMesh.cpp bezierLens.cpp hostUtil.cpp)
 
 INCLUDE_DIRECTORIES ( "/usr/include/eigen3"
                       "../repos/stl_reader"
