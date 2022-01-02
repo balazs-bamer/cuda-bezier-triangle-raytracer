@@ -1,13 +1,43 @@
 #include "mesh.h"
+#include "hostUtil.h"
 #include "bezierLens.h"
 
 #include<deque>
 #include<vector>
+#include<chrono>
 #include<iomanip>
 #include<iostream>
 
 
 std::string const cgBaseDir("output/");
+
+void testUniformHemisphere(uint32_t const aBelts) {
+  UniformHemisphere hemi(aBelts);
+  std::vector<uint32_t> was(hemi.getPatchCount(), 0u);
+  auto start = std::chrono::high_resolution_clock::now();
+  for(uint32_t i = 0u; i < 1000000u; ++i) {
+    auto [vector, patch] = hemi.getRandom();
+    was[patch]++;
+  }
+  for(auto const count : was) {
+    std::cout << count << '\n';
+  }
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> diff = end - start;
+  std::cout << diff.count() << '\n';
+
+  Mesh result;
+  Mesh sphere;
+  sphere.makeUnitSphere(3, 1);
+  sphere *= 0.01f;
+  for(uint32_t i = 0u; i < 1000u; ++i) {
+    auto [vector, patch] = hemi.getRandom();
+    auto copy = sphere;
+    copy += vector;
+    std::copy(copy.cbegin(), copy.cend(), std::back_inserter(result));
+  }
+  result.writeMesh(cgBaseDir + "hemisphere.stl");
+}
 
 auto visualizeNormals(Mesh const &aMesh) {
   Mesh result;
@@ -466,6 +496,8 @@ void testCustomStl(char * const aName, int32_t const aDivisor) {  // TODO this d
 int main(int argc, char **argv) {
   Vector ellipsoidAxes(1.0f, 4.0f, 2.0f);
 
+  testUniformHemisphere(6u);
+
 /*  testDequeDivisor("dequeDivisor", 7, 7, 3.0f, 3);
 
   testVectorMax("vectorMax", 4, 2, 13.0f, 11.0f);
@@ -477,7 +509,7 @@ int main(int argc, char **argv) {
   testBezierSplitTall("7x3", 7, 3, ellipsoidAxes, 1);
   testBezierSplitTall("15x5", 15, 5, ellipsoidAxes, 1);*/
 
-  testBezierRefraction("21x15", 21, 15, ellipsoidAxes, 3.0f, 3.0f, 4, 4);
+//  testBezierRefraction("21x15", 21, 15, ellipsoidAxes, 3.0f, 3.0f, 4, 4);
 //  visualizeFollowers("follow");
 
 /*  measureApproximation(0, 4, 1, ellipsoidAxes, 1);     // SplitSteps: 0 Sectors:  4 Belts:  1 Size: 1 4 2 Divisor: 1 error:      1.2555894
