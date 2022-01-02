@@ -171,16 +171,19 @@ struct Ray final {
   : mStart(aStart)
   , mDirection(aDirection.normalized()) {}
 
+  // Does not consider that a ray is a half-line.
   UTIL_CUDA_PREFIX_DEVICE UTIL_CUDA_PREFIX_HOST
   Vector getPerpendicularTo(Vertex const &aPoint) const {
     return aPoint - mStart - (aPoint - mStart).dot(mDirection) * mDirection;
   }
 
+  // Does not consider that a ray is a half-line.
   UTIL_CUDA_PREFIX_DEVICE UTIL_CUDA_PREFIX_HOST
   float getDistance(Vertex const &aPoint) const {
     return getPerpendicularTo(aPoint).norm();
   }
 
+  // Does not consider that a ray is a half-line.
   UTIL_CUDA_PREFIX_DEVICE UTIL_CUDA_PREFIX_HOST
   float getDistance2(Vertex const &aPoint) const {
     return getPerpendicularTo(aPoint).squaredNorm();
@@ -328,6 +331,19 @@ struct Spherical final {
   : mR(::sqrt(aX * aX + aY * aY + aZ * aZ))
   , mInclination(::acos(aZ / mR))
   , mAzimuth(::atan2(aY, aX)) {}
+};
+
+struct Sphere final {  // TODO consider if we need this for bounding sphere intersection or do it by hand. Problem is ray is a half-line and this would also need to store r2.
+  Vector mCenter;
+  float  mRadius;
+
+  UTIL_CUDA_PREFIX_DEVICE UTIL_CUDA_PREFIX_HOST
+  Sphere() = default;
+
+  UTIL_CUDA_PREFIX_DEVICE UTIL_CUDA_PREFIX_HOST
+  Sphere(Vector const &aCenter, float const aRadius) : mCenter(aCenter), mRadius(aRadius) {}
+
+  bool doesIntersect(Ray const aRay);
 };
 
 #endif
