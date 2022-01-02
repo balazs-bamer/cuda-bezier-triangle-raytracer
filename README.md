@@ -164,7 +164,7 @@ This is a simple implementation using relative indices of refraction according t
 
 A batch of Thrust kernels takes a set of rays and a Bézier mesh, and calculates intersection on every ray vs every Bézier triangle, and on intersection, also refraction. Note, there are "few" triangles, in the magnitude of hundreds or thousand, so the brute-force solution won't mean performance loss. This happens on entering and exiting the lens. After it the intersection with the illuminated surface will be calculated for all refracted rays. From the emitter rays are casted in every direction of the hemisphere.
 
-Uniform illumination from an emitter point is achieved by first choosing the "incidence" angle `a` from the uniform distribution (0, pi/2). Now, the radius of a "belt" with this `a` incidence is `sin(a)`. Now if we take a random number with uniform distribution (0, 1) and it is larger than the belt radius, we discard the whole process and start over. This way shorter "belts" will have the same point density as longer ones. On a belt, the direction of the actual point is chosen from the uniform distribution (0, 2pi). For every point, a total of `r` rays will be cast this way.
+First I wanted to generate uniform distrinution on a hemisphere by first choosing the "incidence" angle `a` from the uniform distribution (0, pi/2). Now, the radius of a "belt" with this `a` incidence is `sin(a)`. Now if we take a random number with uniform distribution (0, 1) and it is larger than the belt radius, we discard the whole process and start over. On a belt, the direction of the actual point is chosen from the uniform distribution (0, 2pi). It is easy to see that on average pi/2 iterations are needed. However, the direct method based on modified distribution described in [[7]](#7) is about 50% faster, so I use it. For every point, a total of `r` rays will be cast this way.
 
 CUDA kernels work best if possibly all the threads have the same way of execution. This is more likely to happen if the rays in a kernel have similar geometries and hit similar part of the lens. To achieve this, the emitter is divided into `k` by `l` ractangular parts, and the hemisphere also in `b` belts, each one into equal patches depending on its radius. For `0 <= i < b` -th belt (counted from the emitter surface) the number of patches is
 
@@ -191,7 +191,7 @@ The batch of kernels are invocated in the following algorithm:
       - Sort the result into the output processing structures
   - Process output structures TODO how?
 
-Now only the raytracing itself is handled by Thrust. Perhaps more tasks would be benefitial. The rough ray-lens intersection is determined by checking the lens' bounding sphere. This can be done much faster than a check against the axis-aligned bounding box or anything more complicated. For sake of simplicity, I use Ritter's algorithm [[7]](#7) here, which produces approximately 5% bigger sphere than the optimal one.
+Now only the raytracing itself is handled by Thrust. Perhaps more tasks would be benefitial. The rough ray-lens intersection is determined by checking the lens' bounding sphere. This can be done much faster than a check against the axis-aligned bounding box or anything more complicated. For sake of simplicity, I use Ritter's algorithm [[8]](#8) here, which produces approximately 5% bigger sphere than the optimal one.
 
 ## Initial Thrust implementation
 
@@ -241,6 +241,11 @@ Scratchapixel
 https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
 
 <a id="7">[7]</a>
+Cory Simon (2015).
+Generating uniformly distributed numbers on a sphere
+http://corysimon.github.io/articles/uniformdistn-on-sphere/
+
+<a id="8">[8]</a>
 Jack Ritter (1990).
 An efficient bounding sphere
 Versatec, Inc. Santa Clara, California

@@ -17,12 +17,8 @@ UniformHemisphere::UniformHemisphere(uint32_t const aBelts)
 std::pair<Vector, uint32_t> UniformHemisphere::getRandom() {
   Vector direction;
   uint32_t index;
-  float inclination;
-  float beltRadius;
-  do {                                                 // 0.455082
-    inclination = mUniformPi_2(mRandomGenerator);
-    beltRadius = ::sin(inclination);
-  } while(beltRadius < mUniform1(mRandomGenerator));
+  float inclination = ::acos(mUniform1(mRandomGenerator));
+  float beltRadius = ::sin(inclination);
   auto turn = mUniform2pi(mRandomGenerator);
   direction(0) = ::cos(inclination);
   direction(1) = beltRadius * ::cos(turn);

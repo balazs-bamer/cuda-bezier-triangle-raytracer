@@ -11,7 +11,6 @@ private:
   std::vector<std::pair<float, uint32_t>>  mBelts;
   std::ranlux24_base                       mRandomGenerator;
   std::uniform_real_distribution<float>    mUniform1;
-  std::uniform_real_distribution<float>    mUniformPi_2;
   std::uniform_real_distribution<float>    mUniform2pi;
   uint32_t                                 mPatchCount;
 
