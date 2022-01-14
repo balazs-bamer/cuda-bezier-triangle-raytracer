@@ -207,6 +207,18 @@ Analysis of intersection algorithm lacks exact mathematical proof.
 
 The refraction algorithm does not handle compound lenses.
 
+## Scratch
+
+For solids of revolutions, the Bézier-triangle mesh is not ultimately necessary. Direct intersection checking can be done based on [[9]](#9) using the following modification:
+
+Instead of <img src="https://render.githubusercontent.com/render/math?math=x\vec{n}"> I use <img src="https://render.githubusercontent.com/render/math?math=Q %2b u\vec{n}"> which is a more exact notation of the line represesenting the rotation of axis. Here, _u_ will also be used as the independent variable of the function _f_ defining the solid of revolution. This determines the choice of _Q_. The ray is given as <img src="https://render.githubusercontent.com/render/math?math=P %2b t\vec{v}">. The distance of the ray and the rotation axis is the same as in the article:
+<img src="https://render.githubusercontent.com/render/math?math=\sqrt{u^2 (\vec{j}\vec{j}) %2b 2u (\vec{j}\vec{k}) %2b \vec{k}\vec{k}}">
+and this should be equal to _f_, i.e. <img src="https://render.githubusercontent.com/render/math?math=g(u) = f(u) - d(u)"> should be 0. For the case of _f_ is monotonic in the interested interval [_l_, _h_], the solution can be easily determined using Newton's method. Suppose it is _u_. Now the intersection point on the solid of revolution is
+
+<img src="https://render.githubusercontent.com/render/math?math=M(u)=P %2b (\frac{Q %2b u\vec{n} - P}{\vec{v}\vec{n}}\vec{n})\vec{v}">
+
+Normal at the intersection point is given by <img src="https://render.githubusercontent.com/render/math?math=M'(u)\times((M(u)-Q-u\vec{n})\times\vec{n})"> where the derivative could be obtained using the five-point stencil numeric method. Special cases of _v_ and _n_ parallel or perpendicular are detailed in the article.
+
 ## References
 
 See [Wikipedia](https://wikipedia.org) for well-known or simpler stuff.
@@ -249,3 +261,8 @@ http://corysimon.github.io/articles/uniformdistn-on-sphere/
 Jack Ritter (1990).
 An efficient bounding sphere
 Versatec, Inc. Santa Clara, California
+
+<a id="9">[9]</a>
+Gluyas (2019).
+Intersection of solid of revolution and a line
+https://math.stackexchange.com/questions/1971374/intersection-of-solid-of-revolution-and-a-line
