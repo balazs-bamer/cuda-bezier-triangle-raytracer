@@ -13,14 +13,17 @@
 #define UTIL_CUDA_PREFIX_HOST
 #endif
 
+
 constexpr float cgPi = 3.14159265358979323846;
 constexpr float cgGeneralEpsilon = 1.0e-5;
+
 
 using Vector         = Eigen::Matrix<float, 3, 1>;
 using Vertex         = Eigen::Matrix<float, 3, 1>;
 using Matrix         = Eigen::Matrix<float, 3, 3>;
 using Transform      = Eigen::Matrix<float, 3, 3>;
 using Triangle       = std::array<Vertex, 3u>;
+
 
 // Namespace-like struct to allow this file act as a header-only library for CPP and CUDA.
 struct util {
@@ -159,6 +162,7 @@ struct util {
   }
 };
 
+
 struct Ray final {
   Vertex mStart;
   Vector mDirection; // normalized
@@ -199,12 +203,14 @@ struct Ray final {
   }
 };
 
+
 struct Intersection final {
   bool   mValid;         // Will be true even if distance < 0, because it can be important.
   Vertex mPoint;
   float  mCosIncidence;  // Negative if the ray comes from outside, so the surface normal and the ray point in opposite direction.
   float  mDistance;      // Distance of ray source point and intersection point.
 };
+
 
 // Plane equation is in the form of point.dot(mNormal) == mConstant where point is any point in the plane.
 struct Plane final {
@@ -320,6 +326,7 @@ struct Plane final {
                                                          || mNormal(0) == aOther.mNormal(0) && mNormal(1) == aOther.mNormal(1) && mNormal(2) == aOther.mNormal(2) && mConstant < aOther.mConstant; }
 };
 
+
 struct Spherical final {
   float mR;
   float mAzimuth; // or sector
@@ -333,6 +340,7 @@ struct Spherical final {
   , mAzimuth(::atan2(aY, aX)) {}
 };
 
+
 struct Sphere final {  // TODO consider if we need this for bounding sphere intersection or do it by hand. Problem is ray is a half-line and this would also need to store r2.
   Vector mCenter;
   float  mRadius;
@@ -344,6 +352,60 @@ struct Sphere final {  // TODO consider if we need this for bounding sphere inte
   Sphere(Vector const &aCenter, float const aRadius) : mCenter(aCenter), mRadius(aRadius) {}
 
   bool doesIntersect(Ray const aRay);
+};
+
+
+template<uint32_t tDegree>
+class PolynomApprox final {
+  static_assert(tDegree >= 1u);
+
+private:
+  Eigen::Matrix<float, tDegree + 1u, 1u> mCoefficients;
+  static constexpr uint32_t csDegree1 = tDegree + 1u;
+
+public:
+  PolynomApprox(std::vector<float> const& aSamplesX, std::vector<float> const aSamplesY) {
+    std::array<float, tDegree + csDegree1>   fitX;
+    Eigen::Matrix<float, csDegree1, csDegree1> fitA;
+    Eigen::Matrix<float, csDegree1 , 1u>      fitB;
+
+    auto sampleCount = std::min(aSamplesX.size(), aSamplesY.size());
+    auto degree1 = tDegree + 1u;
+
+    if(sampleCount >= csDegree1) {
+      for(uint32_t i = 0u; i < csDegree1 + tDegree; ++i) {
+        fitX[i] = 0.0f;
+        for(uint32_t j = 0u; j < sampleCount; ++j) {
+          fitX[i] += ::pow(aSamplesX[j], i);
+        }
+      }
+      for(uint32_t i = 0u; i < csDegree1; ++i) {
+        for(uint32_t j = 0u; j < csDegree1; ++j) {
+          fitA(i, j) =fitX[i + j];
+        }
+      }
+      for(uint32_t i = 0u; i < csDegree1; ++i) {
+        float tmp = 0.0f;
+        for(uint32_t j = 0u; j < sampleCount; ++j) {
+          tmp += ::pow(aSamplesX[j], i) * aSamplesY[j];
+        }
+        fitB(i) = tmp;
+      }
+      mCoefficients = fitA.colPivHouseholderQr().solve(fitB);
+    }
+    else {
+      mCoefficients = Eigen::Matrix<float, tDegree + 1u, 1u>::Zero();
+    }
+  }
+
+  float eval(float const aX) const {
+    float result = mCoefficients(tDegree) * aX;
+    for(uint32_t i = tDegree - 1u; i > 0u; --i) {
+      result = (result + mCoefficients(i)) * aX;
+    }
+    result += mCoefficients(0);
+    return result;
+  }
 };
 
 #endif
