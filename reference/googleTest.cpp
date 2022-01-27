@@ -353,7 +353,7 @@ TEST(toWhichSide, Points) {
 }
 
 TEST(polynomApprox, x2few) {
-  PolynomApprox<2u> poly({1.0f, 2.0f}, {1.0f, 4.0f, 9.0f});
+  PolynomApprox poly({1.0f, 2.0f}, {1.0f, 4.0f, 9.0f}, 2u);
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(1.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(4.0f),  0.0f));
@@ -361,7 +361,7 @@ TEST(polynomApprox, x2few) {
 }
 
 TEST(polynomApprox, x20) {
-  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f}, {0.0f, 0.0f, 0.0f});
+  PolynomApprox poly({1.0f, 2.0f, 3.0f}, {0.0f, 0.0f, 0.0f}, 2u);
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(4.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(5.0f),  0.0f));
@@ -369,7 +369,7 @@ TEST(polynomApprox, x20) {
 }
 
 TEST(polynomApprox, x2_21_27_30) {
-  PolynomApprox<2u> poly({32.0f, 48.0f, 63.0f}, {21.0f, 27.0f, 30.0f});
+  PolynomApprox poly({32.0f, 48.0f, 63.0f}, {21.0f, 27.0f, 30.0f}, 2u);
   EXPECT_TRUE(eq(poly.eval(32.0f),  21.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(48.0f),  27.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(63.0f),  30.0f, 0.1f));
@@ -377,7 +377,7 @@ TEST(polynomApprox, x2_21_27_30) {
 }
 
 TEST(polynomApprox, x2) {
-  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 9.0f});
+  PolynomApprox poly({1.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 9.0f}, 2u);
   EXPECT_TRUE(poly.size() == 3u);
   EXPECT_TRUE(eq(poly[0u],  0.0f));
   EXPECT_TRUE(eq(poly[1u],  0.0f));
@@ -389,7 +389,7 @@ TEST(polynomApprox, x2) {
 }
 
 TEST(polynomApprox, x2_5) {
-  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f}, {6.0f, 9.0f, 14.0f});
+  PolynomApprox poly({1.0f, 2.0f, 3.0f}, {6.0f, 9.0f, 14.0f}, 2u);
   EXPECT_TRUE(poly.size() == 3u);
   EXPECT_TRUE(eq(poly[0u],  5.0f));
   EXPECT_TRUE(eq(poly[1u],  0.0f));
@@ -401,7 +401,7 @@ TEST(polynomApprox, x2_5) {
 }
 
 TEST(polynomApprox, x2off) {
-  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f, 4.0f}, {1.0f, 4.0f, 9.0f, 15.9f});
+  PolynomApprox poly({1.0f, 2.0f, 3.0f, 4.0f}, {1.0f, 4.0f, 9.0f, 15.9f}, 2u);
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(4.0f), 16.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(5.0f), 25.0f, 0.3f));
@@ -409,7 +409,7 @@ TEST(polynomApprox, x2off) {
 }
 
 TEST(polynomApprox, x2veryoff) {
-  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f, 4.0f}, {1.0f, 3.0f, 13.0f, 13.0f});
+  PolynomApprox poly({1.0f, 2.0f, 3.0f, 4.0f}, {1.0f, 3.0f, 13.0f, 13.0f}, 2u);
   EXPECT_FALSE(eq(poly.eval(0.0f),  0.0f));
   EXPECT_FALSE(eq(poly.eval(4.0f), 16.0f));
   EXPECT_FALSE(eq(poly.eval(5.0f), 25.0f));
@@ -417,7 +417,7 @@ TEST(polynomApprox, x2veryoff) {
 }
 
 TEST(polynomApprox, 2x3_3x2_4x_5) {
-  PolynomApprox<3u> poly({0.0f, 1.0f, 2.0f, 3.0f}, {5.0f, 14.0f, 41.0f, 98.0f});
+  PolynomApprox poly({0.0f, 1.0f, 2.0f, 3.0f}, {5.0f, 14.0f, 41.0f, 98.0f}, 3u);
   EXPECT_TRUE(poly.size() == 4u);
   EXPECT_TRUE(eq(poly.eval(0.5f),  8.0f));
   EXPECT_TRUE(eq(poly.eval(1.5f), 24.5f));

@@ -355,24 +355,23 @@ struct Sphere final {  // TODO consider if we need this for bounding sphere inte
 };
 
 
-template<uint32_t tDegree>
 class PolynomApprox final {
-  static_assert(tDegree >= 1u);
-
 private:
-  static constexpr uint32_t csDegree1 = tDegree + 1u;
+  uint32_t const  mDegree;
 
-  Eigen::VectorXf           mCoefficients;
-  float                     mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
+  Eigen::VectorXf mCoefficients;
+  float           mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
 
 public:
-  PolynomApprox(float const* const aSamplesX, float const* const aSamplesY, uint32_t const aSampleCount) {
-    Eigen::MatrixXf fitA(aSampleCount, csDegree1);
+  PolynomApprox(float const* const aSamplesX, float const* const aSamplesY, uint32_t const aSampleCount, uint32_t const aDegree)
+    : mDegree(aDegree)
+    , mCoefficients(mDegree + 1u) {
+    Eigen::MatrixXf fitA(aSampleCount, mDegree + 1u);
     Eigen::VectorXf fitB = Eigen::VectorXf::Map(aSamplesY, aSampleCount);
 
-    if(aSampleCount >= csDegree1) {
+    if(aSampleCount > mDegree) {
       for(uint32_t i = 0u; i < aSampleCount; ++i) {
-        for(uint32_t j = 0u; j < csDegree1; ++j) {
+        for(uint32_t j = 0u; j <= mDegree; ++j) {
           fitA(i, j) = ::pow(aSamplesX[i], j);
         }
       }
@@ -388,21 +387,23 @@ public:
       mRrmsError = (desireds > 0.0f ? ::sqrt(diffs / desireds / aSampleCount) : 0.0f);
       }
     else {
-      mCoefficients = Eigen::Matrix<float, tDegree + 1u, 1u>::Zero();
+      for(uint32_t j = 0u; j <= mDegree; ++j) {
+        mCoefficients(j) = 0.0f;
+      }
       mRrmsError = std::numeric_limits<float>::max();
     }
   }
 
-  PolynomApprox(std::vector<float> const& aSamplesX, std::vector<float> const& aSamplesY) : PolynomApprox(aSamplesX.data(), aSamplesY.data(), std::min(aSamplesX.size(), aSamplesY.size())) {}
+  PolynomApprox(std::vector<float> const& aSamplesX, std::vector<float> const& aSamplesY, uint32_t const aDegree) : PolynomApprox(aSamplesX.data(), aSamplesY.data(), std::min(aSamplesX.size(), aSamplesY.size()), aDegree) {}
 
-  static uint32_t size() { return csDegree1; }
+  uint32_t size() { return mDegree + 1u; }
   float operator[](uint32_t const aIndex) const { return mCoefficients(aIndex); }
 
   float getRrmsError() const { return mRrmsError; }
 
   float eval(float const aX) const {
-    float result = mCoefficients(tDegree) * aX;
-    for(uint32_t i = tDegree - 1u; i > 0u; --i) {
+    float result = mCoefficients(mDegree) * aX;
+    for(uint32_t i = mDegree - 1u; i > 0u; --i) {
       result = (result + mCoefficients(i)) * aX;
     }
     result += mCoefficients(0);
