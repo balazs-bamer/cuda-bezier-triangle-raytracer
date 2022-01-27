@@ -373,7 +373,7 @@ TEST(polynomApprox, x2_21_27_30) {
   EXPECT_TRUE(eq(poly.eval(32.0f),  21.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(48.0f),  27.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(63.0f),  30.0f, 0.1f));
-  EXPECT_TRUE(eq(poly.getRrmsError(), 0.3f));
+  EXPECT_TRUE(eq(poly.getRrmsError(), 0.0f));
 }
 
 TEST(polynomApprox, x2) {

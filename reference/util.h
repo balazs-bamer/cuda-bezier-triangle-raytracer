@@ -360,37 +360,21 @@ class PolynomApprox final {
   static_assert(tDegree >= 1u);
 
 private:
-  static constexpr uint32_t           csDegree1 = tDegree + 1u;
+  static constexpr uint32_t csDegree1 = tDegree + 1u;
 
-  Eigen::Matrix<float, csDegree1, 1u> mCoefficients;
-  float                               mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
+  Eigen::VectorXf           mCoefficients;
+  float                     mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
 
 public:
   PolynomApprox(float const* const aSamplesX, float const* const aSamplesY, uint32_t const aSampleCount) {
-    std::array<float, tDegree + csDegree1>     fitX;
-    Eigen::Matrix<float, csDegree1, csDegree1> fitA;
-    Eigen::Matrix<float, csDegree1 , 1u>       fitB;
-
-    auto degree1 = tDegree + 1u;
+    Eigen::MatrixXf fitA(aSampleCount, csDegree1);
+    Eigen::VectorXf fitB = Eigen::VectorXf::Map(aSamplesY, aSampleCount);
 
     if(aSampleCount >= csDegree1) {
-      for(uint32_t i = 0u; i < csDegree1 + tDegree; ++i) {
-        fitX[i] = 0.0f;
-        for(uint32_t j = 0u; j < aSampleCount; ++j) {
-          fitX[i] += ::pow(aSamplesX[j], i);
-        }
-      }
-      for(uint32_t i = 0u; i < csDegree1; ++i) {
+      for(uint32_t i = 0u; i < aSampleCount; ++i) {
         for(uint32_t j = 0u; j < csDegree1; ++j) {
-          fitA(i, j) =fitX[i + j];
+          fitA(i, j) = ::pow(aSamplesX[i], j);
         }
-      }
-      for(uint32_t i = 0u; i < csDegree1; ++i) {
-        float tmp = 0.0f;
-        for(uint32_t j = 0u; j < aSampleCount; ++j) {
-          tmp += ::pow(aSamplesX[j], i) * aSamplesY[j];
-        }
-        fitB(i) = tmp;
       }
       mCoefficients = fitA.colPivHouseholderQr().solve(fitB);
       auto diffs = 0.0f;
