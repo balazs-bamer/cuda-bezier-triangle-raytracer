@@ -370,6 +370,10 @@ TEST(polynomApprox, x20) {
 
 TEST(polynomApprox, x2) {
   PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f}, {1.0f, 4.0f, 9.0f});
+  EXPECT_TRUE(poly.size() == 3u);
+  EXPECT_TRUE(eq(poly[0u],  0.0f));
+  EXPECT_TRUE(eq(poly[1u],  0.0f));
+  EXPECT_TRUE(eq(poly[2u],  1.0f));
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(4.0f), 16.0f));
   EXPECT_TRUE(eq(poly.eval(5.0f), 25.0f));
@@ -394,6 +398,7 @@ TEST(polynomApprox, x2veryoff) {
 
 TEST(polynomApprox, 2x3_3x2_4x_5) {
   PolynomApprox<3u> poly({0.0f, 1.0f, 2.0f, 3.0f}, {5.0f, 14.0f, 41.0f, 98.0f});
+  EXPECT_TRUE(poly.size() == 4u);
   EXPECT_TRUE(eq(poly.eval(0.5f),  8.0f));
   EXPECT_TRUE(eq(poly.eval(1.5f), 24.5f));
   EXPECT_TRUE(eq(poly.eval(2.5f), 65.0f));

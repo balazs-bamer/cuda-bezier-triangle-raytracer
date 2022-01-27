@@ -360,10 +360,10 @@ class PolynomApprox final {
   static_assert(tDegree >= 1u);
 
 private:
-  static constexpr uint32_t csDegree1 = tDegree + 1u;
+  static constexpr uint32_t           csDegree1 = tDegree + 1u;
 
-  Eigen::Matrix<float, tDegree + 1u, 1u> mCoefficients;
-  float                                  mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
+  Eigen::Matrix<float, csDegree1, 1u> mCoefficients;
+  float                               mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
 
 public:
   PolynomApprox(std::vector<float> const& aSamplesX, std::vector<float> const aSamplesY) {
@@ -409,6 +409,9 @@ public:
       mRrmsError = std::numeric_limits<float>::max();
     }
   }
+
+  static uint32_t size() { return csDegree1; }
+  float operator[](uint32_t const aIndex) const { return mCoefficients(aIndex); }
 
   float getRrmsError() const { return mRrmsError; }
 
