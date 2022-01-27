@@ -357,6 +357,15 @@ TEST(polynomApprox, x2few) {
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(1.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(4.0f),  0.0f));
+  EXPECT_TRUE(eq(poly.getRrmsError(), std::numeric_limits<float>::max()));
+}
+
+TEST(polynomApprox, x20) {
+  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f}, {0.0f, 0.0f, 0.0f});
+  EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f));
+  EXPECT_TRUE(eq(poly.eval(4.0f),  0.0f));
+  EXPECT_TRUE(eq(poly.eval(5.0f),  0.0f));
+  EXPECT_TRUE(eq(poly.getRrmsError(), 0.0f));
 }
 
 TEST(polynomApprox, x2) {
@@ -364,6 +373,7 @@ TEST(polynomApprox, x2) {
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f));
   EXPECT_TRUE(eq(poly.eval(4.0f), 16.0f));
   EXPECT_TRUE(eq(poly.eval(5.0f), 25.0f));
+  EXPECT_TRUE(eq(poly.getRrmsError(), 0.0f));
 }
 
 TEST(polynomApprox, x2off) {
@@ -371,6 +381,15 @@ TEST(polynomApprox, x2off) {
   EXPECT_TRUE(eq(poly.eval(0.0f),  0.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(4.0f), 16.0f, 0.1f));
   EXPECT_TRUE(eq(poly.eval(5.0f), 25.0f, 0.3f));
+  EXPECT_TRUE(eq(poly.getRrmsError(), 0.00059f));
+}
+
+TEST(polynomApprox, x2veryoff) {
+  PolynomApprox<2u> poly({1.0f, 2.0f, 3.0f, 4.0f}, {1.0f, 3.0f, 13.0f, 13.0f});
+  EXPECT_FALSE(eq(poly.eval(0.0f),  0.0f));
+  EXPECT_FALSE(eq(poly.eval(4.0f), 16.0f));
+  EXPECT_FALSE(eq(poly.eval(5.0f), 25.0f));
+  EXPECT_TRUE(poly.getRrmsError() > 0.1f);
 }
 
 TEST(polynomApprox, 2x3_3x2_4x_5) {
@@ -378,6 +397,7 @@ TEST(polynomApprox, 2x3_3x2_4x_5) {
   EXPECT_TRUE(eq(poly.eval(0.5f),  8.0f));
   EXPECT_TRUE(eq(poly.eval(1.5f), 24.5f));
   EXPECT_TRUE(eq(poly.eval(2.5f), 65.0f));
+  EXPECT_TRUE(eq(poly.getRrmsError(), 0.0f));
 }
 
 int main(int argc, char **argv) {

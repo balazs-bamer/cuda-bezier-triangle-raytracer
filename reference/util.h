@@ -360,14 +360,16 @@ class PolynomApprox final {
   static_assert(tDegree >= 1u);
 
 private:
-  Eigen::Matrix<float, tDegree + 1u, 1u> mCoefficients;
   static constexpr uint32_t csDegree1 = tDegree + 1u;
+
+  Eigen::Matrix<float, tDegree + 1u, 1u> mCoefficients;
+  float                                  mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
 
 public:
   PolynomApprox(std::vector<float> const& aSamplesX, std::vector<float> const aSamplesY) {
-    std::array<float, tDegree + csDegree1>   fitX;
+    std::array<float, tDegree + csDegree1>     fitX;
     Eigen::Matrix<float, csDegree1, csDegree1> fitA;
-    Eigen::Matrix<float, csDegree1 , 1u>      fitB;
+    Eigen::Matrix<float, csDegree1 , 1u>       fitB;
 
     auto sampleCount = std::min(aSamplesX.size(), aSamplesY.size());
     auto degree1 = tDegree + 1u;
@@ -392,11 +394,23 @@ public:
         fitB(i) = tmp;
       }
       mCoefficients = fitA.colPivHouseholderQr().solve(fitB);
-    }
+      auto diffs = 0.0f;
+      auto desireds = 0.0f;
+      for(uint32_t i = 0u; i < sampleCount; ++i) {
+        auto desired = aSamplesY[i];
+        auto diff = (desired - eval(aSamplesX[i]));
+        diffs += diff * diff;
+        desireds += desired * desired;
+      }
+      mRrmsError = (desireds > 0.0f ? ::sqrt(diffs / desireds / sampleCount) : 0.0f);
+      }
     else {
       mCoefficients = Eigen::Matrix<float, tDegree + 1u, 1u>::Zero();
+      mRrmsError = std::numeric_limits<float>::max();
     }
   }
+
+  float getRrmsError() const { return mRrmsError; }
 
   float eval(float const aX) const {
     float result = mCoefficients(tDegree) * aX;
