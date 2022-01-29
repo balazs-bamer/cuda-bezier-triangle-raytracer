@@ -1,7 +1,7 @@
 #ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_MESH
 #define CUDA_BEZIER_TRIANGLE_RAYTRACER_MESH
 
-#include "util.h"
+#include "3dGeomUtil.h"
 #include "stl_reader.h"
 #include <map>
 #include <list>

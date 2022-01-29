@@ -1,7 +1,7 @@
 #ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_HOSTUTIL
 #define CUDA_BEZIER_TRIANGLE_RAYTRACER_HOSTUTIL
 
-#include "util.h"
+#include "3dGeomUtil.h"
 #include <vector>
 #include <random>
 

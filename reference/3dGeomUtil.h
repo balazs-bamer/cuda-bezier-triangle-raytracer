@@ -1,5 +1,5 @@
-#ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_UTIL
-#define CUDA_BEZIER_TRIANGLE_RAYTRACER_UTIL
+#ifndef CUDA_3D_GEOM_UTIL
+#define CUDA_3D_GEOM_UTIL
 
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int32_t
 
@@ -352,65 +352,6 @@ struct Sphere final {  // TODO consider if we need this for bounding sphere inte
   Sphere(Vector const &aCenter, float const aRadius) : mCenter(aCenter), mRadius(aRadius) {}
 
   bool doesIntersect(Ray const aRay);
-};
-
-
-class PolynomApprox final {
-private:
-  uint32_t const  mDegreeMinus;
-  uint32_t const  mCoeffCount;
-
-  Eigen::VectorXf mCoefficients;
-  float           mRrmsError;    // https://stats.stackexchange.com/questions/413209/is-there-something-like-a-root-mean-square-relative-error-rmsre-or-what-is-t
-
-public:
-  PolynomApprox(float const* const aSamplesX, float const* const aSamplesY, uint32_t const aSampleCount, uint32_t const aDegreeMinus, uint32_t const aDegreePlus)
-    : mDegreeMinus(aDegreeMinus)
-    , mCoeffCount(aDegreeMinus + 1u + aDegreePlus)
-    , mCoefficients(mCoeffCount) {
-    Eigen::MatrixXf fitA(aSampleCount, mCoeffCount);
-    Eigen::VectorXf fitB = Eigen::VectorXf::Map(aSamplesY, aSampleCount);
-
-    if(aSampleCount >= mCoeffCount) {
-      for(uint32_t i = 0u; i < aSampleCount; ++i) {
-        for(uint32_t j = 0u; j < mCoeffCount; ++j) {
-          fitA(i, j) = ::pow(aSamplesX[i], static_cast<int32_t>(j) - static_cast<int32_t>(aDegreeMinus));
-        }
-      }
-      mCoefficients = fitA.colPivHouseholderQr().solve(fitB);
-      auto diffs = 0.0f;
-      auto desireds = 0.0f;
-      for(uint32_t i = 0u; i < aSampleCount; ++i) {
-        auto desired = aSamplesY[i];
-        auto diff = (desired - eval(aSamplesX[i]));
-        diffs += diff * diff;
-        desireds += desired * desired;
-      }
-      mRrmsError = (desireds > 0.0f ? ::sqrt(diffs / desireds / aSampleCount) : 0.0f);
-      }
-    else {
-      for(uint32_t j = 0u; j < mCoeffCount; ++j) {
-        mCoefficients(j) = 0.0f;
-      }
-      mRrmsError = std::numeric_limits<float>::max();
-    }
-  }
-
-  PolynomApprox(std::vector<float> const& aSamplesX, std::vector<float> const& aSamplesY, uint32_t const aDegreeMinus, uint32_t const aDegreePlus) : PolynomApprox(aSamplesX.data(), aSamplesY.data(), std::min(aSamplesX.size(), aSamplesY.size()), aDegreeMinus, aDegreePlus) {}
-
-  uint32_t size() { return mCoeffCount; }
-  float operator[](uint32_t const aIndex) const { return mCoefficients(aIndex); }
-
-  float getRrmsError() const { return mRrmsError; }
-
-  float eval(float const aX) const {
-    float result = mCoefficients(mCoeffCount - 1u) * aX;
-    for(uint32_t i = mCoeffCount - 2u; i > 0u; --i) {
-      result = (result + mCoefficients(i)) * aX;
-    }
-    result += mCoefficients(0);
-    return result / ::pow(aX, mDegreeMinus);
-  }
 };
 
 #endif

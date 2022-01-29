@@ -1,7 +1,7 @@
 ﻿#ifndef CUDA_BEZIER_TRIANGLE_RAYTRACER_BEZIER
 #define CUDA_BEZIER_TRIANGLE_RAYTRACER_BEZIER
 
-#include "util.h"
+#include "3dGeomUtil.h"
 
 
 struct BezierIntersection final {
