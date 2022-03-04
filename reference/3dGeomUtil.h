@@ -1,7 +1,9 @@
 #ifndef CUDA_3D_GEOM_UTIL
 #define CUDA_3D_GEOM_UTIL
 
+#ifndef EIGEN_DEFAULT_DENSE_INDEX_TYPE
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int32_t
+#endif
 
 #include <Eigen/Dense>
 
