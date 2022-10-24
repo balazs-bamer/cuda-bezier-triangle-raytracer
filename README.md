@@ -86,7 +86,7 @@ The class contains some precomputed values useful for intersection calculations,
 
 #### BezierTriangle::intersection
 
-Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suitable for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm based on Newton's method with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
+Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suited for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm based on Newton's method with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
 
 First I check the intersection with the underlying planar triangle, and if it intersects, calculate the lengths along the ray measured from its starting point
 * until the ray reaches the signed distance from the underlying plane equal to the maximal surface point above that plane
@@ -103,7 +103,7 @@ The intersection calculation is performed in a fixed number of iterations, curre
 7. Take the plane in the surface point perpendicular to the surface normal and intersect it with the ray to get the next ray point to start from.
 8. Goto 3 when there is iteration left.
 
-This process is practically a modification of Newton's root finding method, with an indirect way of evaluating f(x) and f'(x) - exact calculation does not work without barycentric coordinates. The process practically always converges, when the ray has not too big angle of incidence, with an indirect way of evaluating f(x) and f'(x) - exact calculation does not work without barycentric coordinates. The process practically always converges, when the ray has not too big angle of incidence. TODO exact proof for this based on [[3]](#3)
+This process is practically a modification of Newton's root finding method, with an indirect way of evaluating f(x) and f'(x) - exact calculation does not work without barycentric coordinates. The process practically always converges, when the ray has not too big angle of incidence. TODO exact proof for this based on [[3]](#3)
 
 When ready, it is important to check if the intersection is within the domain of the current Bézier triangle. If not, the intersection would be more accurate when calculated on the appropriate neighbouring triangle. To enable this, in this case I return the side index to be considered for a similar calculation process for the neighbouring triangle. Since its planar intersection will definitely be outside the underlying triangle, I omit that check to let the function finish. TODO figures.
 
