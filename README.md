@@ -26,9 +26,9 @@ This file contain common type declarations for all other sources, some geometry 
 
 ### reference/mesh.h
 
-This is the home of the `Mesh` class. I know there are several good STL and mesh processing libraries, but I've created this class for three reasons:
+This is the home of the `Mesh` class. I know there are several good STL and mesh processing libraries, but I've created this class for several reasons:
 1. I wanted full control over mesh processing.
-2. I wanted to preserve original vertices. If the mesh creation algorithm is sophisticated enough, it knows better where and how to place vertices. Any postprocessing can only make it worse.
+2. I wanted to preserve original vertices. If the mesh creation algorithm is sophisticated enough, it knows better where and how to place vertices.
 3. It contains important preprocessing steps for later stages, which belong to triangle mesh processing, not Bézier triangle meshes.
 4. I enjoy working with geometry vectors.
 
@@ -60,7 +60,7 @@ Deletes all current contents and creates an ellipsoid with the given parameters.
 
 #### Mesh::getFace2neighbours
 
-Returns an `std::vector<Neighbours>`, each item corresponding to a mesh triangle. Here the struct `Neighbours` holds information about the neighbouring triangles of the aactual one's each side (starting at vertex i within the triangle):
+Returns an `std::vector<Neighbours>`, each item corresponding to a mesh triangle. Here the struct `Neighbours` holds information about the neighbouring triangles of the actual one's each side (starting at vertex i within the triangle):
 * mFellowTriangles for mesh index of the neighbour of the actual side (`i` -> `(i+1)%3`)
 * mFellowCommonSideStarts for the vertex index `k` in each fellow triangle where the common side starts such that the side in the neighbouring triangle (`k` -> `(k+1)%3`) is the same side as (`i` -> `(i+1)%3`).
 Must be run after `Mesh::standardizeNormals`.
@@ -89,7 +89,7 @@ The class contains some precomputed values useful for intersection calculations,
 Theres is no closed formula for Bézier triangle and ray intersection, like there is for planes and spheres. There are existing ray - Bézier triangle intersection algorithms, such as [[2]](#2). However, this algorithm needs investigation of several cases, which is not well suited for GPUs. Moreover, the article does not contain performance data, and it seemed to me a big effort to implement it. So I've found out a rather simple algorithm based on Newton's method with one or two identical computation-intensive loops, which are easy to run parallel for many rays.
 
 First I check the intersection with the underlying planar triangle, and if it intersects, calculate the lengths along the ray measured from its starting point
-* until the ray reaches the signed distance from the underlying plane equal to the maximal surface point above that plane
+* until the ray reaches the signed distance from the underlying plane equal to the maximal surface point (of the Bézier triangle) above that plane
 * until the ray reaches the signed distance from the underlying plane equal to the maximal surface point below that plane
 
 The intersection calculation is performed in a fixed number of iterations, currently 4.
@@ -126,7 +126,7 @@ I've implemented this function because the raytracing will inspect mesh and ray 
 
 The idea here is to take all Bézier triangles, and subdivide each one proven to be too tall. Note, as we are in the Bézier triangle domain, each triangle is the reasult of the Clough-Tocher subdivision. I could have gone with taking that subdivision of the tall triangle, but it tends to create "thin" triangles, as the edges won't ever be split. I know there are well-known subdivision algorithm, but I wanted to make a very simple implementation and take advantage of the Bézier triangle control point information, which already takes into account the neighbouring triangles.
 
-Curently I take the approximate Bézier triangle height (maximum at the original triangle centroid and quarter points of the original sides) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
+Currently I take the approximate Bézier triangle height (maximum at the original triangle centroid and quarter points of the original sides) and the triangle perimeter ratio, and if it is larger than a constant, I will split it. It might be interesting to incorporate an absolute value parameter too.
 
 The algorithm is simple: I take the underlying side midpoints of a "tall" Bézier triangle, and divide it into 4 pieces. Now it creates vertices where the neighbouring triangle may not have on (no need to split it), so I propagate the subdivision info across each edge to the neighbouring triangle, and split them accordingly into 2 or 3 pieces, for 1 or 2 neighbours being subdivided, respectively. TODO figures.
 
@@ -199,7 +199,7 @@ Now only the raytracing itself is handled by Thrust. Perhaps more tasks would be
 
 ## Shortcomings
 
-<a id="1005">In</a> theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice I've tried some concave bodies, and the ones with small face angles (< 90-120 degrees, depending on the situation) cause numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges.
+<a id="1005">In</a> theory, my algorithms can handle concave meshes, and the `Mesh` class even meshes with holes in it (with hole walls covered by triangles, so holes in topological sense). In practice I've tried some concave bodies, and the ones with small dihedral angles (< 90-120 degrees, depending on the situation) cause numeric errors, most probably because the extreme variation between sizes of neighbouring triangles and sharp edges.
 
 The intersection algorithm does not report mesh intersection for large angles of incidence (above approximately 70 degrees). This could be fixed with some shallow recursion, but I leave it yet.
 
