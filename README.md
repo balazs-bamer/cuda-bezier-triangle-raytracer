@@ -5,14 +5,14 @@
 The aim of this project is to simulate image rendering of arbitrary-shaped "lenses" described by triangle meshes using Bézier triangle interpolation. It will be possible to simulate free-form lenses, and of course spherical lenses as well. (Of course spherical lenses can be simulated much more efficiently.) This project is just for personal learning, so I omit investigation of existing results.
 
 This work is divided into 4 parts:
-1. [C++ utilities and preprocessor](#1001). These parts check the input and produce the Bézier mesh appropriate to implement raytracing.
-2. [Reference single ray tracing implementation in C++](#1002). I use it actually to develop all geometry and raytracing algorithms, which will later be modified for GPU usage.
-3. [Initial implementation in NVIDIA Thrust](#1003), a quick proof-of-concept implementation based on the reference to produce images.
-4. An iteratively developed [CUDA version](#1004) for best performance.
+1. [C++ utilities and preprocessor](#1001). These parts check the input and produce the Bézier mesh appropriate to implement raytracing. Finished.
+2. [Reference single ray tracing implementation in C++](#1002). I use it actually to develop all geometry and raytracing algorithms, which will later be modified for GPU usage. Finished.
+3. [Initial implementation in NVIDIA Thrust](#1003), a quick proof-of-concept implementation based on the reference to produce images. Never started.
+4. An iteratively developed [CUDA version](#1004) for best performance. Never started.
 
 [Shortcomings](#1005) are here. I use Eigen3 for vector calculations, because it is well supported under CUDA, and Google Test for unit testing. I also use Sebastian Reiter's STL reader utility to parse STL files.
 
-[Here](https://db.bme.hu/~bamer/tdk/TDK.html) is my ancient naive implementation of spherical lens system simulator from 1994-1998 (in Hungarian). That work originates from the high school with most parts ready then. I've abandoned the work because a 80386 without an FPU was far too slow for any meaningful rendering. During the university I could complete it and use a Sun workstation for rendering the images.
+[Here](https://bamer.hu/tdk/) is my ancient naive implementation of spherical lens system simulator from 1994-1998 (in Hungarian). That work originates from the high school with most parts ready then. I've abandoned the work because a 80386 without an FPU was far too slow for any meaningful rendering. During the university I could complete it and use a Sun workstation for rendering the images.
 
 I use At most C++17 features all thorough the code to let it interoperate with CUDA.
 
