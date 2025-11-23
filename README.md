@@ -1,4 +1,4 @@
-# Cuda-based Bézier triangle mesh raytracer
+# Bézier triangle mesh raytracer
 
 ![alt text](./images/intro.jpg "Intro")
 
